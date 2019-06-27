@@ -2,12 +2,11 @@ import boto3
 import json
 import hashlib
 from pathlib import Path, PurePath
-from git import Repo
 from collections import deque
 
 class CkanMessage:
 
-    def __init__(self, msg, meta_path):
+    def __init__(self, msg, ckan_meta):
         self.body = msg.body
         for item in msg.message_attributes.items():
             attr_type = '{}Value'.format(item[1]['DataType'])
@@ -20,20 +19,28 @@ class CkanMessage:
         self.md5_of_body = msg.md5_of_body
         self.message_id = msg.message_id
         self.receipt_handle = msg.receipt_handle
-        self.meta_path = meta_path
+        self.ckan_meta = ckan_meta
 
     def __str__(self):
         return '{}: {}'.format(self.ModIdentifier, self.CheckTime)
 
     @property
-    def stored_file(self):
-        return Path(self.meta_path, self.ModIdentifier, self.FileName)
+    def mod_path(self):
+        return Path(self.ckan_meta.working_dir, self.ModIdentifier)
+
+    @property
+    def mod_file(self):
+        return Path(self.mod_path, self.FileName)
 
     def metadata_changed(self):
-        md5 = hashlib.md5(self.stored_file.read_bytes()).hexdigest()
-        if md5 == self.md5_of_body:
+        self.mod_path.mkdir(exist_ok=True)
+        if not self.mod_file.exists():
             return True
-        return False
+        with open(self.mod_file, mode='rb') as f:
+            md5 = hashlib.md5(f.read()).hexdigest()
+            if md5 == self.md5_of_body:
+                return False
+        return True
 
     @property
     def delete_attrs(self):
