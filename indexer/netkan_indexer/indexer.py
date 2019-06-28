@@ -32,15 +32,26 @@ class CkanMessage:
     def mod_file(self):
         return Path(self.mod_path, self.FileName)
 
+    def mod_file_md5(self):
+        with open(self.mod_file, mode='rb') as f:
+            return hashlib.md5(f.read()).hexdigest()
+
     def metadata_changed(self):
-        self.mod_path.mkdir(exist_ok=True)
         if not self.mod_file.exists():
             return True
-        with open(self.mod_file, mode='rb') as f:
-            md5 = hashlib.md5(f.read()).hexdigest()
-            if md5 == self.md5_of_body:
-                return False
+        if self.mod_file_md5() == self.md5_of_body:
+            return False
         return True
+
+    def write_metadata(self):
+        self.mod_path.mkdir(exist_ok=True)
+        with open(self.mod_file, mode='w') as f:
+            f.write(self.body)
+
+    def commit_metadata(self):
+        index = self.ckan_meta.index
+        index.add(self.ckan_meta.untracked_files)
+        return index.commit('NetKAN generated mods - {}'.format(self.mod_file.stem))
 
     @property
     def delete_attrs(self):

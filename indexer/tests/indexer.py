@@ -38,6 +38,16 @@ class TestCkan(unittest.TestCase):
         super(TestCkan, cls).tearDownClass()
         cls.tmpdir.cleanup()
 
+    def tearDown(self):
+        meta = self.message.ckan_meta
+        meta.git.clean('-df')
+        try:
+            cleanup = meta.create_head('cleanup', 'HEAD~1')
+            meta.head.reference = cleanup
+            meta.head.reset(index=True, working_tree=True)
+        except:
+            pass
+
     def test_ckan_message_changed(self):
         self.assertFalse(self.message.metadata_changed())
 
@@ -57,6 +67,18 @@ class TestCkan(unittest.TestCase):
         self.assertEqual(self.message.delete_attrs['Id'], 'MessageMcMessageFace')
         self.assertEqual(self.message.delete_attrs['ReceiptHandle'], 'HandleMcHandleFace')
 
+    def test_ckan_message_repo_untracked(self):
+        self.message.write_metadata()
+        self.assertEqual(0, len(self.message.ckan_meta.untracked_files))
+
+    def test_ckan_message_repo_dirty(self):
+        self.message.write_metadata()
+        self.assertFalse(self.message.ckan_meta.is_dirty())
+
+    def test_ckan_message_write_md5_matches(self):
+        self.message.write_metadata()
+        self.assertEqual(self.message.md5_of_body, self.message.mod_file_md5())
+
 
 class TestUpdateCkan(TestCkan):
     test_data = Path(PurePath(__file__).parent, 'testdata/changed')
@@ -64,10 +86,24 @@ class TestUpdateCkan(TestCkan):
     def test_ckan_message_changed(self):
         self.assertTrue(self.message.metadata_changed())
 
+    def test_ckan_message_repo_dirty(self):
+        self.message.write_metadata()
+        self.assertTrue(self.message.ckan_meta.is_dirty())
 
-class TestNewCkan(TestCkan):
+    def test_ckan_message_commit(self):
+        self.message.write_metadata()
+        c = self.message.commit_metadata()
+        self.assertEqual(0, len(self.message.ckan_meta.untracked_files))
+        self.assertEqual(c.message, 'NetKAN generated mods - DogeCoinFlag-v1.02')
+
+class TestNewCkan(TestUpdateCkan):
     test_data = Path(PurePath(__file__).parent, 'testdata/empty')
 
-    def test_ckan_message_changed(self):
-        self.assertTrue(self.message.metadata_changed())
+    def test_ckan_message_repo_untracked(self):
+        self.message.write_metadata()
+        self.assertEqual(1, len(self.message.ckan_meta.untracked_files))
+
+    def test_ckan_message_repo_dirty(self):
+        self.message.write_metadata()
+        self.assertFalse(self.message.ckan_meta.is_dirty())
 
