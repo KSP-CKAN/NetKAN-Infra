@@ -3,11 +3,33 @@ import json
 import hashlib
 from pathlib import Path, PurePath
 from collections import deque
+from pynamodb.models import Model
+from pynamodb.attributes import (
+    UnicodeAttribute, UTCDateTimeAttribute, BooleanAttribute
+)
+from dateutil.parser import parse
+from datetime import datetime, timezone
+
+
+class ModStatus(Model):
+    class Meta:
+        table_name = 'DevNetKANStatus'
+        region = 'us-west-2'
+
+    ModIdentifier = UnicodeAttribute(hash_key=True)
+    last_error = UnicodeAttribute(null=True)
+    last_checked = UTCDateTimeAttribute(null=True)
+    last_indexed = UTCDateTimeAttribute(null=True)
+    last_inflated = UTCDateTimeAttribute(null=True)
+    success = BooleanAttribute()
+
 
 class CkanMessage:
 
     def __init__(self, msg, ckan_meta):
         self.body = msg.body
+        self.ErrorMessage = 'No ErrorMessage sent'
+        self.indexed = False
         for item in msg.message_attributes.items():
             attr_type = '{}Value'.format(item[1]['DataType'])
             content = item[1][attr_type]
@@ -51,7 +73,24 @@ class CkanMessage:
     def commit_metadata(self):
         index = self.ckan_meta.index
         index.add(self.ckan_meta.untracked_files)
-        return index.commit('NetKAN generated mods - {}'.format(self.mod_file.stem))
+        commit = index.commit('NetKAN generated mods - {}'.format(self.mod_file.stem))
+        self.indexed = True
+        return commit
+
+    def status_attrs(self):
+        class Attrs():
+            pass
+        attrs = Attrs()
+        attrs.ModIdentifier = self.ModIdentifier
+        attrs.success = self.Success
+        # We may wish to change the name in the inflator
+        # as the index will set 'last_checked'
+        attrs.last_inflated = parse(self.CheckTime)
+        if not self.Success:
+            attrs.last_error = self.ErrorMessage
+        if self.indexed:
+            attrs.last_indexed = datetime.now(timezone.utc)
+        return attrs
 
     @property
     def delete_attrs(self):

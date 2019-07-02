@@ -15,5 +15,7 @@ setup(name='netkan_indexer',
         'boto3',
         'click',
         'gitpython',
+        'pynamodb',
+        'dateuitl', # pynamodb requires it, but we're also leaning on it
     ],
 )
