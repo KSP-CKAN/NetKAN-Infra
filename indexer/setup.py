@@ -15,5 +15,6 @@ setup(name='netkan_indexer',
         'boto3',
         'click',
         'gitpython',
+        'pynamodb',
     ],
 )

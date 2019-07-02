@@ -4,6 +4,7 @@
 from troposphere import GetAtt, Output, Parameter, Ref, Template, Sub
 from troposphere.iam import AccessKey, Group, LoginProfile, PolicyType
 from troposphere.sqs import Queue
+from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, ProvisionedThroughput
 
 
 t = Template()
@@ -63,6 +64,62 @@ for queue in [inbound,outbound]:
             Value=GetAtt(queue, "Arn")
         ),
     ])
+
+dev_db = t.add_resource(Table(
+    "DevNetKANStatus",
+    AttributeDefinitions=[
+        AttributeDefinition(
+            AttributeName="ModIdentifier",
+            AttributeType="S"
+        ),
+    ],
+    KeySchema=[
+        KeySchema(
+            AttributeName="ModIdentifier",
+            KeyType="HASH"
+        )
+    ],
+    TableName="DevNetKANStatus",
+    ProvisionedThroughput=ProvisionedThroughput(
+        ReadCapacityUnits=5,
+        WriteCapacityUnits=5
+    )
+))
+
+t.add_output(Output(
+    "TableName",
+    Value=Ref(dev_db),
+    Description="Table name of the newly create DynamoDB table",
+))
+
+t.add_resource(PolicyType(
+    "DbDevPolicies",
+    PolicyName="DbDevUsers",
+    Groups=[Ref(queue_dev_group)],
+    PolicyDocument={
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "dynamodb:DescribeTable",
+                    "dynamodb:GetItem",
+                    "dynamodb:Query",
+                    "dynamodb:PutItem",
+                    "dynamodb:UpdateItem",
+                ],
+                "Resource": [
+                    GetAtt(dev_db,"Arn")
+                ]
+            },
+            {
+                "Effect": "Allow",
+                "Action":"dynamodb:ListTables",
+                "Resource": "*",
+            },
+        ],
+    }
+))
 
 print(t.to_yaml())
 

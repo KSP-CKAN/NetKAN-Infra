@@ -3,6 +3,24 @@ import json
 import hashlib
 from pathlib import Path, PurePath
 from collections import deque
+from pynamodb.models import Model
+from pynamodb.attributes import (
+    UnicodeAttribute, UTCDateTimeAttribute, BooleanAttribute
+)
+
+
+class ModStatus(Model):
+    class Meta:
+        tabile_name = 'DevNetKANStatus'
+        region = 'us-west-2'
+
+    ModIdentifier = UnicodeAttribute(hash_key=True)
+    last_error = UTCDateTimeAttribute(null=True)
+    last_checked = UTCDateTimeAttribute(null=True)
+    last_indexed = UTCDateTimeAttribute(null=True)
+    last_inflated = UTCDateTimeAttribute(null=True)
+    success = BooleanAttribute()
+
 
 class CkanMessage:
 
