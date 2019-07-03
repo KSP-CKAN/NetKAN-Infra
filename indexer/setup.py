@@ -16,5 +16,6 @@ setup(name='netkan_indexer',
         'click',
         'gitpython',
         'pynamodb',
+        'dateuitl', # pynamodb requires it, but we're also leaning on it
     ],
 )
