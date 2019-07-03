@@ -11,7 +11,7 @@ from pynamodb.attributes import (
 
 class ModStatus(Model):
     class Meta:
-        tabile_name = 'DevNetKANStatus'
+        table_name = 'DevNetKANStatus'
         region = 'us-west-2'
 
     ModIdentifier = UnicodeAttribute(hash_key=True)
