@@ -85,10 +85,9 @@ class TestCkan(unittest.TestCase):
         self.assertEqual(attrs.ModIdentifier, 'DogeCoinFlag')
         self.assertTrue(attrs.success)
         self.assertIsInstance(attrs.last_inflated, datetime)
+        self.assertEqual(attrs.last_error, '')
         with self.assertRaises(AttributeError):
             attrs.last_indexed
-        with self.assertRaises(AttributeError):
-            attrs.last_error
 
 
 class TestUpdateCkan(TestCkan):
@@ -113,8 +112,6 @@ class TestUpdateCkan(TestCkan):
         self.assertTrue(attrs.success)
         self.assertIsInstance(attrs.last_inflated, datetime)
         self.assertIsInstance(attrs.last_indexed, datetime)
-        with self.assertRaises(AttributeError):
-            attrs.last_error
 
 
 class TestNewCkan(TestUpdateCkan):
