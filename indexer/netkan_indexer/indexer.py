@@ -28,7 +28,7 @@ class CkanMessage:
 
     def __init__(self, msg, ckan_meta):
         self.body = msg.body
-        self.ErrorMessage = 'No ErrorMessage sent'
+        self.ErrorMessage = ''
         self.indexed = False
         for item in msg.message_attributes.items():
             attr_type = '{}Value'.format(item[1]['DataType'])
@@ -86,8 +86,7 @@ class CkanMessage:
         # We may wish to change the name in the inflator
         # as the index will set 'last_checked'
         attrs.last_inflated = parse(self.CheckTime)
-        if not self.Success:
-            attrs.last_error = self.ErrorMessage
+        attrs.last_error = self.ErrorMessage
         if self.indexed:
             attrs.last_indexed = datetime.now(timezone.utc)
         return attrs
