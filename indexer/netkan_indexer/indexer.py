@@ -9,7 +9,8 @@ from pynamodb.attributes import (
 )
 from dateutil.parser import parse
 from datetime import datetime, timezone
-
+from contextlib import contextmanager
+from git import GitCommandError
 
 class ModStatus(Model):
     class Meta:
@@ -54,6 +55,10 @@ class CkanMessage:
     def mod_file(self):
         return Path(self.mod_path, self.FileName)
 
+    @property
+    def mod_version(self):
+        return self.mod_file.stem
+
     def mod_file_md5(self):
         with open(self.mod_file, mode='rb') as f:
             return hashlib.md5(f.read()).hexdigest()
@@ -73,9 +78,26 @@ class CkanMessage:
     def commit_metadata(self):
         index = self.ckan_meta.index
         index.add(self.ckan_meta.untracked_files)
-        commit = index.commit('NetKAN generated mods - {}'.format(self.mod_file.stem))
+        commit = index.commit('NetKAN generated mods - {}'.format(self.mod_version))
         self.indexed = True
         return commit
+
+    @contextmanager
+    def change_branch(self):
+        try:
+            self.ckan_meta.remotes.origin.fetch(self.mod_version)
+            origin = getattr(self.ckan_meta.remotes.origin.refs, self.mod_version)
+            origin.checkout('--ours')
+        except GitCommandError:
+            origin = self.ckan_meta.create_head(self.mod_version)
+            origin.checkout()
+            self.ckan_meta.remotes.origin.push('{mod}:{mod}'.format(mod=self.mod_version))
+        try:
+            yield
+        finally:
+           self.ckan_meta.remotes.origin.pull(self.mod_version, strategy='ours')
+           self.ckan_meta.remotes.origin.push(self.mod_version)
+           self.ckan_meta.heads.master.checkout()
 
     def status_attrs(self):
         class Attrs():

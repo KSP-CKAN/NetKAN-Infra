@@ -28,10 +28,15 @@ class TestCkan(unittest.TestCase):
         cls.msg.md5_of_body = '709d9d3484f8c1c719b15a8c3425276a'
         cls.tmpdir = tempfile.TemporaryDirectory()
         working = Path(cls.tmpdir.name, 'working')
+        upstream = Path(cls.tmpdir.name, 'upstream')
+        upstream.mkdir()
+        Repo.init(upstream, bare=True)
         shutil.copytree(cls.test_data, working)
         cls.ckan_meta = Repo.init(working)
         cls.ckan_meta.index.add(cls.ckan_meta.untracked_files)
         cls.ckan_meta.index.commit('Test Data')
+        cls.ckan_meta.create_remote('origin', upstream.as_posix())
+        cls.ckan_meta.remotes.origin.push('master:master')
         cls.message = CkanMessage(cls.msg, cls.ckan_meta)
 
     @classmethod
@@ -51,6 +56,9 @@ class TestCkan(unittest.TestCase):
 
     def test_ckan_message_changed(self):
         self.assertFalse(self.message.metadata_changed())
+
+    def test_ckan_message_mod_version(self):
+        self.assertEqual('DogeCoinFlag-v1.02', self.message.mod_version)
 
     def test_ckan_message_success(self):
         self.assertTrue(self.message.Success)
@@ -112,6 +120,47 @@ class TestUpdateCkan(TestCkan):
         self.assertTrue(attrs.success)
         self.assertIsInstance(attrs.last_inflated, datetime)
         self.assertIsInstance(attrs.last_indexed, datetime)
+
+
+class TestStagedCkan(TestUpdateCkan):
+    test_data = Path(PurePath(__file__).parent, 'testdata/changed')
+
+    def setUp(self):
+        super().setUp()
+        self.msg.message_attributes['Staged'] = {'StringValue': 'True', 'DataType': 'String'}
+        self.message = CkanMessage(self.msg, self.ckan_meta)
+
+    def test_ckan_message_changed(self):
+        with self.message.change_branch():
+            self.assertTrue(self.message.metadata_changed())
+
+    def test_ckan_message_commit(self):
+        with self.message.change_branch():
+            self.message.write_metadata()
+            c = self.message.commit_metadata()
+            self.assertEqual(0, len(self.message.ckan_meta.untracked_files))
+            self.assertEqual(c.message, 'NetKAN generated mods - DogeCoinFlag-v1.02')
+        self.assertEqual(
+            self.message.ckan_meta.head.commit.message,
+            'Test Data'
+        )
+
+    def test_ckan_message_stage(self):
+        self.assertTrue(self.message.Staged)
+
+    def test_ckan_message_change_branch(self):
+        self.assertEqual(str(self.message.ckan_meta.active_branch), 'master')
+        with self.message.change_branch():
+            self.assertEqual(str(self.message.ckan_meta.active_branch), 'DogeCoinFlag-v1.02')
+        self.assertEqual(str(self.message.ckan_meta.active_branch), 'master')
+
+    def test_ckan_message_status_attrs(self):
+        attrs = self.message.status_attrs()
+        self.assertEqual(attrs.ModIdentifier, 'DogeCoinFlag')
+        self.assertTrue(attrs.success)
+        self.assertIsInstance(attrs.last_inflated, datetime)
+        with self.assertRaises(AttributeError):
+            attrs.last_indexed
 
 
 class TestNewCkan(TestUpdateCkan):
