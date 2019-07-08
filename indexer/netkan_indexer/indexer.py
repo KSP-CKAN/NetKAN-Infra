@@ -1,5 +1,3 @@
-import boto3
-import json
 import hashlib
 from pathlib import Path, PurePath
 from collections import deque
@@ -11,6 +9,7 @@ from dateutil.parser import parse
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from git import GitCommandError
+
 
 class ModStatus(Model):
     class Meta:
@@ -34,7 +33,7 @@ class CkanMessage:
         for item in msg.message_attributes.items():
             attr_type = '{}Value'.format(item[1]['DataType'])
             content = item[1][attr_type]
-            if content.lower() in ['true','false']:
+            if content.lower() in ['true', 'false']:
                 content = True if content.lower() == 'true' else False
             if item[0] == 'FileName':
                 content = PurePath(content).name
@@ -78,7 +77,9 @@ class CkanMessage:
     def commit_metadata(self):
         index = self.ckan_meta.index
         index.add(self.ckan_meta.untracked_files)
-        commit = index.commit('NetKAN generated mods - {}'.format(self.mod_version))
+        commit = index.commit(
+            'NetKAN generated mods - {}'.format(self.mod_version)
+        )
         self.indexed = True
         return commit
 
@@ -86,18 +87,24 @@ class CkanMessage:
     def change_branch(self):
         try:
             self.ckan_meta.remotes.origin.fetch(self.mod_version)
-            origin = getattr(self.ckan_meta.remotes.origin.refs, self.mod_version)
+            origin = getattr(
+                self.ckan_meta.remotes.origin.refs, self.mod_version
+            )
             origin.checkout('--ours')
         except GitCommandError:
             origin = self.ckan_meta.create_head(self.mod_version)
             origin.checkout()
-            self.ckan_meta.remotes.origin.push('{mod}:{mod}'.format(mod=self.mod_version))
+            self.ckan_meta.remotes.origin.push(
+                '{mod}:{mod}'.format(mod=self.mod_version)
+            )
         try:
             yield
         finally:
-           self.ckan_meta.remotes.origin.pull(self.mod_version, strategy='ours')
-           self.ckan_meta.remotes.origin.push(self.mod_version)
-           self.ckan_meta.heads.master.checkout()
+            self.ckan_meta.remotes.origin.pull(
+                self.mod_version, strategy='ours'
+            )
+            self.ckan_meta.remotes.origin.push(self.mod_version)
+            self.ckan_meta.heads.master.checkout()
 
     def status_attrs(self):
         class Attrs():
@@ -115,7 +122,10 @@ class CkanMessage:
 
     @property
     def delete_attrs(self):
-        return { 'Id': self.message_id, 'ReceiptHandle': self.receipt_handle }
+        return {
+            'Id': self.message_id,
+            'ReceiptHandle': self.receipt_handle
+        }
 
 
 class MessageHandler:

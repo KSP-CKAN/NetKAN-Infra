@@ -7,6 +7,8 @@ from unittest import mock
 from pathlib import Path, PurePath
 from git import Repo
 from datetime import datetime
+from gitdb.exc import BadName
+
 
 class TestCkan(unittest.TestCase):
     test_data = Path(PurePath(__file__).parent, 'testdata/no_change')
@@ -15,13 +17,21 @@ class TestCkan(unittest.TestCase):
     def setUpClass(cls):
         super(TestCkan, cls).setUpClass()
         cls.msg = mock.Mock()
-        cls.msg.body = '{\n    "spec_version": 1,\n    "comment": "flagmod",\n    "identifier": "DogeCoinFlag",\n    "name": "Dogecoin Flag",\n    "abstract": "Such flag. Very currency. Wow.",\n    "description": "Adorn your craft with your favourite cryptocurrency. To the mün!",\n    "author": "daviddwk",\n    "license": "CC-BY",\n    "resources": {\n        "homepage": "https://www.reddit.com/r/dogecoin/comments/1tdlgg/i_made_a_more_accurate_dogecoin_and_a_ksp_flag/",\n        "repository": "https://github.com/pjf/DogeCoinFlag"\n    },\n    "version": "v1.02",\n    "ksp_version": "any",\n    "download": "https://github.com/pjf/DogeCoinFlag/releases/download/v1.02/DogeCoinFlag-1.02.zip",\n    "download_size": 53359,\n    "download_hash": {\n        "sha1": "BFB78381B5565E1AC7E9B2EB9C65B76EF7F6DF71",\n        "sha256": "CF70CE1F988F908FB9CF641C1E47CDA2A30D5AD951A4811A5C0C5D30F6FD3BA9"\n    },\n    "download_content_type": "application/zip",\n    "x_generated_by": "netkan"\n}\n'
+        cls.msg.body = Path(
+            PurePath(__file__).parent,
+            'testdata/DogeCoinFlag-v1.02.ckan'
+        ).read_text()
         cls.msg.message_attributes = {
-            'CheckTime': {'StringValue': '2019-06-24T19:06:14', 'DataType': 'String'},
-            'ModIdentifier': {'StringValue': 'DogeCoinFlag', 'DataType': 'String'},
+            'CheckTime': {
+                'StringValue': '2019-06-24T19:06:14', 'DataType': 'String'},
+            'ModIdentifier': {
+                'StringValue': 'DogeCoinFlag', 'DataType': 'String'},
             'Staged': {'StringValue': 'False', 'DataType': 'String'},
             'Success': {'StringValue': 'True', 'DataType': 'String'},
-            'FileName': {'StringValue': './DogeCoinFlag-v1.02.ckan', 'DataType': 'String'}
+            'FileName': {
+                'StringValue': './DogeCoinFlag-v1.02.ckan',
+                'DataType': 'String'
+            }
         }
         cls.msg.message_id = 'MessageMcMessageFace'
         cls.msg.receipt_handle = 'HandleMcHandleFace'
@@ -51,7 +61,7 @@ class TestCkan(unittest.TestCase):
             cleanup = meta.create_head('cleanup', 'HEAD~1')
             meta.head.reference = cleanup
             meta.head.reset(index=True, working_tree=True)
-        except:
+        except BadName:
             pass
 
     def test_ckan_message_changed(self):
@@ -73,8 +83,13 @@ class TestCkan(unittest.TestCase):
         self.assertFalse(self.message.Staged)
 
     def test_ckan_message_delete_attrs(self):
-        self.assertEqual(self.message.delete_attrs['Id'], 'MessageMcMessageFace')
-        self.assertEqual(self.message.delete_attrs['ReceiptHandle'], 'HandleMcHandleFace')
+        self.assertEqual(
+            self.message.delete_attrs['Id'], 'MessageMcMessageFace'
+        )
+        self.assertEqual(
+            self.message.delete_attrs['ReceiptHandle'],
+            'HandleMcHandleFace'
+        )
 
     def test_ckan_message_repo_untracked(self):
         self.message.write_metadata()
@@ -112,7 +127,9 @@ class TestUpdateCkan(TestCkan):
         self.message.write_metadata()
         c = self.message.commit_metadata()
         self.assertEqual(0, len(self.message.ckan_meta.untracked_files))
-        self.assertEqual(c.message, 'NetKAN generated mods - DogeCoinFlag-v1.02')
+        self.assertEqual(
+            c.message, 'NetKAN generated mods - DogeCoinFlag-v1.02'
+        )
 
     def test_ckan_message_status_attrs(self):
         attrs = self.message.status_attrs()
@@ -127,7 +144,9 @@ class TestStagedCkan(TestUpdateCkan):
 
     def setUp(self):
         super().setUp()
-        self.msg.message_attributes['Staged'] = {'StringValue': 'True', 'DataType': 'String'}
+        self.msg.message_attributes['Staged'] = {
+            'StringValue': 'True', 'DataType': 'String'
+        }
         self.message = CkanMessage(self.msg, self.ckan_meta)
 
     def test_ckan_message_changed(self):
@@ -139,7 +158,9 @@ class TestStagedCkan(TestUpdateCkan):
             self.message.write_metadata()
             c = self.message.commit_metadata()
             self.assertEqual(0, len(self.message.ckan_meta.untracked_files))
-            self.assertEqual(c.message, 'NetKAN generated mods - DogeCoinFlag-v1.02')
+            self.assertEqual(
+                c.message, 'NetKAN generated mods - DogeCoinFlag-v1.02'
+            )
         self.assertEqual(
             self.message.ckan_meta.head.commit.message,
             'Test Data'
@@ -151,7 +172,9 @@ class TestStagedCkan(TestUpdateCkan):
     def test_ckan_message_change_branch(self):
         self.assertEqual(str(self.message.ckan_meta.active_branch), 'master')
         with self.message.change_branch():
-            self.assertEqual(str(self.message.ckan_meta.active_branch), 'DogeCoinFlag-v1.02')
+            self.assertEqual(
+                str(self.message.ckan_meta.active_branch), 'DogeCoinFlag-v1.02'
+            )
         self.assertEqual(str(self.message.ckan_meta.active_branch), 'master')
 
     def test_ckan_message_status_attrs(self):
@@ -180,7 +203,9 @@ class TestFailedCkan(TestCkan):
 
     def setUp(self):
         super().setUp()
-        self.msg.message_attributes['Success'] = {'StringValue': 'False', 'DataType': 'String'}
+        self.msg.message_attributes['Success'] = {
+            'StringValue': 'False', 'DataType': 'String'
+        }
         self.msg.message_attributes['ErrorMessage'] = {
             'StringValue': 'Curl download failed with error CouldntConnect',
             'DataType': 'String'
@@ -191,14 +216,19 @@ class TestFailedCkan(TestCkan):
         self.assertFalse(self.message.Success)
 
     def test_ckan_message_error_message(self):
-        self.assertEqual(self.message.ErrorMessage, 'Curl download failed with error CouldntConnect')
+        self.assertEqual(
+            self.message.ErrorMessage,
+            'Curl download failed with error CouldntConnect'
+        )
 
     def test_ckan_message_status_attrs(self):
         attrs = self.message.status_attrs()
         self.assertEqual(attrs.ModIdentifier, 'DogeCoinFlag')
         self.assertFalse(attrs.success)
         self.assertIsInstance(attrs.last_inflated, datetime)
-        self.assertEqual(attrs.last_error, 'Curl download failed with error CouldntConnect')
+        self.assertEqual(
+            attrs.last_error,
+            'Curl download failed with error CouldntConnect'
+        )
         with self.assertRaises(AttributeError):
             attrs.last_indexed
-
