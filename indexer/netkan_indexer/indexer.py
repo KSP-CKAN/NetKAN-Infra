@@ -130,7 +130,7 @@ class CkanMessage:
 
 class MessageHandler:
 
-    def __init__(self, repo):
+    def __init__(self, repo, github_pr):
         self.repo = repo
         self.master = deque()
         self.staged = deque()
