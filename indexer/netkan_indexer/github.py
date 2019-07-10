@@ -1,5 +1,6 @@
 import json
 import requests
+import logging
 
 
 # We don't need a whole lot out of github, consuming a library
@@ -30,11 +31,12 @@ class GitHubPR:
             data=json.dumps(data),
         )
         if response.status_code not in [200, 201, 204]:
-            return (False, 'PR for {} failed: {}'.format(
+            logging.info('PR for {} failed: {}'.format(
                 branch,
                 response.json()['errors'][0]['message']
             ))
+            return
         pr = response.json()
-        return (True, 'PR for {} opened at {}'.format(
+        logging.info('PR for {} opened at {}'.format(
             branch, pr['html_url']
         ))

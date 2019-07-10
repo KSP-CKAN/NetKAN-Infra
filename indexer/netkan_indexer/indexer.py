@@ -26,7 +26,7 @@ class ModStatus(Model):
 
 class CkanMessage:
 
-    def __init__(self, msg, ckan_meta):
+    def __init__(self, msg, ckan_meta, github_pr=None):
         self.body = msg.body
         self.ErrorMessage = ''
         self.indexed = False
@@ -42,6 +42,7 @@ class CkanMessage:
         self.message_id = msg.message_id
         self.receipt_handle = msg.receipt_handle
         self.ckan_meta = ckan_meta
+        self.github_pr = github_pr
 
     def __str__(self):
         return '{}: {}'.format(self.ModIdentifier, self.CheckTime)
@@ -120,6 +121,28 @@ class CkanMessage:
             attrs.last_indexed = datetime.now(timezone.utc)
         return attrs
 
+    def _process_ckan(self):
+        if self.metadata_changed:
+            self.write_metadata()
+            self.commit_metadata()
+            ModStatus(self.status_attrs()).save()
+            return True
+        return False
+
+    def process_ckan(self):
+        if not self.Staged:
+            self._process_ckan()
+            return
+        with self.change_branch():
+            if self._process_ckan():
+                self.github_pr.create_pull_request(
+                    title='NetKAN inflated: {}'.format(self.ModIdentifier),
+                    branch=self.mod_version,
+                    body='{} has been staged, please test and merge'.format(
+                        self.ModIdentifier
+                    )
+                )
+
     @property
     def delete_attrs(self):
         return {
@@ -130,20 +153,18 @@ class CkanMessage:
 
 class MessageHandler:
 
-    def __init__(self, repo, github_pr):
+    def __init__(self, repo, github_pr=None):
         self.repo = repo
+        self.github_pr = github_pr
         self.master = deque()
         self.staged = deque()
         self.processed = []
 
-    def add(self, ckan):
-        if not ckan.staged:
-            self.master.append(ckan)
-        else:
-            self.staged.append(ckan)
-
     def __str__(self):
-        return str(self.master) + str(self.staged)
+        return str(self.master + self.staged)
+
+    def __len__(self):
+        return len(self.master + self.staged)
 
     # Apparently gitpython can be leaky on long running processes
     # we can ensure we call close on it and run our handler inside
@@ -152,5 +173,31 @@ class MessageHandler:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # call git repo close action
-        pass
+        self.repo.close()
+
+    def append(self, message):
+        ckan = CkanMessage(
+            message,
+            self.repo,
+            self.github_pr
+        )
+        if not ckan.Staged:
+            self.master.append(ckan)
+        else:
+            self.staged.append(ckan)
+
+    def process_queue(self, queue):
+        while queue:
+            ckan = queue.popleft()
+            ckan.process_ckan()
+            self.processed.append(ckan)
+
+    def sqs_delete_entries(self):
+        return [c.delete_attrs for c in self.process_ckans]
+
+    # Currently we intermingle Staged/Master commits
+    # separating them out will be a little more efficient
+    # with our push/pull traffic.
+    def process_ckans(self):
+        self.process_queue(self.master)
+        self.process_queue(self.staged)

@@ -8,9 +8,6 @@ setup(name='netkan_indexer',
     author='Leon Wright',
     author_email='techman83@gmail.com',
     packages=find_packages(),
-    scripts=[
-        'netkan_indexer.py',
-    ],
     install_requires=[
         'boto3',
         'click',
@@ -18,4 +15,7 @@ setup(name='netkan_indexer',
         'pynamodb',
         'dateuitl', # pynamodb requires it, but we're also leaning on it
     ],
+    entry_points = {
+        'console_scripts': ['netkan-indexer=netkan_indexer.cli:run'],
+    },
 )
