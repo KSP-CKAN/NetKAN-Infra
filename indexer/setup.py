@@ -2,7 +2,8 @@
 
 from setuptools import setup, find_packages
 
-setup(name='netkan_indexer',
+setup(
+    name='netkan_indexer',
     version='1.0',
     description='NetKAN Indexer',
     author='Leon Wright',
@@ -13,9 +14,11 @@ setup(name='netkan_indexer',
         'click',
         'gitpython',
         'pynamodb',
-        'dateuitl', # pynamodb requires it, but we're also leaning on it
+        # pynamodb requires it, but we're also leaning on it
+        'python-dateutil',
+        'requests',
     ],
-    entry_points = {
+    entry_points={
         'console_scripts': ['netkan-indexer=netkan_indexer.cli:run'],
     },
 )
