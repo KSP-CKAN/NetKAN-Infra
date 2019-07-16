@@ -1,6 +1,7 @@
 import click
 import logging
 import boto3
+from git import Repo
 from .github import GitHubPR
 from .indexer import MessageHandler
 
@@ -36,23 +37,26 @@ def run(queue, metadata, token, repo, user, debug):
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
-    logging.info("Indexer started at log level %s", level)
+    logging.info('Indexer started at log level %s', level)
 
     github_pr = GitHubPR(token, repo, user)
     sqs = boto3.resource('sqs')
     queue = sqs.get_queue_by_name(QueueName=queue)
+    ckan_meta = Repo(metadata)
+    logging.info('Opening git repo at {}'.format(ckan_meta.working_dir))
 
     while True:
         messages = queue.receive_messages(
             MaxNumberOfMessages=10,
+            MessageAttributeNames=['All'],
             VisibilityTimeout=300
         )
         if not messages:
             continue
-        with MessageHandler(metadata, github_pr) as handler:
+        with MessageHandler(ckan_meta, github_pr) as handler:
             for message in messages:
                 handler.append(message)
-            sqs.delete_batch(
-                QueueUrl='string',
-                Entries=handler.sqs_delete_entries
+            handler.process_ckans()
+            queue.delete_messages(
+                Entries=handler.sqs_delete_entries()
             )

@@ -9,6 +9,7 @@ from dateutil.parser import parse
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from git import GitCommandError
+import logging
 
 
 class ModStatus(Model):
@@ -81,6 +82,7 @@ class CkanMessage:
         commit = index.commit(
             'NetKAN generated mods - {}'.format(self.mod_version)
         )
+        logging.info('Committing {}'.format(self.mod_version))
         self.indexed = True
         return commit
 
@@ -179,9 +181,11 @@ class MessageHandler:
     # we can ensure we call close on it and run our handler inside
     # a context manager
     def __enter__(self):
+        self.update_master()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.update_master(push=True)
         self.repo.close()
 
     def append(self, message):
@@ -202,7 +206,16 @@ class MessageHandler:
             self.processed.append(ckan)
 
     def sqs_delete_entries(self):
-        return [c.delete_attrs for c in self.process_ckans]
+        return [c.delete_attrs for c in self.processed]
+
+    def update_master(self, push=False):
+        if str(self.repo.active_branch) == 'master':
+            self.repo.heads.master.checkout()
+        self.repo.remotes.origin.pull(
+            'master', strategy='ours'
+        )
+        if push:
+            self.repo.remotes.origin.push('master')
 
     # Currently we intermingle Staged/Master commits
     # separating them out will be a little more efficient
