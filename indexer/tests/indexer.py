@@ -104,13 +104,14 @@ class TestCkan(unittest.TestCase):
         self.assertEqual(self.message.md5_of_body, self.message.mod_file_md5())
 
     def test_ckan_message_status_attrs(self):
-        attrs = self.message.status_attrs()
-        self.assertEqual(attrs.ModIdentifier, 'DogeCoinFlag')
-        self.assertTrue(attrs.success)
-        self.assertIsInstance(attrs.last_inflated, datetime)
-        self.assertEqual(attrs.last_error, '')
-        with self.assertRaises(AttributeError):
-            attrs.last_indexed
+        attrs = self.message.status_attrs(new=True)
+        self.assertEqual(attrs['ModIdentifier'], 'DogeCoinFlag')
+        self.assertTrue(attrs['success'])
+        self.assertIsInstance(attrs['last_inflated'], datetime)
+        with self.assertRaises(KeyError):
+            attrs['last_error']
+        with self.assertRaises(KeyError):
+            attrs['last_indexed']
 
 
 class TestUpdateCkan(TestCkan):
@@ -132,11 +133,11 @@ class TestUpdateCkan(TestCkan):
         )
 
     def test_ckan_message_status_attrs(self):
-        attrs = self.message.status_attrs()
-        self.assertEqual(attrs.ModIdentifier, 'DogeCoinFlag')
-        self.assertTrue(attrs.success)
-        self.assertIsInstance(attrs.last_inflated, datetime)
-        self.assertIsInstance(attrs.last_indexed, datetime)
+        attrs = self.message.status_attrs(new=True)
+        self.assertEqual(attrs['ModIdentifier'], 'DogeCoinFlag')
+        self.assertTrue(attrs['success'])
+        self.assertIsInstance(attrs['last_inflated'], datetime)
+        self.assertIsInstance(attrs['last_indexed'], datetime)
 
 
 class TestStagedCkan(TestUpdateCkan):
@@ -178,12 +179,12 @@ class TestStagedCkan(TestUpdateCkan):
         self.assertEqual(str(self.message.ckan_meta.active_branch), 'master')
 
     def test_ckan_message_status_attrs(self):
-        attrs = self.message.status_attrs()
-        self.assertEqual(attrs.ModIdentifier, 'DogeCoinFlag')
-        self.assertTrue(attrs.success)
-        self.assertIsInstance(attrs.last_inflated, datetime)
-        with self.assertRaises(AttributeError):
-            attrs.last_indexed
+        attrs = self.message.status_attrs(new=True)
+        self.assertEqual(attrs['ModIdentifier'], 'DogeCoinFlag')
+        self.assertTrue(attrs['success'])
+        self.assertIsInstance(attrs['last_inflated'], datetime)
+        with self.assertRaises(KeyError):
+            attrs['last_indexed']
 
 
 class TestNewCkan(TestUpdateCkan):
@@ -222,13 +223,13 @@ class TestFailedCkan(TestCkan):
         )
 
     def test_ckan_message_status_attrs(self):
-        attrs = self.message.status_attrs()
-        self.assertEqual(attrs.ModIdentifier, 'DogeCoinFlag')
-        self.assertFalse(attrs.success)
-        self.assertIsInstance(attrs.last_inflated, datetime)
+        attrs = self.message.status_attrs(new=True)
+        self.assertEqual(attrs['ModIdentifier'], 'DogeCoinFlag')
+        self.assertFalse(attrs['success'])
+        self.assertIsInstance(attrs['last_inflated'], datetime)
         self.assertEqual(
-            attrs.last_error,
+            attrs['last_error'],
             'Curl download failed with error CouldntConnect'
         )
-        with self.assertRaises(AttributeError):
-            attrs.last_indexed
+        with self.assertRaises(KeyError):
+            attrs['last_indexed']

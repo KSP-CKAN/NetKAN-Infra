@@ -28,7 +28,7 @@ class CkanMessage:
 
     def __init__(self, msg, ckan_meta, github_pr=None):
         self.body = msg.body
-        self.ErrorMessage = ''
+        self.ErrorMessage = None
         self.indexed = False
         for item in msg.message_attributes.items():
             attr_type = '{}Value'.format(item[1]['DataType'])
@@ -107,27 +107,36 @@ class CkanMessage:
             self.ckan_meta.remotes.origin.push(self.mod_version)
             self.ckan_meta.heads.master.checkout()
 
-    def status_attrs(self):
-        class Attrs():
-            pass
-        attrs = Attrs()
-        attrs.ModIdentifier = self.ModIdentifier
-        attrs.success = self.Success
-        # We may wish to change the name in the inflator
-        # as the index will set 'last_checked'
-        attrs.last_inflated = parse(self.CheckTime)
-        attrs.last_error = self.ErrorMessage
+    def status_attrs(self, new=False):
+        attrs = {
+            'success': self.Success,
+            # We may wish to change the name in the inflator
+            # as the index will set 'last_checked'
+            'last_inflated': parse(self.CheckTime),
+        }
+        if new:
+            attrs['ModIdentifier'] = self.ModIdentifier
         if self.indexed:
-            attrs.last_indexed = datetime.now(timezone.utc)
+            attrs['last_indexed'] = datetime.now(timezone.utc)
+        if self.ErrorMessage:
+            attrs['last_error'] = self.ErrorMessage
         return attrs
 
     def _process_ckan(self):
-        if self.metadata_changed:
+        if self.metadata_changed():
             self.write_metadata()
             self.commit_metadata()
-            ModStatus(self.status_attrs()).save()
-            return True
-        return False
+        try:
+            status = ModStatus.get(self.ModIdentifier)
+            attrs = self.status_attrs()
+            actions = [
+                getattr(ModStatus, key).set(
+                    attrs[key]
+                ) for key in attrs.keys()
+            ]
+            status.update(actions=actions)
+        except ModStatus.DoesNotExist:
+            ModStatus(**self.status_attrs(True)).save()
 
     def process_ckan(self):
         if not self.Staged:
