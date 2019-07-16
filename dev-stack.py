@@ -107,6 +107,7 @@ t.add_resource(PolicyType(
                     "dynamodb:Query",
                     "dynamodb:PutItem",
                     "dynamodb:UpdateItem",
+                    "dynamodb:Scan",
                 ],
                 "Resource": [
                     GetAtt(dev_db,"Arn")
