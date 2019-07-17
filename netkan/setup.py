@@ -19,6 +19,8 @@ setup(
         'requests',
     ],
     entry_points={
-        'console_scripts': ['netkan-indexer=netkan_indexer.cli:run'],
+        'console_scripts': [
+            'netkan-indexer=netkan.cli:indexer'
+        ],
     },
 )

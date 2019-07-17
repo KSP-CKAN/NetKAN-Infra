@@ -20,7 +20,7 @@ from .indexer import MessageHandler
     required=True, envvar='GH_Token'
 )
 @click.option(
-    '--repo', default='CKAN-meta',
+    '--repo', default='pr_tester',
     help='GitHub repo to raise PR against',
 )
 @click.option(
@@ -36,7 +36,7 @@ from .indexer import MessageHandler
     '--timeout', default=300,
     help='Reduce message visibility timeout for testing',
 )
-def run(queue, metadata, token, repo, user, debug, timeout):
+def indexer(queue, metadata, token, repo, user, debug, timeout):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
