@@ -1,7 +1,31 @@
-version: '2.1'
+version: '3.4'
 
 services:
   indexer:
     build:
-      context: indexer
-
+      dockerfile: indexer/Dockerfile
+      context: .
+      target: dev
+    environment:
+      METADATA_REPO: /home/netkan/pr_tester
+      AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+      GH_Token: ${CKAN_GH_Token}
+    volumes:
+      - ./netkan:/home/netkan/netkan
+      - ./pr_tester:/home/netkan/pr_tester
+  inflator:
+    image: kspckan/inflator
+    environment:
+      QUEUES: InboundDev.fifo,OutboundDev.fifo
+      GH_Token: ${CKAN_GH_Token}
+      AWS_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+    volumes:
+      # Docker will create this with root perms if
+      # it's not created first. First user on most
+      # distros is 1000:1000, which will match the
+      # user in the container.
+      - ${HOME}/ckan_cache:/home/netkan/ckan_cache
