@@ -32,7 +32,11 @@ from .indexer import MessageHandler
     '--debug', is_flag=True, default=False,
     help='Enable debug logging',
 )
-def run(queue, metadata, token, repo, user, debug):
+@click.option(
+    '--timeout', default=300,
+    help='Reduce message visibility timeout for testing',
+)
+def run(queue, metadata, token, repo, user, debug, timeout):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
@@ -49,7 +53,7 @@ def run(queue, metadata, token, repo, user, debug):
         messages = queue.receive_messages(
             MaxNumberOfMessages=10,
             MessageAttributeNames=['All'],
-            VisibilityTimeout=300
+            VisibilityTimeout=timeout
         )
         if not messages:
             continue
