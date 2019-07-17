@@ -78,7 +78,7 @@ class CkanMessage:
 
     def commit_metadata(self):
         index = self.ckan_meta.index
-        index.add(self.ckan_meta.untracked_files)
+        index.add([self.mod_file.as_posix()])
         commit = index.commit(
             'NetKAN generated mods - {}'.format(self.mod_version)
         )
@@ -90,13 +90,21 @@ class CkanMessage:
     def change_branch(self):
         try:
             self.ckan_meta.remotes.origin.fetch(self.mod_version)
-            origin = getattr(
-                self.ckan_meta.remotes.origin.refs, self.mod_version
+            if self.mod_version not in self.ckan_meta.heads:
+                self.ckan_meta.create_head(
+                    self.mod_version,
+                    getattr(
+                        self.ckan_meta.remotes.origin.refs,
+                        self.mod_version
+                    )
+                )
+            branch = getattr(
+                self.ckan_meta.heads, self.mod_version
             )
-            origin.checkout('--ours')
+            branch.checkout()
         except GitCommandError:
-            origin = self.ckan_meta.create_head(self.mod_version)
-            origin.checkout()
+            branch = self.ckan_meta.create_head(self.mod_version)
+            branch.checkout()
             self.ckan_meta.remotes.origin.push(
                 '{mod}:{mod}'.format(mod=self.mod_version)
             )
@@ -141,18 +149,22 @@ class CkanMessage:
             ModStatus(**self.status_attrs(True)).save()
 
     def process_ckan(self):
+        # Process regular CKAN
         if not self.Staged:
             self._process_ckan()
             return
+
+        # Staging operations
         with self.change_branch():
-            if self._process_ckan():
-                self.github_pr.create_pull_request(
-                    title='NetKAN inflated: {}'.format(self.ModIdentifier),
-                    branch=self.mod_version,
-                    body='{} has been staged, please test and merge'.format(
-                        self.ModIdentifier
-                    )
+            self._process_ckan()
+        if self.indexed:
+            self.github_pr.create_pull_request(
+                title='NetKAN inflated: {}'.format(self.ModIdentifier),
+                branch=self.mod_version,
+                body='{} has been staged, please test and merge'.format(
+                    self.ModIdentifier
                 )
+            )
 
     @property
     def delete_attrs(self):

@@ -25,15 +25,22 @@ class GitHubPR:
         }
         response = requests.post(
             'https://api.github.com/repos/{}/{}/pulls'.format(
-                self.repo, self.user
+                self.user, self.repo
             ),
             headers=headers,
             data=json.dumps(data),
         )
         if response.status_code not in [200, 201, 204]:
-            logging.info('PR for {} failed: {}'.format(
+            error = ''
+            message = response.json()['message']
+            try:
+                error = response.json()['errors'][0]['message']
+            except KeyError:
+                pass
+            logging.info('PR for {} failed: {} - {}'.format(
                 branch,
-                response.json()['errors'][0]['message']
+                message,
+                error
             ))
             return
         pr = response.json()
