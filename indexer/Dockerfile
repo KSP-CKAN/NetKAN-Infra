@@ -4,6 +4,7 @@ ADD ./netkan /netkan
 WORKDIR /netkan
 USER netkan
 RUN pip install --user .
+RUN python -m unittest -v
 WORKDIR /
 USER root
 RUN rm -Rf /netkan
@@ -23,4 +24,4 @@ RUN useradd -Ms /bin/bash netkan
 RUN chown -R netkan:netkan /home/netkan
 WORKDIR /home/netkan
 USER netkan
-ENTRYPOINT [".local/bin/netkan-indexer"]
+ENTRYPOINT ".local/bin/netkan-indexer"

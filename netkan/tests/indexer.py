@@ -1,4 +1,4 @@
-from netkan_indexer.indexer import CkanMessage
+from netkan.indexer import CkanMessage
 
 import unittest
 import tempfile

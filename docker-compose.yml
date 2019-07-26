@@ -7,14 +7,17 @@ services:
       context: .
       target: dev
     environment:
-      METADATA_REPO: /home/netkan/pr_tester
+      SSH_KEY: ${CKAN_NETKAN_SSHKEY}
+      METADATA_PATH: ${CKAN_METADATA_PATH}
+      METADATA_USER: ${CKAN_METADATA_USER}
+      METADATA_REPO: ${CKAN_METADATA_REPO}
       AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
       GH_Token: ${CKAN_GH_Token}
+      SQS_QUEUE: OutboundDev.fifo
     volumes:
       - ./netkan:/home/netkan/netkan
-      - ./pr_tester:/home/netkan/pr_tester
   inflator:
     image: kspckan/inflator
     environment:
