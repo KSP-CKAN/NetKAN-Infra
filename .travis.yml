@@ -1,0 +1,19 @@
+sudo: required
+services:
+- docker
+env:
+  global:
+  - DOCKERHUB_USERNAME=kspckanbuilder
+  - secure: oocVPRlELiOf6YAGtFTBTL4LyzWo3IVJBwSxYQfv+zGW1/UN3v/ibYLfrCDobuGMeraCMExzx9/hxywrCvnTsYn3PhD+HokNYdOpEQTUz1cs5Hucz+Zh+SLKV6z8Hki3geAMqPGYbTp9tVaQ7Blph9apkovynZtT8KjUG6VSdI/Wlwb9yRcalQs9OBc+LfKhKKyDVpqwfZoJbDiQv+XjbK/DB/UlyUBjDFNCJ6MgrPUmNaPeAITs3aBiBGPV9dSqvBpEQEo3ub9BnuObwF+3Azw23GtGF1eF8x2oAXq9svYi0sQEIKUKgjzOUWwMcFZ9KIyrLi0VRycaRG8KSq9Movh/e1zCPPonlbxaE7OH0+0Sk5YaxinqDk6KkvYbBscTbY9Ww5QD0v/R0iVQ74MfghJEq36g8chZa9j+ax0Lj6sedV3fUhYlMKb2zm3ZqKp7A8HzP1xxvraJ37L7DINKN6ZJ2ZHbMaHus31zGZVFf7C2mG/KYPJMImkvjLOaOnK4JY1xXvZ+fTGUZ0r6oNMzh8sitkoutOdV+/5o/U46/fJf2onaM1WlQCIQEUwQdmJ/nqErHisiHgPUboCp61IHi+VCWbb0Exeo2Xd1FpPIzc4iscJOaHcOmLWUvRWy0DqpWn/0IsH3sV6OFMOEzhmL0AZDI9QtxgyZcgOXovDreWY=
+before_script:
+- docker pull "kspckan/indexer" || true
+script:
+- docker build . -f indexer/Dockerfile -t kspckan/indexer
+before_deploy:
+- echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+- docker tag "kspckan/indexer" "kspckan/indexer:latest"
+deploy:
+  provider: script
+  script: docker push "kspckan/indexer:latest"
+  on:
+    branch: master
