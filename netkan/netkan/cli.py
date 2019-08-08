@@ -1,10 +1,7 @@
 import click
 import logging
 import boto3
-import sys
-import subprocess
-from git import Repo
-from pathlib import Path
+from .utils import init_repo, init_ssh
 from .github import GitHubPR
 from .indexer import MessageHandler
 
@@ -44,27 +41,8 @@ def indexer(queue, metadata, token, repo, user, key, debug, timeout):
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
-
-    if not key:
-        logging.error('Private Key required for SSH Git')
-        sys.exit(1)
-    logging.info('Private Key found, writing to disk')
-    key_path = Path('/home/netkan/.ssh')
-    key_path.mkdir(exist_ok=True)
-    key_file = Path(key_path, 'id_rsa')
-    if not key_file.exists():
-        key_file.write_text('{}\n'.format(key))
-        key_file.chmod(0o400)
-        scan = subprocess.run([
-            'ssh-keyscan', '-t', 'rsa', 'github.com'
-        ], stdout=subprocess.PIPE)
-        Path(key_path, 'known_hosts').write_text(scan.stdout.decode('utf-8'))
-
-    clone_path = Path('/tmp/CKAN-meta')
-    if not clone_path.exists():
-        logging.info('Cloning metadata')
-        Repo.clone_from(metadata, clone_path, depth=1)
-    ckan_meta = Repo(clone_path)
+    init_ssh(key, '/home/netkan/.ssh')
+    ckan_meta = init_repo(metadata, '/tmp/CKAN-meta')
 
     logging.info('Indexer started at log level %s', level)
     github_pr = GitHubPR(token, repo, user)
@@ -87,3 +65,19 @@ def indexer(queue, metadata, token, repo, user, key, debug, timeout):
             queue.delete_messages(
                 Entries=handler.sqs_delete_entries()
             )
+
+@click.command()
+@click.option(
+    '--queue', default='Inbound.fifo', envvar='SQS_QUEUE',
+    help='SQS Queue to poll for metadata'
+)
+@click.option(
+    '--netkan', default='git@github.com:KSP-CKAN/NetKAN.git',
+    envvar='NETKAN_PATH', help='Path/URL to NetKAN Repo for dev override',
+)
+@click.option(
+    '--debug', is_flag=True, default=False,
+    help='Enable debug logging',
+)
+def scheduler(queue, netkan, debug):
+    click.echo("I did a thing!")

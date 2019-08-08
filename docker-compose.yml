@@ -18,6 +18,20 @@ services:
       SQS_QUEUE: OutboundDev.fifo
     volumes:
       - ./netkan:/home/netkan/netkan
+  scheduler:
+    build:
+      dockerfile: scheduler/Dockerfile
+      context: .
+      target: dev
+    environment:
+      SSH_KEY: ${CKAN_NETKAN_SSHKEY}
+      NETKAN_PATH: ${CKAN_METADATA_PATH}
+      AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+      SQS_QUEUE: InboundDev.fifo
+    volumes:
+      - ./netkan:/home/netkan/netkan
   inflator:
     image: kspckan/inflator
     environment:
