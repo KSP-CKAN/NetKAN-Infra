@@ -1,9 +1,11 @@
 import click
 import logging
 import boto3
+from pathlib import Path
 from .utils import init_repo, init_ssh
 from .github import GitHubPR
 from .indexer import MessageHandler
+from .scheduler import NetkanScheduler
 
 
 @click.command()
@@ -32,7 +34,7 @@ from .indexer import MessageHandler
     help='Enable debug logging',
 )
 @click.option(
-    '--timeout', default=300,
+    '--timeout', default=300, envvar='SQS_TIMEOUT',
     help='Reduce message visibility timeout for testing',
 )
 @click.option('--key', envvar='SSH_KEY', required=True)
@@ -66,13 +68,14 @@ def indexer(queue, metadata, token, repo, user, key, debug, timeout):
                 Entries=handler.sqs_delete_entries()
             )
 
+
 @click.command()
 @click.option(
     '--queue', default='Inbound.fifo', envvar='SQS_QUEUE',
     help='SQS Queue to poll for metadata'
 )
 @click.option(
-    '--netkan', default='git@github.com:KSP-CKAN/NetKAN.git',
+    '--netkan', default='https://github.com/KSP-CKAN/NetKAN.git',
     envvar='NETKAN_PATH', help='Path/URL to NetKAN Repo for dev override',
 )
 @click.option(
@@ -80,4 +83,17 @@ def indexer(queue, metadata, token, repo, user, key, debug, timeout):
     help='Enable debug logging',
 )
 def scheduler(queue, netkan, debug):
-    click.echo("I did a thing!")
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
+    )
+    init_repo(netkan, '/tmp/NetKAN')
+
+    logging.debug('Scheduler started at log level %s', level)
+
+    sqs = boto3.resource('sqs')
+    queue = sqs.get_queue_by_name(QueueName=queue)
+    client = boto3.client('sqs')
+
+    scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue.url, client)
+    scheduler.schedule_all_netkans()
