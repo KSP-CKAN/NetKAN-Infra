@@ -75,25 +75,33 @@ def indexer(queue, metadata, token, repo, user, key, debug, timeout):
     help='SQS Queue to poll for metadata'
 )
 @click.option(
-    '--netkan', default='https://github.com/KSP-CKAN/NetKAN.git',
-    envvar='NETKAN_PATH', help='Path/URL to NetKAN Repo for dev override',
+    '--max-queued', default=20, envvar='MAX_QUEUED',
+    help='SQS Queue to send netkan metadata for scheduling'
 )
 @click.option(
     '--debug', is_flag=True, default=False,
     help='Enable debug logging',
 )
-def scheduler(queue, netkan, debug):
+def scheduler(queue, netkan, max_queued, debug):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
     init_repo(netkan, '/tmp/NetKAN')
 
-    logging.debug('Scheduler started at log level %s', level)
+    logging.info('Scheduler started at log level %s', level)
 
     sqs = boto3.resource('sqs')
     queue = sqs.get_queue_by_name(QueueName=queue)
     client = boto3.client('sqs')
+
+    message_count = int(queue.attributes.get('ApproximateNumberOfMessages', 0))
+    if message_count > max_queued:
+        logging.info(
+            "Run skipped, too many NetKANs left to process ({} left)".format(
+                message_count
+            )
+        )
 
     scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue.url, client)
     scheduler.schedule_all_netkans()
