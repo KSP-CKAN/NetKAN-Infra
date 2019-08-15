@@ -10,24 +10,24 @@ from .scheduler import NetkanScheduler
 
 @click.command()
 @click.option(
-    '--queue', default='Outbound.fifo', envvar='SQS_QUEUE',
+    '--queue', envvar='SQS_QUEUE',
     help='SQS Queue to poll for metadata'
 )
 @click.option(
-    '--metadata', default='git@github.com:KSP-CKAN/CKAN-meta.git',
-    envvar='METADATA_PATH', help='Path/URL to Metadata Repo for dev override',
+    '--metadata', envvar='METADATA_PATH',
+    help='Path/URL/SSH to Metadata Repo',
 )
 @click.option(
     '--token', help='GitHub Token for PRs',
     required=True, envvar='GH_Token'
 )
 @click.option(
-    '--repo', default='CKAN-meta', envvar='METADATA_REPO',
-    help='GitHub repo to raise PR against',
+    '--repo', envvar='METADATA_REPO',
+    help='GitHub repo to raise PR against (Org Repo: CKAN-meta)',
 )
 @click.option(
-    '--user', default='KSP-CKAN', envvar='METADATA_USER',
-    help='GitHub user/org repo resides under',
+    '--user', envvar='METADATA_USER',
+    help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
 )
 @click.option(
     '--debug', is_flag=True, default=False,
@@ -71,8 +71,12 @@ def indexer(queue, metadata, token, repo, user, key, debug, timeout):
 
 @click.command()
 @click.option(
-    '--queue', default='Inbound.fifo', envvar='SQS_QUEUE',
-    help='SQS Queue to poll for metadata'
+    '--queue', envvar='SQS_QUEUE',
+    help='SQS Queue to send netkan metadata for scheduling'
+)
+@click.option(
+    '--netkan', envvar='NETKAN_PATH',
+    help='Path/URL to NetKAN Repo for dev override',
 )
 @click.option(
     '--max-queued', default=20, envvar='MAX_QUEUED',
