@@ -3,8 +3,7 @@ version: '3.4'
 services:
   indexer:
     build:
-      dockerfile: indexer/Dockerfile
-      context: .
+      context: netkan/.
       target: dev
     environment:
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
@@ -19,10 +18,10 @@ services:
       SQS_TIMEOUT: 30
     volumes:
       - ./netkan:/home/netkan/netkan
+    command: indexer
   scheduler:
     build:
-      dockerfile: scheduler/Dockerfile
-      context: .
+      context: netkan/.
       target: dev
     environment:
       NETKAN_PATH: ${NETKAN_METADATA_PATH}
@@ -33,6 +32,7 @@ services:
       MAX_QUEUED: 1
     volumes:
       - ./netkan:/home/netkan/netkan
+    command: scheduler
   inflator:
     image: kspckan/inflator
     environment:

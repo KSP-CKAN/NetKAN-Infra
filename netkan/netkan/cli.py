@@ -7,6 +7,9 @@ from .github import GitHubPR
 from .indexer import MessageHandler
 from .scheduler import NetkanScheduler
 
+@click.group()
+def netkan():
+    pass
 
 @click.command()
 @click.option(
@@ -109,3 +112,6 @@ def scheduler(queue, netkan, max_queued, debug):
 
     scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue.url, client)
     scheduler.schedule_all_netkans()
+
+netkan.add_command(indexer)
+netkan.add_command(scheduler)
