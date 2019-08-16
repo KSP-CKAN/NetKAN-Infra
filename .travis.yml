@@ -6,14 +6,13 @@ env:
   - DOCKERHUB_USERNAME=kspckanbuilder
   - secure: nYqcReYlGtNY9X+yH6RboyzFJPk9C3AExjmCrSMg/kjN7PXYQ5N79IUAtY66K9gkduoKFyoAXN2BlHMThb0BPONuKQpXOi/e/L0oppbQ4MI1XVZJBoajLD5slkfoVy1C0/0urdnHKM1YhQUBz/R0nNLgu3wN8FoLWI4E3DV2bjUwfNF7IwdSibirpJa5fgjVE/zb2sEuTDfS1r0pLIR8Vtw5KB3LdbariMO71TqrM8C2Ibd5rey5NdRTrrzX+inpQbBE6ZdWUm08umsSdYQ0Sb5D4A7CYl8AnLJFTJBfeG8VT1jMTpo5Sy3f8zWFhioBL7lWenmOJdlO7pJrGCC+AEBHRWKjI7PqwoPOJjBmJeTC0BZX8w+sn4nAtfsHplAQRGUbrsX7B51DCCrjBFuvdNnb5faQs6GYjdaRe680ci40DtR/qdIvxlWFNq/6tWjetLnugb2WNey5bDjm42QxMYDXOC+SVXLlEpToNlDeALmxdilf7NLW7tuPbMzJAHG5gOJUXMYFhH1BHBZGyQnvpIN1bpj6UaRcX+IjBfCBAcn+VM0VSbiWFPanY8roFUin1gMZ2nvcP30oMGjE1y4bEQKtX0GFy01cWgpdPwtoJzNWJmz9B+VSV9R3XO2HBkoPO0AiyKSTcqNBN8r5RMItT0c9TGwmqrBUZZZ6z5yBVuM=
 before_script:
-- docker pull "kspckan/indexer" || true
+- docker pull "kspckan/netkan" || true
 script:
-- docker build . -f indexer/Dockerfile -t kspckan/indexer
+- docker build netkan/. -t kspckan/netkan
 before_deploy:
 - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-- docker tag "kspckan/indexer" "kspckan/indexer:latest"
 deploy:
   provider: script
-  script: docker push "kspckan/indexer:latest"
+  script: bin/push_deploy_containers.sh
   on:
     branch: master

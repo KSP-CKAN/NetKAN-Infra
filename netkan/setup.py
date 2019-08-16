@@ -20,7 +20,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'netkan-indexer=netkan.cli:indexer'
+            'netkan=netkan.cli:netkan',
         ],
     },
 )

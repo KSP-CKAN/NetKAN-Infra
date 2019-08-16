@@ -36,6 +36,7 @@ t.add_resource(PolicyType(
                     "sqs:PurgeQueue",
                     "sqs:ReceiveMessage",
                     "sqs:GetQueueUrl",
+                    "sqs:GetQueueAttributes",
                 ],
                 "Resource": [
                     GetAtt(inbound, "Arn"),

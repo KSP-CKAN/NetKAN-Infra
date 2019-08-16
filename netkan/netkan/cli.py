@@ -1,41 +1,43 @@
 import click
 import logging
 import boto3
-import sys
-import subprocess
-from git import Repo
 from pathlib import Path
+from .utils import init_repo, init_ssh
 from .github import GitHubPR
 from .indexer import MessageHandler
+from .scheduler import NetkanScheduler
 
+@click.group()
+def netkan():
+    pass
 
 @click.command()
 @click.option(
-    '--queue', default='Outbound.fifo', envvar='SQS_QUEUE',
+    '--queue', envvar='SQS_QUEUE',
     help='SQS Queue to poll for metadata'
 )
 @click.option(
-    '--metadata', default='git@github.com:KSP-CKAN/CKAN-meta.git',
-    envvar='METADATA_PATH', help='Path/URL to Metadata Repo for dev override',
+    '--metadata', envvar='METADATA_PATH',
+    help='Path/URL/SSH to Metadata Repo',
 )
 @click.option(
     '--token', help='GitHub Token for PRs',
     required=True, envvar='GH_Token'
 )
 @click.option(
-    '--repo', default='CKAN-meta', envvar='METADATA_REPO',
-    help='GitHub repo to raise PR against',
+    '--repo', envvar='METADATA_REPO',
+    help='GitHub repo to raise PR against (Org Repo: CKAN-meta)',
 )
 @click.option(
-    '--user', default='KSP-CKAN', envvar='METADATA_USER',
-    help='GitHub user/org repo resides under',
+    '--user', envvar='METADATA_USER',
+    help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
 )
 @click.option(
     '--debug', is_flag=True, default=False,
     help='Enable debug logging',
 )
 @click.option(
-    '--timeout', default=300,
+    '--timeout', default=300, envvar='SQS_TIMEOUT',
     help='Reduce message visibility timeout for testing',
 )
 @click.option('--key', envvar='SSH_KEY', required=True)
@@ -44,27 +46,8 @@ def indexer(queue, metadata, token, repo, user, key, debug, timeout):
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
-
-    if not key:
-        logging.error('Private Key required for SSH Git')
-        sys.exit(1)
-    logging.info('Private Key found, writing to disk')
-    key_path = Path('/home/netkan/.ssh')
-    key_path.mkdir(exist_ok=True)
-    key_file = Path(key_path, 'id_rsa')
-    if not key_file.exists():
-        key_file.write_text('{}\n'.format(key))
-        key_file.chmod(0o400)
-        scan = subprocess.run([
-            'ssh-keyscan', '-t', 'rsa', 'github.com'
-        ], stdout=subprocess.PIPE)
-        Path(key_path, 'known_hosts').write_text(scan.stdout.decode('utf-8'))
-
-    clone_path = Path('/tmp/CKAN-meta')
-    if not clone_path.exists():
-        logging.info('Cloning metadata')
-        Repo.clone_from(metadata, clone_path, depth=1)
-    ckan_meta = Repo(clone_path)
+    init_ssh(key, '/home/netkan/.ssh')
+    ckan_meta = init_repo(metadata, '/tmp/CKAN-meta')
 
     logging.info('Indexer started at log level %s', level)
     github_pr = GitHubPR(token, repo, user)
@@ -87,3 +70,48 @@ def indexer(queue, metadata, token, repo, user, key, debug, timeout):
             queue.delete_messages(
                 Entries=handler.sqs_delete_entries()
             )
+
+
+@click.command()
+@click.option(
+    '--queue', envvar='SQS_QUEUE',
+    help='SQS Queue to send netkan metadata for scheduling'
+)
+@click.option(
+    '--netkan', envvar='NETKAN_PATH',
+    help='Path/URL to NetKAN Repo for dev override',
+)
+@click.option(
+    '--max-queued', default=20, envvar='MAX_QUEUED',
+    help='SQS Queue to send netkan metadata for scheduling'
+)
+@click.option(
+    '--debug', is_flag=True, default=False,
+    help='Enable debug logging',
+)
+def scheduler(queue, netkan, max_queued, debug):
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
+    )
+    init_repo(netkan, '/tmp/NetKAN')
+
+    logging.info('Scheduler started at log level %s', level)
+
+    sqs = boto3.resource('sqs')
+    queue = sqs.get_queue_by_name(QueueName=queue)
+    client = boto3.client('sqs')
+
+    message_count = int(queue.attributes.get('ApproximateNumberOfMessages', 0))
+    if message_count > max_queued:
+        logging.info(
+            "Run skipped, too many NetKANs left to process ({} left)".format(
+                message_count
+            )
+        )
+
+    scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue.url, client)
+    scheduler.schedule_all_netkans()
+
+netkan.add_command(indexer)
+netkan.add_command(scheduler)

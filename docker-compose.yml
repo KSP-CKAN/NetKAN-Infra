@@ -3,8 +3,7 @@ version: '3.4'
 services:
   indexer:
     build:
-      dockerfile: indexer/Dockerfile
-      context: .
+      context: netkan/.
       target: dev
     environment:
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
@@ -16,8 +15,24 @@ services:
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
       GH_Token: ${CKAN_GH_Token}
       SQS_QUEUE: OutboundDev.fifo
+      SQS_TIMEOUT: 30
     volumes:
       - ./netkan:/home/netkan/netkan
+    command: indexer
+  scheduler:
+    build:
+      context: netkan/.
+      target: dev
+    environment:
+      NETKAN_PATH: ${NETKAN_METADATA_PATH}
+      AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+      SQS_QUEUE: InboundDev.fifo
+      MAX_QUEUED: 1
+    volumes:
+      - ./netkan:/home/netkan/netkan
+    command: scheduler
   inflator:
     image: kspckan/inflator
     environment:

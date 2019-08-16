@@ -221,7 +221,7 @@ class MessageHandler:
         return [c.delete_attrs for c in self.processed]
 
     def update_master(self, push=False):
-        if str(self.repo.active_branch) == 'master':
+        if str(self.repo.active_branch) != 'master':
             self.repo.heads.master.checkout()
         self.repo.remotes.origin.pull(
             'master', strategy='ours'
