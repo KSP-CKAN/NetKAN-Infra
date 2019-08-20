@@ -47,3 +47,16 @@ services:
       # distros is 1000:1000, which will match the
       # user in the container.
       - ${HOME}/ckan_cache:/home/netkan/ckan_cache
+  webhooks:
+    build:
+      context: webhooks/.
+    environment:
+      GH_token: ${CKAN_GH_Token}
+      XKAN_GHSECRET: test
+      CKAN_meta: ${CKAN_METADATA_PATH}
+      NetKAN: ${NETKAN_METADATA_PATH}
+      IA_access: test
+      IA_secret: test
+      IA_collection: test
+    volumes:
+      - ${HOME}/ckan_cache:/home/netkan/ckan_cache
