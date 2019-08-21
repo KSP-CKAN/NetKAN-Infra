@@ -6,12 +6,18 @@ from .utils import init_repo, init_ssh
 from .github import GitHubPR
 from .indexer import MessageHandler
 from .scheduler import NetkanScheduler
+from .status import ModStatus
 
 @click.group()
 def netkan():
     pass
 
+
 @click.command()
+@click.option(
+    '--status-db', envvar='STATUS_DB',
+    help='DynamoDB Tablename'
+)
 @click.option(
     '--queue', envvar='SQS_QUEUE',
     help='SQS Queue to poll for metadata'
@@ -41,7 +47,8 @@ def netkan():
     help='Reduce message visibility timeout for testing',
 )
 @click.option('--key', envvar='SSH_KEY', required=True)
-def indexer(queue, metadata, token, repo, user, key, debug, timeout):
+def indexer(queue, metadata, token, repo, user, key,
+            status_db, debug, timeout):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
@@ -113,5 +120,20 @@ def scheduler(queue, netkan, max_queued, debug):
     scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue.url, client)
     scheduler.schedule_all_netkans()
 
+
+@click.command()
+@click.option(
+    '--status-db', envvar='STATUS_DB',
+    help='DynamoDB Tablename'
+)
+@click.option(
+    '--status-bucket', envvar='STATUS_BUCKET',
+    help='Bucket to Dump status.json'
+)
+def dump_status(status_db, status_bucket):
+    status = ModStatus()
+    status.export_all_mods()
+
 netkan.add_command(indexer)
 netkan.add_command(scheduler)
+netkan.add_command(dump_status)
