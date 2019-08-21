@@ -16,6 +16,7 @@ services:
       GH_Token: ${CKAN_GH_Token}
       SQS_QUEUE: OutboundDev.fifo
       SQS_TIMEOUT: 30
+      STATUS_DB: DevNetKANStatus
     volumes:
       - ./netkan:/home/netkan/netkan
     command: indexer
