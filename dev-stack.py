@@ -1,10 +1,12 @@
 # Converted from SQS_With_CloudWatch_Alarms.template located at:
 # http://aws.amazon.com/cloudformation/aws-cloudformation-templates/
 
-from troposphere import GetAtt, Output, Parameter, Ref, Template, Sub
-from troposphere.iam import AccessKey, Group, LoginProfile, PolicyType
+from troposphere import GetAtt, Output, Ref, Sub, Template
+from troposphere.iam import Group, PolicyType
 from troposphere.sqs import Queue
-from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, ProvisionedThroughput
+from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
+    ProvisionedThroughput
+from troposphere.s3 import Bucket
 
 
 t = Template()
@@ -40,19 +42,19 @@ t.add_resource(PolicyType(
                 ],
                 "Resource": [
                     GetAtt(inbound, "Arn"),
-                    GetAtt(outbound,"Arn")
+                    GetAtt(outbound, "Arn")
                 ]
             },
             {
                 "Effect": "Allow",
-                "Action":"sqs:ListQueues",
+                "Action": "sqs:ListQueues",
                 "Resource": "*",
             },
         ],
     }
 ))
 
-for queue in [inbound,outbound]:
+for queue in [inbound, outbound]:
     t.add_output([
         Output(
             "{}QueueURL".format(queue.title),
@@ -111,18 +113,48 @@ t.add_resource(PolicyType(
                     "dynamodb:Scan",
                 ],
                 "Resource": [
-                    GetAtt(dev_db,"Arn")
+                    GetAtt(dev_db, "Arn")
                 ]
             },
             {
                 "Effect": "Allow",
-                "Action":"dynamodb:ListTables",
+                "Action": "dynamodb:ListTables",
                 "Resource": "*",
             },
         ],
     }
 ))
 
+s3_bucket = t.add_resource(
+    Bucket("CkanTestStatus", BucketName="ckan-test-status")
+)
+
+t.add_output(Output(
+    "TestCkanStatus",
+    Value=Ref(s3_bucket),
+    Description="Name of S3 bucket to hold test status file"
+))
+
+t.add_resource(PolicyType(
+    "S3TestBucket",
+    PolicyName="S3TestBucketAccess",
+    Groups=[Ref(queue_dev_group)],
+    PolicyDocument={
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "s3:PutObject",
+                    "s3:GetObject",
+                    "s3:ListBucket",
+                ],
+                "Resource": [
+                    Sub("${Bucket}/*", Bucket=GetAtt(s3_bucket, "Arn"))
+                ]
+            },
+        ],
+    }
+))
+
 print(t.to_yaml())
-
-
