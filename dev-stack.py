@@ -111,6 +111,7 @@ t.add_resource(PolicyType(
                     "dynamodb:PutItem",
                     "dynamodb:UpdateItem",
                     "dynamodb:Scan",
+                    "dynamodb:BatchWriteItem",
                 ],
                 "Resource": [
                     GetAtt(dev_db, "Arn")

@@ -1,12 +1,14 @@
 import click
-import logging
 import boto3
+import json
+import logging
 from pathlib import Path
 from .utils import init_repo, init_ssh
 from .github import GitHubPR
 from .indexer import MessageHandler
 from .scheduler import NetkanScheduler
 from .status import ModStatus
+
 
 @click.group()
 def netkan():
@@ -130,10 +132,32 @@ def scheduler(queue, netkan, max_queued, debug):
     '--status-bucket', envvar='STATUS_BUCKET',
     help='Bucket to Dump status.json'
 )
-def dump_status(status_db, status_bucket):
-    status = ModStatus()
-    status.export_all_mods()
+@click.option(
+    '--status-key', envvar='STATUS_KEY', default='status/netkan.json',
+    help='Bucket to Dump status.json'
+)
+def dump_status(status_db, status_bucket, status_key):
+    if status_bucket:
+        click.echo('Exporting to s3://{}/{}'.format(status_bucket, status_key))
+        ModStatus.export_to_s3(status_bucket, status_key)
+        click.echo('Done.')
+    else:
+        click.echo(json.dumps(ModStatus.export_all_mods()))
+
+
+@click.command()
+@click.option(
+    '--status-db', envvar='STATUS_DB',
+    help='DynamoDB Tablename'
+)
+@click.argument('filename')
+def restore_status(status_db, filename):
+    click.echo('To keep within free tier rate limits, this could take some time')
+    ModStatus.restore_status(filename)
+    click.echo('Done!')
+
 
 netkan.add_command(indexer)
 netkan.add_command(scheduler)
 netkan.add_command(dump_status)
+netkan.add_command(restore_status)
