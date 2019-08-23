@@ -14,5 +14,4 @@ IA_secret=$IA_secret
 IA_collection=$IA_collection
 END_CONFIG
 
-sleep 86000
-
+plackup -E development -s Twiggy /usr/local/bin/ckan-webhooks

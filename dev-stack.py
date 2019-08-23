@@ -7,7 +7,14 @@ from troposphere.sqs import Queue
 from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
     ProvisionedThroughput
 from troposphere.s3 import Bucket
+import os
+import sys
 
+zone_id = os.environ.get('CKAN_DEV_ZONEID', False)
+
+if not zone_id:
+    print('Zone ID Required from EnvVar `CKAN_DEV_ZONEID`')
+    sys.exit()
 
 t = Template()
 
@@ -154,6 +161,38 @@ t.add_resource(PolicyType(
                     Sub("${Bucket}/*", Bucket=GetAtt(s3_bucket, "Arn"))
                 ]
             },
+        ],
+    }
+))
+
+t.add_resource(PolicyType(
+    "CertBotAccess",
+    PolicyName="CertBotAccess",
+    Groups=[Ref(queue_dev_group)],
+    PolicyDocument={
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "route53:ListHostedZones",
+                    "route53:GetChange"
+                ],
+                "Resource": [
+                    "*"
+                ]
+            },
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "route53:ChangeResourceRecordSets"
+                ],
+                "Resource": [
+                    "arn:aws:route53:::hostedzone/{}".format(
+                        zone_id
+                    ),
+                ]
+            }
         ],
     }
 ))

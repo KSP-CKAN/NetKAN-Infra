@@ -1,5 +1,8 @@
 version: '3.4'
 
+volumes:
+  certbot:
+
 services:
   indexer:
     build:
@@ -75,3 +78,21 @@ services:
     volumes:
       - ./netkan:/home/netkan/netkan
     command: export-status-s3
+  certbot:
+    image: certbot/dns-route53
+    command: certonly -n --agree-tos --email ${CKAN_EMAIL} --dns-route53 -d local.test.ksp-ckan.space --test-cert
+    environment:
+      AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+    volumes:
+      - certbot:/etc/letsencrypt
+  nginx:
+    build:
+      context: nginx/.
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - certbot:/etc/letsencrypt
+      - ./nginx/nginx-dev.conf:/etc/nginx/nginx.conf
