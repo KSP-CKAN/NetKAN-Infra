@@ -135,7 +135,7 @@ def scheduler(queue, netkan, max_queued, debug):
 )
 @click.option(
     '--status-key', envvar='STATUS_KEY', default='status/netkan.json',
-    help='Bucket to Dump status.json'
+    help='Overwrite bucket key, defaults to `status/netkan.json`'
 )
 @click.option(
     '--interval', envvar='STATUS_INTERVAL', default=300,
