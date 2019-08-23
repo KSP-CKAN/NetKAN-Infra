@@ -18,10 +18,6 @@ def netkan():
 
 @click.command()
 @click.option(
-    '--status-db', envvar='STATUS_DB',
-    help='DynamoDB Tablename'
-)
-@click.option(
     '--queue', envvar='SQS_QUEUE',
     help='SQS Queue to poll for metadata'
 )
@@ -126,10 +122,6 @@ def scheduler(queue, netkan, max_queued, debug):
 
 @click.command()
 @click.option(
-    '--status-db', envvar='STATUS_DB',
-    help='DynamoDB Tablename'
-)
-@click.option(
     '--status-bucket', envvar='STATUS_BUCKET', required=True,
     help='Bucket to Dump status.json'
 )
@@ -141,7 +133,7 @@ def scheduler(queue, netkan, max_queued, debug):
     '--interval', envvar='STATUS_INTERVAL', default=300,
     help='Dump status to S3 every `interval` seconds'
 )
-def export_status_s3(status_db, status_bucket, status_key, interval):
+def export_status_s3(status_bucket, status_key, interval):
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s',
         level=logging.INFO
@@ -160,21 +152,13 @@ def export_status_s3(status_db, status_bucket, status_key, interval):
 
 
 @click.command()
-@click.option(
-    '--status-db', envvar='STATUS_DB',
-    help='DynamoDB Tablename'
-)
-def dump_status(status_db):
+def dump_status():
     click.echo(json.dumps(ModStatus.export_all_mods()))
 
 
 @click.command()
-@click.option(
-    '--status-db', envvar='STATUS_DB',
-    help='DynamoDB Tablename'
-)
 @click.argument('filename')
-def restore_status(status_db, filename):
+def restore_status(filename):
     click.echo(
         'To keep within free tier rate limits, this could take some time'
     )
