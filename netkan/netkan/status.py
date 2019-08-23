@@ -1,5 +1,6 @@
 import boto3
 import json
+import logging
 import os
 import time
 from datetime import datetime
@@ -71,6 +72,7 @@ class ModStatus(Model):
             Key=key,
             Body=json.dumps(cls.export_all_mods(compat)).encode(),
         )
+        logging.info('Exported to s3://{}/{}'.format(bucket, key))
 
     # This likely isn't super effecient, but we really should only have to use
     # this operation once to seed the existing history.
