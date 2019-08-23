@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cat > .ksp-cakn << END_CONFIG
+cat > .ksp-ckan << END_CONFIG
 CKAN_meta=$CKAN_meta
 NetKAN=$NetKAN
 netkan_exe=https://ckan-travis.s3.amazonaws.com/netkan.exe
