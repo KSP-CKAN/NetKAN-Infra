@@ -47,7 +47,7 @@ def netkan():
 )
 @click.option('--key', envvar='SSH_KEY', required=True)
 def indexer(queue, metadata, token, repo, user, key,
-            status_db, debug, timeout):
+            debug, timeout):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
