@@ -1,5 +1,8 @@
 version: '3.4'
 
+volumes:
+  certbot:
+
 services:
   indexer:
     build:
@@ -16,6 +19,7 @@ services:
       GH_Token: ${CKAN_GH_Token}
       SQS_QUEUE: OutboundDev.fifo
       SQS_TIMEOUT: 30
+      STATUS_DB: DevNetKANStatus
     volumes:
       - ./netkan:/home/netkan/netkan
     command: indexer
@@ -47,3 +51,48 @@ services:
       # distros is 1000:1000, which will match the
       # user in the container.
       - ${HOME}/ckan_cache:/home/netkan/ckan_cache
+  webhooks:
+    build:
+      context: webhooks/.
+    environment:
+      GH_token: ${CKAN_GH_Token}
+      XKAN_GHSECRET: test
+      CKAN_meta: ${CKAN_METADATA_PATH}
+      NetKAN: ${NETKAN_METADATA_PATH}
+      IA_access: test
+      IA_secret: test
+      IA_collection: test
+    volumes:
+      - ${HOME}/ckan_cache:/home/netkan/ckan_cache
+  status:
+    build:
+      context: netkan/.
+      target: dev
+    environment:
+      STATUS_DB: DevNetKANStatus
+      STATUS_BUCKET: ckan-test-status
+      AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+      STATUS_INTERVAL: 0
+    volumes:
+      - ./netkan:/home/netkan/netkan
+    command: export-status-s3
+  certbot:
+    image: certbot/dns-route53
+    command: certonly -n --agree-tos --email ${CKAN_EMAIL} --dns-route53 -d local.test.ksp-ckan.space --test-cert
+    environment:
+      AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+    volumes:
+      - certbot:/etc/letsencrypt
+  nginx:
+    build:
+      context: nginx/.
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - certbot:/etc/letsencrypt
+      - ./nginx/nginx-dev.conf:/etc/nginx/nginx.conf

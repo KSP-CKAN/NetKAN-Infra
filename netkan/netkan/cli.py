@@ -1,15 +1,20 @@
 import click
-import logging
 import boto3
+import json
+import logging
+import time
 from pathlib import Path
 from .utils import init_repo, init_ssh
 from .github import GitHubPR
 from .indexer import MessageHandler
 from .scheduler import NetkanScheduler
+from .status import ModStatus
+
 
 @click.group()
 def netkan():
     pass
+
 
 @click.command()
 @click.option(
@@ -41,7 +46,8 @@ def netkan():
     help='Reduce message visibility timeout for testing',
 )
 @click.option('--key', envvar='SSH_KEY', required=True)
-def indexer(queue, metadata, token, repo, user, key, debug, timeout):
+def indexer(queue, metadata, token, repo, user, key,
+            debug, timeout):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
@@ -113,5 +119,55 @@ def scheduler(queue, netkan, max_queued, debug):
     scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue.url, client)
     scheduler.schedule_all_netkans()
 
+
+@click.command()
+@click.option(
+    '--status-bucket', envvar='STATUS_BUCKET', required=True,
+    help='Bucket to Dump status.json'
+)
+@click.option(
+    '--status-key', envvar='STATUS_KEY', default='status/netkan.json',
+    help='Overwrite bucket key, defaults to `status/netkan.json`'
+)
+@click.option(
+    '--interval', envvar='STATUS_INTERVAL', default=300,
+    help='Dump status to S3 every `interval` seconds'
+)
+def export_status_s3(status_bucket, status_key, interval):
+    logging.basicConfig(
+        format='[%(asctime)s] [%(levelname)-8s] %(message)s',
+        level=logging.INFO
+    )
+    frequency = 'every {} seconds'.format(
+        interval) if interval else 'once'
+    logging.info('Exporting to s3://{}/{} {}'.format(
+        status_bucket, status_key, frequency)
+    )
+    while True:
+        ModStatus.export_to_s3(status_bucket, status_key, interval)
+        if not interval:
+            break
+        time.sleep(interval)
+    logging.info('Done.')
+
+
+@click.command()
+def dump_status():
+    click.echo(json.dumps(ModStatus.export_all_mods()))
+
+
+@click.command()
+@click.argument('filename')
+def restore_status(filename):
+    click.echo(
+        'To keep within free tier rate limits, this could take some time'
+    )
+    ModStatus.restore_status(filename)
+    click.echo('Done!')
+
+
 netkan.add_command(indexer)
 netkan.add_command(scheduler)
+netkan.add_command(dump_status)
+netkan.add_command(export_status_s3)
+netkan.add_command(restore_status)
