@@ -6,14 +6,16 @@ from troposphere.iam import Policy, Role, InstanceProfile
 from troposphere.sqs import Queue
 from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
     ProvisionedThroughput
-from troposphere.ecs import Cluster
+from troposphere.ecs import Cluster, TaskDefinition, ContainerDefinition, \
+    Service
 from troposphere.ec2 import Instance, CreditSpecification
 from troposphere.cloudformation import Init, InitFile, InitFiles, \
-    InitConfig, Metadata
+    InitConfig, InitService, Metadata
 import os
 import sys
 
 zone_id = os.environ.get('CKAN_ZONEID', False)
+subnet_id = os.environ.get('CKAN_SUBNET', False)
 status_fqdn = 'status.test.ksp-ckan.space'
 
 if not zone_id:
@@ -178,7 +180,7 @@ netkan_role = t.add_resource(Role(
                             "s3:ListBucket",
                         ],
                         "Resource": [
-                            "sarn:aws:s3::status.ksp-ckan.org/*"
+                            "arn:aws:s3:::status.ksp-ckan.org/*"
                         ]
                     },
                 ],
@@ -227,10 +229,11 @@ netkan_profile = t.add_resource(InstanceProfile(
 # to scale the service beyond a single instance (due to some
 # infrastructure sponsorship) it wouldn't take more than
 # adding an AutoScalingGroup + LoadBalancer to scale this.
-netkan_ecs = t.add_resource(Cluster("NetkanCluster"))
+netkan_ecs = t.add_resource(Cluster('NetKANCluster', ClusterName='NetKANCluster'))
 
 netkan_userdata = Sub("""
 #!/bin/bash -xe
+echo ECS_CLUSTER=NetKANCluster > /etc/ecs/ecs.config
 yum install -y aws-cfn-bootstrap
 # Install the files and packages from the metadata
 /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} \
@@ -240,7 +243,7 @@ yum install -y aws-cfn-bootstrap
 /opt/aws/bin/cfn-hup || error_exit 'Failed to start cfn-hup
 # Signal the status from cfn-init
 /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} \
---resource EcsInstance --region ${AWS::Region}
+--resource NetKANCompute --region ${AWS::Region}
 """)
 
 cfn_hup = InitFile(
@@ -266,18 +269,31 @@ docker = InitFile(
     "log-driver": "json-file",
     "log-opts": {
         "max-size": "20m",
-        "max-file": "3",
+        "max-file": "3"
     }
 }
 """)
+cfn_service = InitService(
+    enabled=True,
+    ensureRunning=True,
+    files=[
+        '/etc/cfn/cfn-hup.conf',
+        '/etc/cfn/hooks.d/cfn-auto-reloader.conf',
+    ]
+)
+docker_service = InitService(
+    enabled=True,
+    ensureRunning=True,
+    files=['/etc/docker/daemon.json']
+)
 netkan_instance = Instance(
     'NetKANCompute',
     # ECS Optimised us-west-2
     ImageId='ami-0e434a58221275ed4',
     InstanceType='t3.micro',
     IamInstanceProfile=Ref(netkan_profile),
-    KeyName='techman83_work',
-    SecurityGroups=[],
+    KeyName='techman83_alucard',
+    SecurityGroups=['ckan-bot'],
     UserData=Base64(netkan_userdata),
     # t3 instances are unlimited by default
     CreditSpecification=CreditSpecification(CPUCredits='standard'),
@@ -288,10 +304,36 @@ netkan_instance = Instance(
                 '/etc/cfn/hooks.d/cfn-auto-reloader.conf': reloader,
                 '/etc/docker/daemon.json': docker,
             })
-        )
+        ),
+        'services': {
+            'sysvinit': {
+                'cfn': cfn_service,
+                'docker': docker_service,
+            }
+        },
     })),
 )
-
 t.add_resource(netkan_instance)
+
+test_task = TaskDefinition(
+    "TestTask",
+    ContainerDefinitions=[
+        ContainerDefinition(
+            Image="chentex/random-logger",
+            Memory="16",
+            Name="Test",
+        )
+    ],
+    Family=Sub('${AWS::StackName}TestTask'),
+)
+t.add_resource(test_task)
+test_service = Service(
+    'TestService',
+    Cluster='NetKANCluster',
+    DesiredCount=1,
+    TaskDefinition=Ref(test_task),
+    DependsOn=['NetKANCluster'],
+)
+t.add_resource(test_service)
 
 print(t.to_yaml())
