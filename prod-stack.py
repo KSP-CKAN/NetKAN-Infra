@@ -7,7 +7,7 @@ from troposphere.sqs import Queue
 from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
     ProvisionedThroughput
 from troposphere.ecs import Cluster, TaskDefinition, ContainerDefinition, \
-    Service
+    Service, Secret
 from troposphere.ec2 import Instance, CreditSpecification
 from troposphere.cloudformation import Init, InitFile, InitFiles, \
     InitConfig, InitService, Metadata
@@ -214,7 +214,7 @@ netkan_role = t.add_resource(Role(
                     }
                 ],
             }
-        )
+        ),
     ]
 ))
 
@@ -223,13 +223,59 @@ netkan_profile = t.add_resource(InstanceProfile(
     Roles=[Ref(netkan_role)]
 ))
 
+# To Access the Secrets manager, the ecs agent needs to AsssumeRole permission
+# regardless of what the instance can access.
+netkan_ecs_role = t.add_resource(Role(
+    "NetKANProdEcsRole",
+    AssumeRolePolicyDocument={
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "ecs-tasks.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole"
+            }
+        ]
+    },
+    Policies=[
+        Policy(
+            PolicyName="AllowParameterAccess",
+            PolicyDocument={
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "ssm:DescribeParameters"
+                        ],
+                        "Resource": "*"
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "ssm:GetParameters"
+                        ],
+                        "Resource": Sub(
+                            "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/Test"
+                        )
+                    }
+                ]
+            }
+        )
+    ]
+))
+
 # Indexer Compute
 # We could utilise an autoscaling group, but that is way
 # more complicated for our use case. If at some point we'd
 # to scale the service beyond a single instance (due to some
 # infrastructure sponsorship) it wouldn't take more than
 # adding an AutoScalingGroup + LoadBalancer to scale this.
-netkan_ecs = t.add_resource(Cluster('NetKANCluster', ClusterName='NetKANCluster'))
+netkan_ecs = t.add_resource(
+    Cluster('NetKANCluster', ClusterName='NetKANCluster')
+)
 
 netkan_userdata = Sub("""
 #!/bin/bash -xe
@@ -322,9 +368,13 @@ test_task = TaskDefinition(
             Image="chentex/random-logger",
             Memory="16",
             Name="Test",
+            Secrets=[
+                Secret(Name='TestVar', ValueFrom='Test'),
+            ]
         )
     ],
     Family=Sub('${AWS::StackName}TestTask'),
+    ExecutionRoleArn=Ref(netkan_ecs_role),
 )
 t.add_resource(test_task)
 test_service = Service(
