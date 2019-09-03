@@ -7,7 +7,7 @@ from troposphere.sqs import Queue
 from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
     ProvisionedThroughput
 from troposphere.ecs import Cluster, TaskDefinition, ContainerDefinition, \
-    Service, Secret
+    Service, Secret, Environment, DeploymentConfiguration
 from troposphere.ec2 import Instance, CreditSpecification
 from troposphere.cloudformation import Init, InitFile, InitFiles, \
     InitConfig, InitService, Metadata
@@ -258,7 +258,7 @@ netkan_ecs_role = t.add_resource(Role(
                             "ssm:GetParameters"
                         ],
                         "Resource": Sub(
-                            "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/Test"
+                            "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/NetKAN/Indexer/*"
                         )
                     }
                 ]
@@ -361,29 +361,132 @@ netkan_instance = Instance(
 )
 t.add_resource(netkan_instance)
 
-test_task = TaskDefinition(
-    "TestTask",
-    ContainerDefinitions=[
-        ContainerDefinition(
-            Image="chentex/random-logger",
-            Memory="16",
-            Name="Test",
-            Secrets=[
-                Secret(Name='TestVar', ValueFrom='Test'),
-            ]
-        )
-    ],
-    Family=Sub('${AWS::StackName}TestTask'),
-    ExecutionRoleArn=Ref(netkan_ecs_role),
-)
-t.add_resource(test_task)
-test_service = Service(
-    'TestService',
-    Cluster='NetKANCluster',
-    DesiredCount=1,
-    TaskDefinition=Ref(test_task),
-    DependsOn=['NetKANCluster'],
-)
-t.add_resource(test_service)
+services = [
+    {
+        'name': 'Indexer',
+        'secrets': ['SSH_KEY', 'GH_Token'],
+        'env': [
+            ('METADATA_PATH', 'git@github.com:Techman83/pr_tester.git'),
+            ('METADATA_USER', 'Techman83'),
+            ('METADATA_REPO', 'pr_tester'),
+            ('SQS_QUEUE', GetAtt(outbound, 'QueueName')),
+        ]
+    },
+    {
+        'name': 'Scheduler',
+        'secrets': [],
+        'env': [
+            ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
+            ('NETKAN_PATH', 'https://github.com/Techman83/pr_tester.git'),
+        ],
+        'cron': '00 */1 * * *',
+    },
+    {
+        'name': 'Inflator',
+        'image': 'kspckan/inflator',
+        'secrets': ['GH_Token'],
+        'env': [
+            (
+                'QUEUES', '{},{}'.format(
+                    GetAtt(inbound, 'QueueName'),
+                    GetAtt(outbound, 'QueueName')
+                )
+            )
+        ],
+        'volumes': [
+            ('ckan_cache', '/home/netkan/ckan_cache')
+        ]
+    },
+    {
+        'name': 'Webhooks',
+        'image': 'kspckan/webhooks',
+        'secrets': [
+            'SSH_KEY', 'GH_Token', 'XKAN_GHSECRET',
+            'IA_access', 'IA_secret',
+        ],
+        'env': [
+            ('CKAN_meta', 'git@github.com:Techman83/pr_tester.git'),
+            ('NetKAN', 'https://github.com/Techman83/pr_tester.git'),
+            ('IA_collection', 'kspckanmods'),
+        ],
+        'volumes': [
+            ('ckan_cache', '/home/netkan/ckan_cache')
+        ]
+    },
+    {
+        'name': 'StatusDumper',
+        'env': [
+            ('STATUS_BUCKET', 'status.ksp-ckan.org'),
+            ('STATUS_KEY', 'status/test_override.json'),
+        ],
+    },
+    {
+        'name': 'CertBot',
+        'image': 'certbot/dns-route53',
+        'command': 'certonly -n --agree-tos --email domains@ksp-ckan.space --dns-route53 -d status.ksp-ckan.space',
+        'volumes': [
+            ('certbot', '/etc/letsencrypt')
+        ],
+        'cron': '00 0 * * 7',
+    },
+    {
+        'name': 'WebhooksProxy',
+        'image': 'kspckan/webhooks-proxy',
+        'ports': ['80', '443'],
+        'volumes': [
+            ('certbot', '/etc/letsencrypt')
+        ]
+    },
+]
+
+# TODO: Add relevant port mappings
+# TODO: Add volume mounts
+
+for service in services:
+    secrets = service.get('secrets', [])
+    envs = service.get('env', [])
+    name = service['name']
+    cron = service.get('cron', None)
+    task = TaskDefinition(
+        '{}Task'.format(name),
+        ContainerDefinitions=[
+            ContainerDefinition(
+                Image=service.get('image', 'kspckan/netkan'),
+                Memory=service.get('memory', '96'),
+                Name=service['name'],
+                Secrets=[
+                    Secret(
+                        Name=x,
+                        ValueFrom='/NetKAN/Indexer/{}'.format(x)
+                    ) for x in secrets
+                ],
+                Environment=[
+                    Environment(
+                        Name=x[0], Value=x[1]
+                    ) for x in envs
+                ]
+            ),
+        ],
+        Family=Sub('${AWS::StackName}${name}', name=name),
+        ExecutionRoleArn=Ref(netkan_ecs_role)
+    )
+    t.add_resource(task)
+
+    if cron:
+        # TODO: Configure Cron Tasks
+        continue
+
+    t.add_resource(Service(
+        '{}Service'.format(name),
+        Cluster='NetKANCluster',
+        DesiredCount=1,
+        TaskDefinition=Ref(task),
+        # Allow for in place service redeployments
+        DeploymentConfiguration=DeploymentConfiguration(
+            MaximumPercent=100,
+            MinimumHealthyPercent=0
+        ),
+        DependsOn=['NetKANCluster']
+    ))
 
 print(t.to_yaml())
