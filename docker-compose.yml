@@ -55,7 +55,8 @@ services:
     build:
       context: webhooks/.
     environment:
-      GH_token: ${CKAN_GH_Token}
+      SSH_KEY: ${CKAN_NETKAN_SSHKEY}
+      GH_Token: ${CKAN_GH_Token}
       XKAN_GHSECRET: test
       CKAN_meta: ${CKAN_METADATA_PATH}
       NetKAN: ${NETKAN_METADATA_PATH}
