@@ -7,7 +7,8 @@ from troposphere.sqs import Queue
 from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
     ProvisionedThroughput
 from troposphere.ecs import Cluster, TaskDefinition, ContainerDefinition, \
-    Service, Secret, Environment, DeploymentConfiguration
+    Service, Secret, Environment, DeploymentConfiguration, Volume, \
+    Host, MountPoint
 from troposphere.ec2 import Instance, CreditSpecification
 from troposphere.cloudformation import Init, InitFile, InitFiles, \
     InitConfig, InitService, Metadata
@@ -16,7 +17,9 @@ import sys
 
 zone_id = os.environ.get('CKAN_ZONEID', False)
 subnet_id = os.environ.get('CKAN_SUBNET', False)
-status_fqdn = 'status.test.ksp-ckan.space'
+bot_fqdn = 'netkan.ksp-ckan.space'
+email = 'domains@ksp-ckan.space'
+param_namespace = '/Test/Indexer/'
 
 if not zone_id:
     print('Zone ID Required from EnvVar `CKAN_ZONEID`')
@@ -258,7 +261,8 @@ netkan_ecs_role = t.add_resource(Role(
                             "ssm:GetParameters"
                         ],
                         "Resource": Sub(
-                            "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/NetKAN/Indexer/*"
+                            "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ns}*",
+                            ns=param_namespace
                         )
                     }
                 ]
@@ -284,9 +288,16 @@ yum install -y aws-cfn-bootstrap
 # Install the files and packages from the metadata
 /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} \
 --resource NetKANCompute --region ${AWS::Region}
+
+# ECS Volumes are a pain and I don't want to shave any more yaks today
+mkdir /mnt/letsencrypt
+mkdir /mnt/ckan_cache
+chown -R 1000:1000 /mnt/ckan_cache
+
 # Start up the cfn-hup daemon to listen for changes
 # to the metadata
 /opt/aws/bin/cfn-hup || error_exit 'Failed to start cfn-hup
+
 # Signal the status from cfn-init
 /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} \
 --resource NetKANCompute --region ${AWS::Region}
@@ -364,16 +375,22 @@ t.add_resource(netkan_instance)
 services = [
     {
         'name': 'Indexer',
+        'command': 'indexer',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
             ('METADATA_PATH', 'git@github.com:Techman83/pr_tester.git'),
             ('METADATA_USER', 'Techman83'),
             ('METADATA_REPO', 'pr_tester'),
             ('SQS_QUEUE', GetAtt(outbound, 'QueueName')),
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+        ],
+        'volumes': [
+            ('ckan_cache', '/home/netkan/ckan_cache')
         ]
     },
     {
         'name': 'Scheduler',
+        'command': 'scheduler',
         'secrets': [],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
@@ -387,9 +404,10 @@ services = [
         'secrets': ['GH_Token'],
         'env': [
             (
-                'QUEUES', '{},{}'.format(
-                    GetAtt(inbound, 'QueueName'),
-                    GetAtt(outbound, 'QueueName')
+                'QUEUES', Sub(
+                    '${Inbound},${Outbound}',
+                    Inbound=GetAtt(inbound, 'QueueName'),
+                    Outbound=GetAtt(outbound, 'QueueName')
                 )
             )
         ],
@@ -413,19 +431,23 @@ services = [
             ('ckan_cache', '/home/netkan/ckan_cache')
         ]
     },
-    {
-        'name': 'StatusDumper',
-        'env': [
-            ('STATUS_BUCKET', 'status.ksp-ckan.org'),
-            ('STATUS_KEY', 'status/test_override.json'),
-        ],
-    },
+    #{
+    #    'name': 'StatusDumper',
+    #    'command': 'export-status-s3',
+    #    'env': [
+    #        ('STATUS_BUCKET', 'status.ksp-ckan.org'),
+    #        ('STATUS_KEY', 'status/test_override.json'),
+    #    ],
+    #},
     {
         'name': 'CertBot',
         'image': 'certbot/dns-route53',
-        'command': 'certonly -n --agree-tos --email domains@ksp-ckan.space --dns-route53 -d status.ksp-ckan.space',
+        'command': [
+            'certonly', '-n', '--agree-tos', '--email',
+            email, '--dns-route53', '-d', bot_fqdn
+        ],
         'volumes': [
-            ('certbot', '/etc/letsencrypt')
+            ('letsencrypt', '/etc/letsencrypt')
         ],
         'cron': '00 0 * * 7',
     },
@@ -434,42 +456,72 @@ services = [
         'image': 'kspckan/webhooks-proxy',
         'ports': ['80', '443'],
         'volumes': [
-            ('certbot', '/etc/letsencrypt')
-        ]
+            ('letsencrypt', '/etc/letsencrypt')
+        ],
     },
 ]
 
 # TODO: Add relevant port mappings
-# TODO: Add volume mounts
 
 for service in services:
     secrets = service.get('secrets', [])
     envs = service.get('env', [])
     name = service['name']
-    cron = service.get('cron', None)
+    cron = service.get('cron')
+    command = service.get('command')
+    volumes_from = service.get('volumes_from', [])
+    volumes = service.get('volumes', [])
     task = TaskDefinition(
         '{}Task'.format(name),
-        ContainerDefinitions=[
-            ContainerDefinition(
-                Image=service.get('image', 'kspckan/netkan'),
-                Memory=service.get('memory', '96'),
-                Name=service['name'],
-                Secrets=[
-                    Secret(
-                        Name=x,
-                        ValueFrom='/NetKAN/Indexer/{}'.format(x)
-                    ) for x in secrets
-                ],
-                Environment=[
-                    Environment(
-                        Name=x[0], Value=x[1]
-                    ) for x in envs
-                ]
-            ),
-        ],
+        ContainerDefinitions=[],
         Family=Sub('${AWS::StackName}${name}', name=name),
-        ExecutionRoleArn=Ref(netkan_ecs_role)
+        ExecutionRoleArn=Ref(netkan_ecs_role),
+        Volumes=[],
+        DependsOn=[],
     )
+    definition = ContainerDefinition(
+        Image=service.get('image', 'kspckan/netkan'),
+        Memory=service.get('memory', '96'),
+        Name=service['name'],
+        Secrets=[
+            Secret(
+                Name=x,
+                ValueFrom='{}{}'.format(
+                    param_namespace, x
+                )
+            ) for x in secrets
+        ],
+        Environment=[
+            Environment(
+                Name=x[0], Value=x[1]
+            ) for x in envs
+        ],
+        MountPoints=[],
+    )
+    if command:
+        command = command if isinstance(command, list) else [command]
+        definition.Command = command
+    for volume in volumes:
+        volume_name = '{}{}'.format(
+            name,
+            ''.join([i for i in volume[0].capitalize() if i.isalpha()])
+        )
+        task.Volumes.append(
+            Volume(
+                Name=volume_name,
+                Host=Host(
+                    SourcePath=('/mnt/{}'.format(volume[0]))
+                )
+            )
+        )
+        definition.MountPoints.append(
+            MountPoint(
+                ContainerPath=volume[1],
+                SourceVolume=volume_name
+            )
+        )
+
+    task.ContainerDefinitions.append(definition)
     t.add_resource(task)
 
     if cron:
