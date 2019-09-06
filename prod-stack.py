@@ -183,7 +183,7 @@ netkan_role = t.add_resource(Role(
                             "s3:ListBucket",
                         ],
                         "Resource": [
-                            "arn:aws:s3:::status.ksp-ckan.org/*"
+                            "arn:aws:s3:::status.ksp-ckan.space/*"
                         ]
                     },
                 ],
@@ -386,7 +386,7 @@ services = [
         ],
         'volumes': [
             ('ckan_cache', '/home/netkan/ckan_cache')
-        ]
+        ],
     },
     {
         'name': 'Scheduler',
@@ -416,29 +416,13 @@ services = [
         ]
     },
     {
-        'name': 'Webhooks',
-        'image': 'kspckan/webhooks',
-        'secrets': [
-            'SSH_KEY', 'GH_Token', 'XKAN_GHSECRET',
-            'IA_access', 'IA_secret',
-        ],
+        'name': 'StatusDumper',
+        'command': 'export-status-s3',
         'env': [
-            ('CKAN_meta', 'git@github.com:Techman83/pr_tester.git'),
-            ('NetKAN', 'https://github.com/Techman83/pr_tester.git'),
-            ('IA_collection', 'kspckanmods'),
+            ('STATUS_BUCKET', 'status.ksp-ckan.space'),
+            ('STATUS_KEY', 'status/test_override.json'),
         ],
-        'volumes': [
-            ('ckan_cache', '/home/netkan/ckan_cache')
-        ]
     },
-    #{
-    #    'name': 'StatusDumper',
-    #    'command': 'export-status-s3',
-    #    'env': [
-    #        ('STATUS_BUCKET', 'status.ksp-ckan.org'),
-    #        ('STATUS_KEY', 'status/test_override.json'),
-    #    ],
-    #},
     {
         'name': 'CertBot',
         'image': 'certbot/dns-route53',
