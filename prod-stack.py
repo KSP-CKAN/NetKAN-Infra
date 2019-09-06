@@ -8,7 +8,7 @@ from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
     ProvisionedThroughput
 from troposphere.ecs import Cluster, TaskDefinition, ContainerDefinition, \
     Service, Secret, Environment, DeploymentConfiguration, Volume, \
-    Host, MountPoint
+    Host, MountPoint, PortMapping, ContainerDependency
 from troposphere.ec2 import Instance, CreditSpecification
 from troposphere.cloudformation import Init, InitFile, InitFiles, \
     InitConfig, InitService, Metadata
@@ -449,28 +449,45 @@ services = [
         'volumes': [
             ('letsencrypt', '/etc/letsencrypt')
         ],
-        'cron': '00 0 * * 7',
+        'cron': '0 0 * * 7',
     },
     {
-        'name': 'WebhooksProxy',
-        'image': 'kspckan/webhooks-proxy',
-        'ports': ['80', '443'],
-        'volumes': [
-            ('letsencrypt', '/etc/letsencrypt')
-        ],
-    },
+        'name': 'Webhooks',
+        'containers': [
+            {
+                'name': 'webhooks',
+                'image': 'kspckan/webhooks',
+                'memory': '156',
+                'secrets': [
+                    'SSH_KEY', 'GH_Token', 'XKAN_GHSECRET',
+                    'IA_access', 'IA_secret',
+                ],
+                'env': [
+                    ('CKAN_meta', 'git@github.com:techman83/moartests.git'),
+                    ('NetKAN', 'https://github.com/Techman83/pr_tester.git'),
+                    ('IA_collection', 'kspckanmods'),
+                ],
+                'volumes': [
+                    ('ckan_cache', '/home/netkan/ckan_cache')
+                ],
+            },
+            {
+                'name': 'WebhooksProxy',
+                'image': 'kspckan/webhooks-proxy',
+                'ports': ['80', '443'],
+                'volumes': [
+                    ('letsencrypt', '/etc/letsencrypt')
+                ],
+                'depends': 'webhooks',
+            },
+        ]
+    }
 ]
 
-# TODO: Add relevant port mappings
-
 for service in services:
-    secrets = service.get('secrets', [])
-    envs = service.get('env', [])
     name = service['name']
     cron = service.get('cron')
-    command = service.get('command')
-    volumes_from = service.get('volumes_from', [])
-    volumes = service.get('volumes', [])
+    containers = service.get('containers', [service])
     task = TaskDefinition(
         '{}Task'.format(name),
         ContainerDefinitions=[],
@@ -479,53 +496,91 @@ for service in services:
         Volumes=[],
         DependsOn=[],
     )
-    definition = ContainerDefinition(
-        Image=service.get('image', 'kspckan/netkan'),
-        Memory=service.get('memory', '96'),
-        Name=service['name'],
-        Secrets=[
-            Secret(
-                Name=x,
-                ValueFrom='{}{}'.format(
-                    param_namespace, x
-                )
-            ) for x in secrets
-        ],
-        Environment=[
-            Environment(
-                Name=x[0], Value=x[1]
-            ) for x in envs
-        ],
-        MountPoints=[],
-    )
-    if command:
-        command = command if isinstance(command, list) else [command]
-        definition.Command = command
-    for volume in volumes:
-        volume_name = '{}{}'.format(
-            name,
-            ''.join([i for i in volume[0].capitalize() if i.isalpha()])
-        )
-        task.Volumes.append(
-            Volume(
-                Name=volume_name,
-                Host=Host(
-                    SourcePath=('/mnt/{}'.format(volume[0]))
-                )
-            )
-        )
-        definition.MountPoints.append(
-            MountPoint(
-                ContainerPath=volume[1],
-                SourceVolume=volume_name
-            )
-        )
 
-    task.ContainerDefinitions.append(definition)
+    for container in containers:
+        secrets = container.get('secrets', [])
+        envs = container.get('env', [])
+        command = container.get('command')
+        volumes = container.get('volumes', [])
+        ports = container.get('ports', [])
+        depends = container.get('depends')
+        definition = ContainerDefinition(
+            Image=container.get('image', 'kspckan/netkan'),
+            Memory=container.get('memory', '96'),
+            Name=container['name'],
+            Secrets=[
+                Secret(
+                    Name=x,
+                    ValueFrom='{}{}'.format(
+                        param_namespace, x
+                    )
+                ) for x in secrets
+            ],
+            Environment=[
+                Environment(
+                    Name=x[0], Value=x[1]
+                ) for x in envs
+            ],
+            MountPoints=[],
+            PortMappings=[],
+            DependsOn=[],
+            Links=[],
+        )
+        if command:
+            command = command if isinstance(command, list) else [command]
+            definition.Command = command
+        for volume in volumes:
+            volume_name = '{}{}'.format(
+                name,
+                ''.join([i for i in volume[0].capitalize() if i.isalpha()])
+            )
+            task.Volumes.append(
+                Volume(
+                    Name=volume_name,
+                    Host=Host(
+                        SourcePath=('/mnt/{}'.format(volume[0]))
+                    )
+                )
+            )
+            definition.MountPoints.append(
+                MountPoint(
+                    ContainerPath=volume[1],
+                    SourceVolume=volume_name
+                )
+            )
+        for port in ports:
+            definition.PortMappings.append(
+                PortMapping(
+                    ContainerPort=port,
+                    HostPort=port,
+                    Protocol='tcp',
+                )
+            )
+        if depends:
+            definition.DependsOn.append(
+                ContainerDependency(
+                    Condition='START',
+                    ContainerName=depends,
+                )
+            )
+            definition.Links.append(depends)
+        task.ContainerDefinitions.append(definition)
     t.add_resource(task)
 
     if cron:
-        # TODO: Configure Cron Tasks
+        target = Target(
+            Id="{}-Schedule".format(name),
+            Arn=Ref(netkan_ecs),
+            EcsParameters=EcsParameters(
+                TaskDefinitionArn=Ref(task)
+            )
+        )
+        t.add_resource(Rule(
+            '{}Rule'.format(name),
+            Description='Scheduler for Indexing Runs',
+            ScheduleExpression=cron,
+            Targets=[target],
+        ))
         continue
 
     t.add_resource(Service(

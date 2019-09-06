@@ -6,6 +6,8 @@ if [ ! -f ".ssh/id_rsa" ]; then
 	chmod 400 .ssh/id_rsa
 fi
 
+ssh-keyscan -t rsa github.com > .ssh/known_hosts
+
 cat > .ksp-ckan << END_CONFIG
 CKAN_meta=$CKAN_meta
 NetKAN=$NetKAN
@@ -20,4 +22,4 @@ IA_secret=$IA_secret
 IA_collection=$IA_collection
 END_CONFIG
 
-plackup -E development -s Twiggy /usr/local/bin/ckan-webhooks
+plackup -E production -s Twiggy /usr/local/bin/ckan-webhooks
