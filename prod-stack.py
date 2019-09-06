@@ -12,6 +12,7 @@ from troposphere.ecs import Cluster, TaskDefinition, ContainerDefinition, \
 from troposphere.ec2 import Instance, CreditSpecification
 from troposphere.cloudformation import Init, InitFile, InitFiles, \
     InitConfig, InitService, Metadata
+from troposphere.events import Rule, Target, EcsParameters
 import os
 import sys
 
@@ -395,12 +396,14 @@ services = [
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_PATH', 'https://github.com/Techman83/pr_tester.git'),
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
-        'cron': '00 */1 * * *',
+        'cron': '0 */1 * * *',
     },
     {
         'name': 'Inflator',
         'image': 'kspckan/inflator',
+        'memory': '156',
         'secrets': ['GH_Token'],
         'env': [
             (
@@ -409,7 +412,8 @@ services = [
                     Inbound=GetAtt(inbound, 'QueueName'),
                     Outbound=GetAtt(outbound, 'QueueName')
                 )
-            )
+            ),
+            ('AWS_REGION', Sub('${AWS::Region}')),
         ],
         'volumes': [
             ('ckan_cache', '/home/netkan/ckan_cache')
