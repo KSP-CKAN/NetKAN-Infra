@@ -9,7 +9,7 @@ from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
 from troposphere.ecs import Cluster, TaskDefinition, ContainerDefinition, \
     Service, Secret, Environment, DeploymentConfiguration, Volume, \
     Host, MountPoint, PortMapping, ContainerDependency
-from troposphere.ec2 import Instance, CreditSpecification
+from troposphere.ec2 import Instance, CreditSpecification, Tag
 from troposphere.cloudformation import Init, InitFile, InitFiles, \
     InitConfig, InitService, Metadata
 from troposphere.events import Rule, Target, EcsParameters
@@ -272,6 +272,61 @@ netkan_ecs_role = t.add_resource(Role(
     ]
 ))
 
+## To be able to schedule tasks, the scheduler needs to be allowed to perform
+## the tasks.
+netkan_scheduler_role = t.add_resource(Role(
+    "NetKANProdSchedulerRole",
+    AssumeRolePolicyDocument={
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "ecs-tasks.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole"
+            }
+        ]
+    },
+    Policies=[
+        Policy(
+            PolicyName="AllowEcsTaskScheduling",
+            PolicyDocument={
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "ecs:RunTask"
+                        ],
+                        "Resource": [
+                            Sub('arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBotScheduler:*'),
+                            Sub('arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBotCertBot:*')
+                        ],
+                        "Condition": {
+                            "ArnLike": {
+                                "ecs:cluster": GetAtt('NetKANCluster', 'Arn')
+                            }
+                        }
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": "iam:PassRole",
+                        "Resource": [
+                            "*"
+                        ],
+                        "Condition": {
+                            "StringLike": {
+                                "iam:PassedToService": "ecs-tasks.amazonaws.com"
+                            }
+                        }
+                    }
+                ]
+            }
+        )
+    ]
+))
+
 # Indexer Compute
 # We could utilise an autoscaling group, but that is way
 # more complicated for our use case. If at some point we'd
@@ -355,6 +410,10 @@ netkan_instance = Instance(
     UserData=Base64(netkan_userdata),
     # t3 instances are unlimited by default
     CreditSpecification=CreditSpecification(CPUCredits='standard'),
+    Tags=[
+        Tag(Key='Name', Value='NetKAN Indexer'),
+        Tag(Key='Service', Value='Indexer'),
+    ],
     Metadata=Metadata(Init({
         'config': InitConfig(
             files=InitFiles({
@@ -398,7 +457,7 @@ services = [
             ('NETKAN_PATH', 'https://github.com/Techman83/pr_tester.git'),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
-        'cron': '0 */1 * * *',
+        'cron': 'cron(0/1 * * * ? *)',
     },
     {
         'name': 'Inflator',
@@ -437,7 +496,7 @@ services = [
         'volumes': [
             ('letsencrypt', '/etc/letsencrypt')
         ],
-        'cron': '0 0 * * 7',
+        'cron': 'cron(0 0 ? * MON *)',
     },
     {
         'name': 'Webhooks',
@@ -558,7 +617,8 @@ for service in services:
     if cron:
         target = Target(
             Id="{}-Schedule".format(name),
-            Arn=Ref(netkan_ecs),
+            Arn=GetAtt(netkan_ecs, 'Arn'),
+            RoleArn=GetAtt(netkan_ecs_role, 'Arn'),
             EcsParameters=EcsParameters(
                 TaskDefinitionArn=Ref(task)
             )
