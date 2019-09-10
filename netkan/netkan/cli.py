@@ -115,9 +115,9 @@ def scheduler(queue, netkan, max_queued, debug):
                 message_count
             )
         )
-
-    scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue.url, client)
-    scheduler.schedule_all_netkans()
+    else:
+        scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue.url, client)
+        scheduler.schedule_all_netkans()
 
 
 @click.command()
