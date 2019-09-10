@@ -282,7 +282,7 @@ netkan_scheduler_role = t.add_resource(Role(
             {
                 "Effect": "Allow",
                 "Principal": {
-                    "Service": "ecs-tasks.amazonaws.com"
+                    "Service": "events.amazonaws.com"
                 },
                 "Action": "sts:AssumeRole"
             }
@@ -454,10 +454,10 @@ services = [
         'secrets': [],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
-            ('NETKAN_PATH', 'https://github.com/Techman83/pr_tester.git'),
+            ('NETKAN_PATH', 'https://github.com/Techman83/NetKAN.git'),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
-        'cron': 'cron(0/1 * * * ? *)',
+        'cron': 'cron(0 * * * ? *)',
     },
     {
         'name': 'Inflator',
@@ -618,7 +618,7 @@ for service in services:
         target = Target(
             Id="{}-Schedule".format(name),
             Arn=GetAtt(netkan_ecs, 'Arn'),
-            RoleArn=GetAtt(netkan_ecs_role, 'Arn'),
+            RoleArn=GetAtt(netkan_scheduler_role, 'Arn'),
             EcsParameters=EcsParameters(
                 TaskDefinitionArn=Ref(task)
             )
