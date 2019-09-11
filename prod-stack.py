@@ -9,7 +9,8 @@ from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
 from troposphere.ecs import Cluster, TaskDefinition, ContainerDefinition, \
     Service, Secret, Environment, DeploymentConfiguration, Volume, \
     Host, MountPoint, PortMapping, ContainerDependency
-from troposphere.ec2 import Instance, CreditSpecification, Tag
+from troposphere.ec2 import Instance, CreditSpecification, Tag, \
+    BlockDeviceMapping, EBSBlockDevice
 from troposphere.cloudformation import Init, InitFile, InitFiles, \
     InitConfig, InitService, Metadata
 from troposphere.events import Rule, Target, EcsParameters
@@ -345,10 +346,17 @@ yum install -y aws-cfn-bootstrap
 /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} \
 --resource NetKANCompute --region ${AWS::Region}
 
-# ECS Volumes are a pain and I don't want to shave any more yaks today
+# ECS Volumes are a pain and I don't want to shave any more yaks
 mkdir /mnt/letsencrypt
-mkdir /mnt/ckan_cache
+mkfs.ext4 -L CKANCACHE /dev/xvdh
+mkdir -p /mnt/ckan_cache
+echo "LABEL=CKANCACHE /mnt/ckan_cache ext4 defaults 0 2" >> /etc/fstab
+mount -a
 chown -R 1000:1000 /mnt/ckan_cache
+
+# Docker doesn't see the new block device until restarted
+service docker stop && service docker start
+systemctl start ecs
 
 # Start up the cfn-hup daemon to listen for changes
 # to the metadata
@@ -429,6 +437,15 @@ netkan_instance = Instance(
             }
         },
     })),
+    BlockDeviceMappings=[
+        BlockDeviceMapping(
+            DeviceName='/dev/xvdh',
+            Ebs=EBSBlockDevice(
+                VolumeSize='100',
+                VolumeType='gp2',
+            )
+        )
+    ]
 )
 t.add_resource(netkan_instance)
 
