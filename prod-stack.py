@@ -220,6 +220,21 @@ netkan_role = t.add_resource(Role(
                 ],
             }
         ),
+        Policy(
+            PolicyName="AllowCloudWatchMetrics",
+            PolicyDocument={
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Action": [
+                            "cloudwatch:GetMetricStatistics",
+                        ],
+                        "Effect": "Allow",
+                        "Resource": "*"
+                    }
+                ]
+            }
+        ),
     ]
 ))
 
@@ -468,13 +483,14 @@ services = [
     {
         'name': 'Scheduler',
         'command': 'scheduler',
+        'memory': '156',
         'secrets': [],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_PATH', 'https://github.com/Techman83/NetKAN.git'),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
-        'cron': 'cron(0 * * * ? *)',
+        'schedule': 'rate(1 hour)',
     },
     {
         'name': 'Inflator',
@@ -550,7 +566,7 @@ services = [
 
 for service in services:
     name = service['name']
-    cron = service.get('cron')
+    schedule = service.get('schedule')
     containers = service.get('containers', [service])
     task = TaskDefinition(
         '{}Task'.format(name),
@@ -631,7 +647,7 @@ for service in services:
         task.ContainerDefinitions.append(definition)
     t.add_resource(task)
 
-    if cron:
+    if schedule:
         target = Target(
             Id="{}-Schedule".format(name),
             Arn=GetAtt(netkan_ecs, 'Arn'),
@@ -642,8 +658,8 @@ for service in services:
         )
         t.add_resource(Rule(
             '{}Rule'.format(name),
-            Description='Scheduler for Indexing Runs',
-            ScheduleExpression=cron,
+            Description='{} scheduled task'.format(name),
+            ScheduleExpression=schedule,
             Targets=[target],
         ))
         continue

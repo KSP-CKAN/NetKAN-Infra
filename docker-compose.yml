@@ -36,7 +36,7 @@ services:
       MAX_QUEUED: 1
     volumes:
       - ./netkan:/home/netkan/netkan
-    command: scheduler
+    command: scheduler --dev
   inflator:
     image: kspckan/inflator
     environment:

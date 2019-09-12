@@ -95,28 +95,20 @@ def indexer(queue, metadata, token, repo, user, key,
     '--debug', is_flag=True, default=False,
     help='Enable debug logging',
 )
-def scheduler(queue, netkan, max_queued, debug):
+@click.option(
+    '--dev', is_flag=True, default=False,
+    help='Disable AWS Credit Checks',
+)
+def scheduler(queue, netkan, max_queued, debug, dev):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
-    init_repo(netkan, '/tmp/NetKAN')
-
     logging.info('Scheduler started at log level %s', level)
 
-    sqs = boto3.resource('sqs')
-    queue = sqs.get_queue_by_name(QueueName=queue)
-    client = boto3.client('sqs')
-
-    message_count = int(queue.attributes.get('ApproximateNumberOfMessages', 0))
-    if message_count > max_queued:
-        logging.info(
-            "Run skipped, too many NetKANs left to process ({} left)".format(
-                message_count
-            )
-        )
-    else:
-        scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue.url, client)
+    scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue)
+    if scheduler.can_schedule(max_queued, dev):
+        init_repo(netkan, '/tmp/NetKAN')
         scheduler.schedule_all_netkans()
 
 
