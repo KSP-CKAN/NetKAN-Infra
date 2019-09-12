@@ -1,8 +1,8 @@
-from git import Repo
-from pathlib import Path
-import sys
 import logging
 import subprocess
+import sys
+from git import Repo
+from pathlib import Path
 
 
 def init_repo(metadata, path):

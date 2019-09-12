@@ -97,3 +97,11 @@ services:
     volumes:
       - certbot:/etc/letsencrypt
       - ./nginx/nginx-dev.conf:/etc/nginx/nginx.conf
+  clean:
+    build:
+      context: netkan/.
+      target: dev
+    volumes:
+      - ./netkan:/home/netkan/netkan
+      - ${HOME}/ckan_cache:/home/netkan/ckan_cache
+    command: clean-cache --days 1

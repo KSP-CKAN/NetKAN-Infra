@@ -235,6 +235,41 @@ netkan_role = t.add_resource(Role(
                 ]
             }
         ),
+        Policy(
+            PolicyName="AllowWebhooksRestart",
+            PolicyDocument={
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Action": [
+                            "ecs:ListServices",
+                        ],
+                        "Effect": "Allow",
+                        "Resource": "*",
+                    },
+                    {
+                        "Action": [
+                            "ecs:DescribeServices",
+                        ],
+                        "Effect": "Allow",
+                        "Resource": Sub(
+                            'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/NetKANCluster/${service}',
+                            service=GetAtt('WebhooksService', 'Name'),
+                        )
+                    },
+                    {
+                        "Action": [
+                            "ecs:UpdateService",
+                        ],
+                        "Effect": "Allow",
+                        "Resource": Sub(
+                            'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/NetKANCluster/${service}',
+                            service=GetAtt('WebhooksService', 'Name'),
+                        )
+                    },
+                ]
+            }
+        )
     ]
 ))
 
@@ -493,6 +528,19 @@ services = [
         'schedule': 'rate(1 hour)',
     },
     {
+        'name': 'CleanCache',
+        'command': [
+            'clean-cache',
+            '--days', '30',
+        ],
+        'secrets': [],
+        'env': [],
+        'volumes': [
+            ('ckan_cache', '/home/netkan/ckan_cache')
+        ],
+        'schedule': 'rate(1 day)',
+    },
+    {
         'name': 'Inflator',
         'image': 'kspckan/inflator',
         'memory': '156',
@@ -529,7 +577,21 @@ services = [
         'volumes': [
             ('letsencrypt', '/etc/letsencrypt')
         ],
-        'cron': 'cron(0 0 ? * MON *)',
+        'schedule': 'cron(0 0 ? * MON *)',
+    },
+    # TODO: It'd be nice to detect a new cert, this'll do for now.
+    {
+        'name': 'RestartWebhooks',
+        'command': [
+            'redeploy-service',
+            '--cluster', 'NetKANCluster',
+            '--service-name', 'WebhooksService',
+        ],
+        'secrets': [],
+        'env': [
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+        ],
+        'schedule': 'cron(30 0 ? * MON *)',
     },
     {
         'name': 'Webhooks',
