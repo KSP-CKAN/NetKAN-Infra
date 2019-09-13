@@ -16,7 +16,8 @@ class NetkanScheduler:
         if queue != 'TestyMcTestFace':
             self.client = boto3.client('sqs')
             sqs = boto3.resource('sqs')
-            self.queue_url = sqs.get_queue_by_name(QueueName=queue).url
+            self.queue = sqs.get_queue_by_name(QueueName=queue)
+            self.queue_url = self.queue.url
 
     def netkans(self):
         # This can easily be recursive with '**/*.netkan', however
@@ -74,7 +75,7 @@ class NetkanScheduler:
             try:
                 credits = stats['Datapoints'][0]['Average']
             except IndexError:
-                pass
+                logging.error("Couldn't acquire CPU Credit Stats")
             if int(credits) < 100:
                 logging.info(
                     "Run skipped, not enough credits (Current Avg: {})".format(

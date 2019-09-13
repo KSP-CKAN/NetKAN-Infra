@@ -111,6 +111,7 @@ def scheduler(queue, netkan, max_queued, debug, dev):
     if scheduler.can_schedule(max_queued, dev):
         init_repo(netkan, '/tmp/NetKAN')
         scheduler.schedule_all_netkans()
+        logging.info("NetKANs submitted to {}".format(queue))
 
 
 @click.command()
