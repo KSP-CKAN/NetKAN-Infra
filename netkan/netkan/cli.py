@@ -1,5 +1,6 @@
 import click
 import boto3
+import datetime
 import json
 import logging
 import time
@@ -95,29 +96,22 @@ def indexer(queue, metadata, token, repo, user, key,
     '--debug', is_flag=True, default=False,
     help='Enable debug logging',
 )
-def scheduler(queue, netkan, max_queued, debug):
+@click.option(
+    '--dev', is_flag=True, default=False,
+    help='Disable AWS Credit Checks',
+)
+def scheduler(queue, netkan, max_queued, debug, dev):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
-    init_repo(netkan, '/tmp/NetKAN')
-
     logging.info('Scheduler started at log level %s', level)
 
-    sqs = boto3.resource('sqs')
-    queue = sqs.get_queue_by_name(QueueName=queue)
-    client = boto3.client('sqs')
-
-    message_count = int(queue.attributes.get('ApproximateNumberOfMessages', 0))
-    if message_count > max_queued:
-        logging.info(
-            "Run skipped, too many NetKANs left to process ({} left)".format(
-                message_count
-            )
-        )
-
-    scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue.url, client)
-    scheduler.schedule_all_netkans()
+    scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue)
+    if scheduler.can_schedule(max_queued, dev):
+        init_repo(netkan, '/tmp/NetKAN')
+        scheduler.schedule_all_netkans()
+        logging.info("NetKANs submitted to {}".format(queue))
 
 
 @click.command()
@@ -166,8 +160,66 @@ def restore_status(filename):
     click.echo('Done!')
 
 
+@click.command()
+@click.option(
+    '--cluster', help='ECS Cluster running the service'
+)
+@click.option(
+    '--service-name', help='Name of ECS Service to restart'
+)
+def redeploy_service(cluster, service_name):
+    click.secho(
+        'Forcing redeployment of {}:{}'.format(cluster, service_name),
+        fg='green'
+    )
+    client = boto3.client('ecs')
+    services = client.list_services(maxResults=100,
+                                    cluster=cluster)['serviceArns']
+    try:
+        service = list(filter(lambda i: service_name in i, services))[0]
+    except IndexError:
+        available = '\n    - '.join(
+            [f.split('/')[1].split('-')[1] for f in services]
+        )
+        raise click.UsageError(
+            "Service '{}' not found. Available services:\n    - {}".format(
+                service, available)
+        )
+    client.update_service(
+        cluster=cluster,
+        service=service,
+        forceNewDeployment=True
+    )
+    click.secho('Waiting for service to become stable...', fg='green')
+    waiter = client.get_waiter('services_stable')
+    waiter.wait(
+        cluster=cluster,
+        services=[service]
+    )
+    click.secho('Service Redeployed', fg='green')
+
+
+@click.command()
+@click.option(
+    '--days', help='Purge items older than X from cache'
+)
+def clean_cache(days):
+    older_than = (
+        datetime.datetime.now() - datetime.timedelta(days=int(days))
+    ).timestamp()
+    click.echo('Checking cache for files older than {} days'.format(days))
+    for item in Path('/home/netkan/ckan_cache/').glob('*'):
+        if item.is_file() and item.stat().st_mtime < older_than:
+            click.echo('Purging {} from ckan cache'.format(
+                item.name
+            ))
+            item.unlink()
+
+
 netkan.add_command(indexer)
 netkan.add_command(scheduler)
 netkan.add_command(dump_status)
 netkan.add_command(export_status_s3)
 netkan.add_command(restore_status)
+netkan.add_command(redeploy_service)
+netkan.add_command(clean_cache)

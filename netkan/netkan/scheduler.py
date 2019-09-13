@@ -1,13 +1,23 @@
+import boto3
+import datetime
+import logging
+import requests
 from pathlib import Path
 from hashlib import md5
 
 
 class NetkanScheduler:
 
-    def __init__(self, path, queue_url, client, base='NetKAN/'):
+    def __init__(self, path, queue, base='NetKAN/'):
         self.path = Path(path, base)
-        self.queue_url = queue_url
-        self.client = client
+
+        # TODO: This isn't super neat, do something better.
+        self.queue_url = 'test_url'
+        if queue != 'TestyMcTestFace':
+            self.client = boto3.client('sqs')
+            sqs = boto3.resource('sqs')
+            self.queue = sqs.get_queue_by_name(QueueName=queue)
+            self.queue_url = self.queue.url
 
     def netkans(self):
         # This can easily be recursive with '**/*.netkan', however
@@ -42,3 +52,48 @@ class NetkanScheduler:
     def schedule_all_netkans(self):
         for batch in self.sqs_batch_entries():
             self.client.send_message_batch(**self.sqs_batch_attrs(batch))
+
+    def can_schedule(self, max_queued, dev=False):
+        if not dev:
+            end = datetime.datetime.utcnow()
+            start = end - datetime.timedelta(minutes=10)
+            response = requests.get(
+                'http://169.254.169.254/latest/meta-data/instance-id'
+            )
+            instance_id = response.text
+            cloudwatch = boto3.client('cloudwatch')
+            stats = cloudwatch.get_metric_statistics(
+                Dimensions=[{'Name': 'InstanceId', 'Value': instance_id}],
+                MetricName='CPUCreditBalance',
+                Namespace='AWS/EC2',
+                StartTime=start.strftime("%Y-%m-%dT%H:%MZ"),
+                EndTime=end.strftime("%Y-%m-%dT%H:%MZ"),
+                Period=10,
+                Statistics=['Average'],
+            )
+            credits = 0
+            try:
+                credits = stats['Datapoints'][0]['Average']
+            except IndexError:
+                logging.error("Couldn't acquire CPU Credit Stats")
+            if int(credits) < 250:
+                logging.info(
+                    "Run skipped, below credit target (Current Avg: {})".format(
+                        credits
+                    )
+                )
+                return False
+
+        message_count = int(
+            self.queue.attributes.get(
+                'ApproximateNumberOfMessages', 0)
+        )
+        if message_count > max_queued:
+            logging.info(
+                "Run skipped, too many NetKANs to process ({} left)".format(
+                    message_count
+                )
+            )
+            return False
+
+        return True

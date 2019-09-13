@@ -118,7 +118,7 @@ class CkanMessage:
         return attrs
 
     def _process_ckan(self):
-        if self.metadata_changed():
+        if self.Success and self.metadata_changed():
             self.write_metadata()
             self.commit_metadata()
         try:
@@ -136,6 +136,12 @@ class CkanMessage:
     def process_ckan(self):
         # Process regular CKAN
         if not self.Staged:
+            self._process_ckan()
+            return
+
+        # TODO: This is a bit of hack to get this across the line, no mod
+        #       version, no valid name to stage the branch
+        if not self.Success:
             self._process_ckan()
             return
 

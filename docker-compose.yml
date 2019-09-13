@@ -36,7 +36,7 @@ services:
       MAX_QUEUED: 1
     volumes:
       - ./netkan:/home/netkan/netkan
-    command: scheduler
+    command: scheduler --dev
   inflator:
     image: kspckan/inflator
     environment:
@@ -55,7 +55,8 @@ services:
     build:
       context: webhooks/.
     environment:
-      GH_token: ${CKAN_GH_Token}
+      SSH_KEY: ${CKAN_NETKAN_SSHKEY}
+      GH_Token: ${CKAN_GH_Token}
       XKAN_GHSECRET: test
       CKAN_meta: ${CKAN_METADATA_PATH}
       NetKAN: ${NETKAN_METADATA_PATH}
@@ -96,3 +97,11 @@ services:
     volumes:
       - certbot:/etc/letsencrypt
       - ./nginx/nginx-dev.conf:/etc/nginx/nginx.conf
+  clean:
+    build:
+      context: netkan/.
+      target: dev
+    volumes:
+      - ./netkan:/home/netkan/netkan
+      - ${HOME}/ckan_cache:/home/netkan/ckan_cache
+    command: clean-cache --days 1

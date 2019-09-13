@@ -8,7 +8,7 @@ class TestNetKAN(unittest.TestCase):
     test_data = Path(PurePath(__file__).parent, 'testdata/NetKAN')
 
     def setUp(self):
-        self.scheduler = NetkanScheduler(self.test_data, 'test_url', 'client')
+        self.scheduler = NetkanScheduler(self.test_data, 'TestyMcTestFace')
 
     def test_netkan_message(self):
         dogecoinflag = Path(self.test_data, 'NetKAN/DogeCoinFlag.netkan')
