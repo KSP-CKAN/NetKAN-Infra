@@ -571,6 +571,16 @@ services = [
         'schedule': 'rate(5 minutes)',
     },
     {
+        'name': 'DownloadCounter',
+        'command': 'download-counter',
+        'secrets': ['SSH_KEY', 'GH_Token'],
+        'env': [
+            ('NETKAN_REPO', NETKAN_HTTP),
+            ('CKANMETA_REPO', CKAN_META),
+        ],
+        'schedule': 'rate(1 day)',
+    },
+    {
         'name': 'CertBot',
         'image': 'certbot/dns-route53',
         'command': [

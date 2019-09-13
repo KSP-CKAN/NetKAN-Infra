@@ -5,7 +5,6 @@ import json
 import logging
 import time
 from pathlib import Path
-from datetime import timedelta
 from .utils import init_repo, init_ssh
 from .github import GitHubPR
 from .indexer import MessageHandler
@@ -231,21 +230,27 @@ def clean_cache(days):
     '--token', envvar='GH_Token', required=True,
     help='GitHub token for API calls',
 )
-def download_counter(netkan_url, ckan_meta_url, github_token):
-    click.echo('Initializing...')
-    counter = DownloadCounter(
-        init_repo(netkan_url,    '/tmp/NetKAN'),
-        init_repo(ckan_meta_url, '/tmp/CKAN-meta'),
-        github_token
+@click.option('--key', envvar='SSH_KEY', required=True)
+@click.option(
+    '--debug', is_flag=True, default=False,
+    help='Enable debug logging',
+)
+def download_counter(netkan, ckan_meta, token, key, debug):
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
-    if datetime.now() - counter.last_run() >= timedelta(days=1):
-        click.echo('Retrieving counts...')
-        counter.get_counts()
-        click.echo('Saving count file...')
-        counter.write_json()
-        click.echo('Done!')
-    else:
-        click.echo('Skipping, ran less than a day ago')
+    logging.info('Download Counter started at log level %s', level)
+    init_ssh(key, '/home/netkan/.ssh')
+    init_repo(netkan, '/tmp/NetKAN')
+    meta = init_repo(ckan_meta, '/tmp/CKAN-meta')
+    logging.info('Starting Download Count Calculation...')
+    DownloadCounter(
+        '/tmp/NetKAN',
+        meta,
+        token
+    ).update_counts()
+    logging.info('Download Counter completed!')
 
 
 netkan.add_command(indexer)
