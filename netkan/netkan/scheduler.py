@@ -76,9 +76,9 @@ class NetkanScheduler:
                 credits = stats['Datapoints'][0]['Average']
             except IndexError:
                 logging.error("Couldn't acquire CPU Credit Stats")
-            if int(credits) < 100:
+            if int(credits) < 250:
                 logging.info(
-                    "Run skipped, not enough credits (Current Avg: {})".format(
+                    "Run skipped, below credit target (Current Avg: {})".format(
                         credits
                     )
                 )
