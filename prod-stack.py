@@ -578,6 +578,7 @@ services = [
     {
         'name': 'DownloadCounter',
         'command': 'download-counter',
+        'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
             ('NETKAN_REPO', NETKAN_HTTP),
