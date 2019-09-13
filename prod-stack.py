@@ -352,7 +352,8 @@ netkan_scheduler_role = t.add_resource(Role(
                         ],
                         "Resource": [
                             Sub('arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBotScheduler:*'),
-                            Sub('arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBotCertBot:*')
+                            Sub('arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBotCertBot:*'),
+                            Sub('arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBotStatusDumper:*'),
                         ],
                         "Condition": {
                             "ArnLike": {
@@ -565,7 +566,9 @@ services = [
         'env': [
             ('STATUS_BUCKET', 'status.ksp-ckan.space'),
             ('STATUS_KEY', 'status/test_override.json'),
+            ('STATUS_INTERVAL', '0'),
         ],
+        'schedule': 'rate(5 minutes)',
     },
     {
         'name': 'CertBot',
