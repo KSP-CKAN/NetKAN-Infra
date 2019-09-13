@@ -5,11 +5,13 @@ import json
 import logging
 import time
 from pathlib import Path
+from datetime import timedelta
 from .utils import init_repo, init_ssh
 from .github import GitHubPR
 from .indexer import MessageHandler
 from .scheduler import NetkanScheduler
 from .status import ModStatus
+from .download_counter import DownloadCounter
 
 
 @click.group()
@@ -216,6 +218,36 @@ def clean_cache(days):
             item.unlink()
 
 
+@click.command()
+@click.option(
+    '--netkan', envvar='NETKAN_REPO',
+    help='Path/URL/SSH to NetKAN repo for mod list',
+)
+@click.option(
+    '--ckan-meta', envvar='CKANMETA_REPO',
+    help='Path/URL/SSH to CKAN-meta repo for output',
+)
+@click.option(
+    '--token', envvar='GH_Token', required=True,
+    help='GitHub token for API calls',
+)
+def download_counter(netkan_url, ckan_meta_url, github_token):
+    click.echo('Initializing...')
+    counter = DownloadCounter(
+        init_repo(netkan_url,    '/tmp/NetKAN'),
+        init_repo(ckan_meta_url, '/tmp/CKAN-meta'),
+        github_token
+    )
+    if datetime.now() - counter.last_run() >= timedelta(days=1):
+        click.echo('Retrieving counts...')
+        counter.get_counts()
+        click.echo('Saving count file...')
+        counter.write_json()
+        click.echo('Done!')
+    else:
+        click.echo('Skipping, ran less than a day ago')
+
+
 netkan.add_command(indexer)
 netkan.add_command(scheduler)
 netkan.add_command(dump_status)
@@ -223,3 +255,4 @@ netkan.add_command(export_status_s3)
 netkan.add_command(restore_status)
 netkan.add_command(redeploy_service)
 netkan.add_command(clean_cache)
+netkan.add_command(download_counter)
