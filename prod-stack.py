@@ -497,8 +497,8 @@ netkan_instance = Instance(
         BlockDeviceMapping(
             DeviceName='/dev/xvdh',
             Ebs=EBSBlockDevice(
-                VolumeSize='100',
-                VolumeType='gp2',
+                VolumeSize='50',
+                VolumeType='standard',
             )
         )
     ]
