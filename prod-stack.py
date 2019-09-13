@@ -1,6 +1,3 @@
-# Converted from SQS_With_CloudWatch_Alarms.template located at:
-# http://aws.amazon.com/cloudformation/aws-cloudformation-templates/
-
 from troposphere import GetAtt, Output, Ref, Template, Sub, Base64
 from troposphere.iam import Policy, Role, InstanceProfile
 from troposphere.sqs import Queue
@@ -17,13 +14,18 @@ from troposphere.events import Rule, Target, EcsParameters
 import os
 import sys
 
-zone_id = os.environ.get('CKAN_ZONEID', False)
-subnet_id = os.environ.get('CKAN_SUBNET', False)
-bot_fqdn = 'netkan.ksp-ckan.space'
-email = 'domains@ksp-ckan.space'
-param_namespace = '/Test/Indexer/'
+ZONE_ID = os.environ.get('CKAN_ZONEID', False)
+BOT_FQDN = 'netkan.ksp-ckan.space'
+EMAIL = 'domains@ksp-ckan.space'
+PARAM_NAMESPACE = '/Test/Indexer/'
+NETKAN_HTTP = 'https://github.com/Techman83/NetKAN.git'
+CKAN_META = 'git@github.com:Techman83/pr_tester.git'
+status_key = 'status/test_override.json'
+STATUS_BUCKET = 'status.ksp-ckan.space'
+METADATA_USER = 'Techman83'
+METADATA_REPO = 'pr_tester'
 
-if not zone_id:
+if not ZONE_ID:
     print('Zone ID Required from EnvVar `CKAN_ZONEID`')
     sys.exit()
 
@@ -213,7 +215,7 @@ netkan_role = t.add_resource(Role(
                         ],
                         "Resource": [
                             "arn:aws:route53:::hostedzone/{}".format(
-                                zone_id
+                                ZONE_ID
                             ),
                         ]
                     }
@@ -314,7 +316,7 @@ netkan_ecs_role = t.add_resource(Role(
                         ],
                         "Resource": Sub(
                             "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ns}*",
-                            ns=param_namespace
+                            ns=PARAM_NAMESPACE
                         )
                     }
                 ]
@@ -323,8 +325,15 @@ netkan_ecs_role = t.add_resource(Role(
     ]
 ))
 
-## To be able to schedule tasks, the scheduler needs to be allowed to perform
-## the tasks.
+# To be able to schedule tasks, the scheduler needs to be allowed to perform
+# the tasks.
+scheduler_resources = []
+for task in [
+        'Scheduler', 'CertBot', 'StatusDumper', 'DownloadCounter']:
+    scheduler_resources.append(Sub(
+        'arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBot${Task}:*',
+        Task=task
+    ))
 netkan_scheduler_role = t.add_resource(Role(
     "NetKANProdSchedulerRole",
     AssumeRolePolicyDocument={
@@ -350,11 +359,7 @@ netkan_scheduler_role = t.add_resource(Role(
                         "Action": [
                             "ecs:RunTask"
                         ],
-                        "Resource": [
-                            Sub('arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBotScheduler:*'),
-                            Sub('arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBotCertBot:*'),
-                            Sub('arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBotStatusDumper:*'),
-                        ],
+                        "Resource": scheduler_resources,
                         "Condition": {
                             "ArnLike": {
                                 "ecs:cluster": GetAtt('NetKANCluster', 'Arn')
@@ -506,9 +511,9 @@ services = [
         'command': 'indexer',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
-            ('METADATA_PATH', 'git@github.com:Techman83/pr_tester.git'),
-            ('METADATA_USER', 'Techman83'),
-            ('METADATA_REPO', 'pr_tester'),
+            ('METADATA_PATH', CKAN_META),
+            ('METADATA_USER', METADATA_USER),
+            ('METADATA_REPO', METADATA_REPO),
             ('SQS_QUEUE', GetAtt(outbound, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
@@ -523,7 +528,7 @@ services = [
         'secrets': [],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
-            ('NETKAN_PATH', 'https://github.com/Techman83/NetKAN.git'),
+            ('NETKAN_PATH', NETKAN_HTTP),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'schedule': 'rate(1 hour)',
@@ -564,8 +569,8 @@ services = [
         'name': 'StatusDumper',
         'command': 'export-status-s3',
         'env': [
-            ('STATUS_BUCKET', 'status.ksp-ckan.space'),
-            ('STATUS_KEY', 'status/test_override.json'),
+            ('STATUS_BUCKET', STATUS_BUCKET),
+            ('STATUS_KEY', status_key),
             ('STATUS_INTERVAL', '0'),
         ],
         'schedule': 'rate(5 minutes)',
@@ -585,7 +590,7 @@ services = [
         'image': 'certbot/dns-route53',
         'command': [
             'certonly', '-n', '--agree-tos', '--email',
-            email, '--dns-route53', '-d', bot_fqdn
+            EMAIL, '--dns-route53', '-d', BOT_FQDN
         ],
         'volumes': [
             ('letsencrypt', '/etc/letsencrypt')
@@ -618,8 +623,8 @@ services = [
                     'IA_access', 'IA_secret',
                 ],
                 'env': [
-                    ('CKAN_meta', 'git@github.com:techman83/moartests.git'),
-                    ('NetKAN', 'https://github.com/Techman83/pr_tester.git'),
+                    ('CKAN_meta', CKAN_META),
+                    ('NetKAN', NETKAN_HTTP),
                     ('IA_collection', 'kspckanmods'),
                 ],
                 'volumes': [
@@ -667,7 +672,7 @@ for service in services:
                 Secret(
                     Name=x,
                     ValueFrom='{}{}'.format(
-                        param_namespace, x
+                        PARAM_NAMESPACE, x
                     )
                 ) for x in secrets
             ],
