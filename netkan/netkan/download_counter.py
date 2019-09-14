@@ -111,4 +111,7 @@ class DownloadCounter:
             'master', strategy='ours'
         )
         self.write_json()
-        self.commit_counts()
+        if self.counts_changed():
+            self.commit_counts()
+        else:
+            logging.info('Download counts match existing data.')

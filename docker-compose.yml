@@ -111,7 +111,7 @@ services:
       target: dev
     environment:
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
-      NETKAN_REPO: ${CKAN_METADATA_PATH}
+      NETKAN_REPO: ${NETKAN_METADATA_PATH}
       CKANMETA_REPO: ${CKAN_METADATA_PATH}
       GH_Token: ${CKAN_GH_Token}
     volumes:
