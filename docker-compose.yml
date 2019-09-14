@@ -105,3 +105,15 @@ services:
       - ./netkan:/home/netkan/netkan
       - ${HOME}/ckan_cache:/home/netkan/ckan_cache
     command: clean-cache --days 1
+  counts:
+    build:
+      context: netkan/.
+      target: dev
+    environment:
+      SSH_KEY: ${CKAN_NETKAN_SSHKEY}
+      NETKAN_REPO: ${NETKAN_METADATA_PATH}
+      CKANMETA_REPO: ${CKAN_METADATA_PATH}
+      GH_Token: ${CKAN_GH_Token}
+    volumes:
+      - ./netkan:/home/netkan/netkan
+    command: download-counter

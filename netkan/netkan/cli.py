@@ -10,6 +10,7 @@ from .github import GitHubPR
 from .indexer import MessageHandler
 from .scheduler import NetkanScheduler
 from .status import ModStatus
+from .download_counter import DownloadCounter
 
 
 @click.group()
@@ -216,6 +217,42 @@ def clean_cache(days):
             item.unlink()
 
 
+@click.command()
+@click.option(
+    '--netkan', envvar='NETKAN_REPO',
+    help='Path/URL/SSH to NetKAN repo for mod list',
+)
+@click.option(
+    '--ckan-meta', envvar='CKANMETA_REPO',
+    help='Path/URL/SSH to CKAN-meta repo for output',
+)
+@click.option(
+    '--token', envvar='GH_Token', required=True,
+    help='GitHub token for API calls',
+)
+@click.option('--key', envvar='SSH_KEY', required=True)
+@click.option(
+    '--debug', is_flag=True, default=False,
+    help='Enable debug logging',
+)
+def download_counter(netkan, ckan_meta, token, key, debug):
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
+    )
+    logging.info('Download Counter started at log level %s', level)
+    init_ssh(key, '/home/netkan/.ssh')
+    init_repo(netkan, '/tmp/NetKAN')
+    meta = init_repo(ckan_meta, '/tmp/CKAN-meta')
+    logging.info('Starting Download Count Calculation...')
+    DownloadCounter(
+        '/tmp/NetKAN',
+        meta,
+        token
+    ).update_counts()
+    logging.info('Download Counter completed!')
+
+
 netkan.add_command(indexer)
 netkan.add_command(scheduler)
 netkan.add_command(dump_status)
@@ -223,3 +260,4 @@ netkan.add_command(export_status_s3)
 netkan.add_command(restore_status)
 netkan.add_command(redeploy_service)
 netkan.add_command(clean_cache)
+netkan.add_command(download_counter)
