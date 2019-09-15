@@ -11,19 +11,20 @@ from troposphere.ec2 import Instance, CreditSpecification, Tag, \
 from troposphere.cloudformation import Init, InitFile, InitFiles, \
     InitConfig, InitService, Metadata
 from troposphere.events import Rule, Target, EcsParameters
+from troposphere.route53 import RecordSetType
 import os
 import sys
 
 ZONE_ID = os.environ.get('CKAN_ZONEID', False)
 BOT_FQDN = 'netkan.ksp-ckan.space'
 EMAIL = 'domains@ksp-ckan.space'
-PARAM_NAMESPACE = '/Test/Indexer/'
-NETKAN_HTTP = 'https://github.com/Techman83/NetKAN.git'
-CKAN_META = 'git@github.com:Techman83/pr_tester.git'
-status_key = 'status/test_override.json'
+PARAM_NAMESPACE = '/NetKAN/Indexer/'
+NETKAN_HTTP = 'https://github.com/KSP-CKAN/NetKAN.git'
+CKAN_META = 'git@github.com:KSP-CKAN/CKAN-meta.git'
+status_key = 'status/netkan.json'
 STATUS_BUCKET = 'status.ksp-ckan.space'
-METADATA_USER = 'Techman83'
-METADATA_REPO = 'pr_tester'
+METADATA_USER = 'KSP-CKAN'
+METADATA_REPO = 'CKAN-meta'
 
 if not ZONE_ID:
     print('Zone ID Required from EnvVar `CKAN_ZONEID`')
@@ -505,10 +506,21 @@ netkan_instance = Instance(
 )
 t.add_resource(netkan_instance)
 
+t.add_resource(RecordSetType(
+    "NetKANDns",
+    HostedZoneId=ZONE_ID,
+    Comment="NetKAN Bot DNS",
+    Name=BOT_FQDN,
+    Type="A",
+    TTL="900",
+    ResourceRecords=[GetAtt('NetKANCompute', "PublicIp")],
+))
+
 services = [
     {
         'name': 'Indexer',
         'command': 'indexer',
+        'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
             ('METADATA_PATH', CKAN_META),
@@ -531,7 +543,7 @@ services = [
             ('NETKAN_PATH', NETKAN_HTTP),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
-        'schedule': 'rate(1 hour)',
+        'schedule': 'rate(2 hours)',
     },
     {
         'name': 'CleanCache',
