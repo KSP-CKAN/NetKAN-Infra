@@ -24,5 +24,6 @@ RUN useradd -Ms /bin/bash netkan
 RUN chown -R netkan:netkan /home/netkan
 WORKDIR /home/netkan
 USER netkan
+ADD .gitconfig .
 ENTRYPOINT [".local/bin/netkan"]
 CMD ["--help"]
