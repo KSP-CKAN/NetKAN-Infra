@@ -33,11 +33,12 @@ class NetkanScheduler:
             'MessageDeduplicationId': md5(content.encode()).hexdigest()
         }
 
+    def __list_split(self, list, length):
+        return (list[n:(n+length)] for n in range(0, len(list), length))
+
     def sqs_batch_entries(self, batch_size=10):
-        netkans = list(self.netkans())
-        while len(netkans) > 0:
-            yield [self.generate_netkan_message(nk) for nk in netkans[:batch_size]]
-            netkans = netkans[batch_size:]
+        for batch in self.__list_split(self.netkans(), batch_size):
+            yield [self.generate_netkan_message(nk) for nk in batch]
 
     def sqs_batch_attrs(self, batch):
         return {
