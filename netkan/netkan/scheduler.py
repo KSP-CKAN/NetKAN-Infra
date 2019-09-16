@@ -34,7 +34,7 @@ class NetkanScheduler:
         }
 
     def sqs_batch_entries(self, batch_size=10):
-        netkans = self.netkans()
+        netkans = list(self.netkans())
         while len(netkans) > 0:
             yield [self.generate_netkan_message(nk) for nk in netkans[:batch_size]]
             netkans = netkans[batch_size:]
