@@ -34,14 +34,10 @@ class NetkanScheduler:
         }
 
     def sqs_batch_entries(self, batch_size=10):
-        batch = []
-
-        for netkan in self.netkans():
-            batch.append(self.generate_netkan_message(netkan))
-            if len(batch) == batch_size:
-                yield(batch)
-                batch = []
-        yield(batch)
+        netkans = self.netkans()
+        while len(netkans) > 0:
+            yield [self.generate_netkan_message(nk) for nk in netkans[:batch_size]]
+            netkans = netkans[batch_size:]
 
     def sqs_batch_attrs(self, batch):
         return {
