@@ -103,11 +103,15 @@ class CkanMessage:
             self.ckan_meta.heads.master.checkout()
 
     def status_attrs(self, new=False):
+        inflation_time = parse(self.CheckTime)
         attrs = {
             'success': self.Success,
             # We may wish to change the name in the inflator
             # as the index will set 'last_checked'
-            'last_inflated': parse(self.CheckTime),
+            'last_inflated': inflation_time,
+            # If we have perfomed an inflation, we certainly
+            # have checked the mod!
+            'last_checked': inflation_time,
         }
         if new:
             attrs['ModIdentifier'] = self.ModIdentifier
