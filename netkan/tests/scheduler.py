@@ -41,3 +41,12 @@ class TestNetKAN(unittest.TestCase):
         attrs = self.scheduler.sqs_batch_attrs(batch)
         self.assertEqual(attrs['QueueUrl'], 'test_url')
         self.assertEqual(len(attrs['Entries']), 10)
+
+    def test_sqs_batching_ten(self):
+        test_data = Path(PurePath(__file__).parent, 'testdata/NetTEN')
+        scheduler = NetkanScheduler(test_data, 'TestyMcTestFace')
+        batches = []
+        for batch in scheduler.sqs_batch_entries():
+            batches.append(batch)
+        self.assertEqual(len(batches[0]), 10)
+        self.assertEqual(len(batches), 1)

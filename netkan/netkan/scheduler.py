@@ -41,7 +41,8 @@ class NetkanScheduler:
             if len(batch) == batch_size:
                 yield(batch)
                 batch = []
-        yield(batch)
+        if len(batch):
+            yield(batch)
 
     def sqs_batch_attrs(self, batch):
         return {
