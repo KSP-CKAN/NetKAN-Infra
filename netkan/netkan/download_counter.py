@@ -4,6 +4,7 @@ import re
 import requests
 from pathlib import Path
 from json.decoder import JSONDecodeError
+from .utils import repo_file_add_or_changed
 
 
 class DownloadCounter:
@@ -77,9 +78,17 @@ class DownloadCounter:
     def get_counts(self):
         for netkan in self.netkan_path.glob('NetKAN/*.netkan'):
             netkan = Path(netkan)
-            count = self.count_from_netkan(
-                json.loads(netkan.read_text())
-            )
+
+            # TODO: This downloader works, but needs refactoring. The error cases
+            #       are awkward and there is a fair bit of duplication going on.
+            count = 0
+            try:
+                count = self.count_from_netkan(
+                    json.loads(netkan.read_text())
+                )
+            except JSONDecodeError:
+                logging.error("Failed decoding count for  {}".format(netkan.stem))
+
             if count > 0:
                 self.counts[netkan.stem] = count
 
@@ -87,14 +96,6 @@ class DownloadCounter:
         self.output_file.write_text(
             json.dumps(self.counts, sort_keys=True, indent=4)
         )
-
-    def counts_changed(self):
-        if self.output_file in self.ckan_meta.untracked_files:
-            return True
-        if self.output_file in [
-                x.a_path for x in self.ckan_meta.index.diff(None)]:
-            return True
-        return False
 
     def commit_counts(self):
         index = self.ckan_meta.index
@@ -111,7 +112,7 @@ class DownloadCounter:
             'master', strategy='ours'
         )
         self.write_json()
-        if self.counts_changed():
+        if repo_file_add_or_changed(self.ckan_meta, self.output_file):
             self.commit_counts()
         else:
             logging.info('Download counts match existing data.')

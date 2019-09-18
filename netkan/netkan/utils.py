@@ -33,3 +33,13 @@ def init_ssh(key, path):
             'ssh-keyscan', '-t', 'rsa', 'github.com'
         ], stdout=subprocess.PIPE)
         Path(key_path, 'known_hosts').write_text(scan.stdout.decode('utf-8'))
+
+
+def repo_file_add_or_changed(repo, filename):
+    relative_file = Path(filename).relative_to(repo.working_dir).as_posix()
+    if relative_file in repo.untracked_files:
+        return True
+    if relative_file in [
+            x.a_path for x in repo.index.diff(None)]:
+        return True
+    return False
