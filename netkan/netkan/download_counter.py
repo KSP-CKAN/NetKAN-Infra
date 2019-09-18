@@ -78,9 +78,17 @@ class DownloadCounter:
     def get_counts(self):
         for netkan in self.netkan_path.glob('NetKAN/*.netkan'):
             netkan = Path(netkan)
-            count = self.count_from_netkan(
-                json.loads(netkan.read_text())
-            )
+
+            # TODO: This downloader works, but needs refactoring. The error cases
+            #       are awkward and there is a fair bit of duplication going on.
+            count = 0
+            try:
+                count = self.count_from_netkan(
+                    json.loads(netkan.read_text())
+                )
+            except JSONDecodeError:
+                logging.error("Failed decoding count for  {}".format(netkan.stem))
+
             if count > 0:
                 self.counts[netkan.stem] = count
 
