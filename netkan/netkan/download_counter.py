@@ -4,6 +4,7 @@ import re
 import requests
 from pathlib import Path
 from json.decoder import JSONDecodeError
+from .utils import repo_file_add_or_changed
 
 
 class DownloadCounter:
@@ -88,14 +89,6 @@ class DownloadCounter:
             json.dumps(self.counts, sort_keys=True, indent=4)
         )
 
-    def counts_changed(self):
-        if self.output_file in self.ckan_meta.untracked_files:
-            return True
-        if self.output_file in [
-                x.a_path for x in self.ckan_meta.index.diff(None)]:
-            return True
-        return False
-
     def commit_counts(self):
         index = self.ckan_meta.index
         index.add([self.output_file.as_posix()])
@@ -111,7 +104,7 @@ class DownloadCounter:
             'master', strategy='ours'
         )
         self.write_json()
-        if self.counts_changed():
+        if repo_file_add_or_changed(self.ckan_meta, self.output_file):
             self.commit_counts()
         else:
             logging.info('Download counts match existing data.')
