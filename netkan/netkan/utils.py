@@ -9,10 +9,7 @@ def init_repo(metadata, path):
     clone_path = Path(path)
     if not clone_path.exists():
         logging.info('Cloning {}'.format(metadata))
-        clone_path.mkdir(parents=True)
-        repo = Repo.init(clone_path)
-        repo.create_remote('origin', metadata)
-        repo.remotes.origin.pull('master:master')
+        repo = Repo.clone_from(metadata, clone_path)
     else:
         repo = Repo(clone_path)
     return repo
