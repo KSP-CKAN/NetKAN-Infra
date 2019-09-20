@@ -106,6 +106,7 @@ class CkanMessage:
         inflation_time = parse(self.CheckTime)
         attrs = {
             'success': self.Success,
+            'last_error': self.ErrorMessage,
             # We may wish to change the name in the inflator
             # as the index will set 'last_checked'
             'last_inflated': inflation_time,
@@ -117,8 +118,6 @@ class CkanMessage:
             attrs['ModIdentifier'] = self.ModIdentifier
         if self.indexed:
             attrs['last_indexed'] = datetime.now(timezone.utc)
-        if self.ErrorMessage:
-            attrs['last_error'] = self.ErrorMessage
         return attrs
 
     def _process_ckan(self):

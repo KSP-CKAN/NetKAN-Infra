@@ -109,8 +109,7 @@ class TestCkan(unittest.TestCase):
         self.assertTrue(attrs['success'])
         self.assertIsInstance(attrs['last_checked'], datetime)
         self.assertIsInstance(attrs['last_inflated'], datetime)
-        with self.assertRaises(KeyError):
-            attrs['last_error']
+        self.assertEqual(attrs['last_error'], None)
         with self.assertRaises(KeyError):
             attrs['last_indexed']
 
