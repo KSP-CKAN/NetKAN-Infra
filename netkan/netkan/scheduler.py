@@ -2,14 +2,48 @@ import boto3
 import datetime
 import logging
 import requests
+import json
+import re
 from pathlib import Path
 from hashlib import md5
 
 
+class Netkan:
+
+    kref_pattern = re.compile('^#/ckan/([^/]+)/(.+)$')
+
+    def __init__(self, filename):
+        self.filename = Path(filename)
+        self.contents = self.filename.read_text()
+        self.json     = json.loads(self.contents)
+
+    def on_spacedock(self):
+        kref = self.json['$kref']
+        if not kref:
+            return False
+        (kind, mod_id) = Netkan.kref_pattern.match(kref).groups()
+        return kind == 'spacedock'
+
+    def has_vref(self):
+        return '$vref' in self.json
+
+    def hook_only(self):
+        return self.on_spacedock() and not self.has_vref()
+
+    def sqs_message(self):
+        return {
+            'Id':                    self.filename.stem,
+            'MessageBody':           self.contents,
+            'MessageGroupId':        '1',
+            'MessageDeduplicationId': md5(self.contents.encode()).hexdigest()
+        }
+
+
 class NetkanScheduler:
 
-    def __init__(self, path, queue, base='NetKAN/'):
+    def __init__(self, path, queue, base='NetKAN/', force_all=False):
         self.path = Path(path, base)
+        self.force_all = force_all
 
         # TODO: This isn't super neat, do something better.
         self.queue_url = 'test_url'
@@ -22,25 +56,17 @@ class NetkanScheduler:
     def netkans(self):
         # This can easily be recursive with '**/*.netkan', however
         # implemeneting like for like initially.
-        return self.path.glob('*.netkan')
-
-    def generate_netkan_message(self, filename):
-        content = Path(filename).read_text()
-        return {
-            'Id': filename.stem,
-            'MessageBody': content,
-            'MessageGroupId': '1',
-            'MessageDeduplicationId': md5(content.encode()).hexdigest()
-        }
+        return (Netkan(f) for f in self.path.glob('*.netkan'))
 
     def sqs_batch_entries(self, batch_size=10):
         batch = []
 
         for netkan in self.netkans():
-            batch.append(self.generate_netkan_message(netkan))
-            if len(batch) == batch_size:
-                yield(batch)
-                batch = []
+            if self.force_all or not netkan.hook_only():
+                batch.append(netkan.sqs_message())
+                if len(batch) == batch_size:
+                    yield(batch)
+                    batch = []
         if len(batch):
             yield(batch)
 

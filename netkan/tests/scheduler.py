@@ -1,4 +1,4 @@
-from netkan.scheduler import NetkanScheduler
+from netkan.scheduler import Netkan, NetkanScheduler
 
 import unittest
 from pathlib import Path, PurePath
@@ -12,7 +12,8 @@ class TestNetKAN(unittest.TestCase):
 
     def test_netkan_message(self):
         dogecoinflag = Path(self.test_data, 'NetKAN/DogeCoinFlag.netkan')
-        message = self.scheduler.generate_netkan_message(dogecoinflag)
+        netkan = Netkan(dogecoinflag)
+        message = netkan.sqs_message()
         self.assertEqual(message['Id'], 'DogeCoinFlag')
         self.assertEqual(
             message['MessageBody'],
