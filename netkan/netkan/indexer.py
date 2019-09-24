@@ -14,8 +14,7 @@ from .status import ModStatus
 class CkanMessage:
 
     def __init__(self, msg, ckan_meta, github_pr=None):
-        self.body = msg.body
-        self.ckan = Ckan(contents=self.body)
+        self.ckan = Ckan(contents=msg.body)
         self.ErrorMessage = None
         self.indexed = False
         for item in msg.message_attributes.items():
@@ -61,7 +60,7 @@ class CkanMessage:
     def write_metadata(self):
         self.mod_path.mkdir(exist_ok=True)
         with open(self.mod_file, mode='w') as file:
-            file.write(self.body)
+            file.write(self.ckan.body)
 
     def commit_metadata(self):
         index = self.ckan_meta.index
@@ -135,10 +134,19 @@ class CkanMessage:
             attrs['last_indexed'] = datetime.now(timezone.utc)
         return attrs
 
+    def get_release_date(self):
+        # Only look for a date if not already set
+        if not hasattr(self.ckan, 'release_date'):
+            self.ckan.find_release_date(self.mod_file, self.ckan_meta)
+            # Update coupled hash property
+            self.md5_of_body = hashlib.md5(self.ckan.body).hexdigest()
+
     def _process_ckan(self):
-        if self.Success and self.metadata_changed():
-            self.write_metadata()
-            self.commit_metadata()
+        if self.Success:
+            self.get_release_date()
+            if self.metadata_changed():
+                self.write_metadata()
+                self.commit_metadata()
         try:
             status = ModStatus.get(self.ModIdentifier)
             attrs = self.status_attrs()

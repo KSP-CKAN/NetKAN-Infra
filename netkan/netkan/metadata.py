@@ -1,8 +1,9 @@
 import json
 import re
 from pathlib import Path
-from hashlib import sha1
+from hashlib import md5, sha1
 import uuid
+from collections import OrderedDict
 
 
 class Netkan:
@@ -15,7 +16,7 @@ class Netkan:
             self.contents = self.filename.read_text()
         else:
             self.contents = contents
-        self._raw = json.loads(self.contents)
+        self._raw = json.loads(self.contents, object_pairs_hook=OrderedDict)
         # Extract kref_src + kref_id from the kref
         if self.has_kref:
             self.kref_src, self.kref_id = self.KREF_PATTERN.match(self.kref).groups()
@@ -82,7 +83,7 @@ class Ckan:
             self.contents = self.filename.read_text()
         else:
             self.contents = contents
-        self._raw = json.loads(self.contents)
+        self._raw = json.loads(self.contents, object_pairs_hook=OrderedDict)
 
     def __getattr__(self, name):
         if name in self._raw:
@@ -90,6 +91,25 @@ class Ckan:
         if name == 'kind':
             return self._raw.get('kind', 'package')
         raise AttributeError
+
+    @property
+    def body(self):
+        return json.dumps(self._raw, indent=4, ensure_ascii=False) + "\n"
+
+    def find_release_date(self, prev_path, ckanmeta_repo):
+        if prev_path.exists():
+            prev = Ckan(filename=prev_path)
+            if hasattr(prev, 'release_date'):
+                # Copy forward existing value if defined
+                self._raw['release_date'] = prev.release_date
+            else:
+                # Dig the earliest date out of the file's git history
+                self._raw['release_date'] = ckanmeta_repo.git.log(
+                    '--', self.mod_file, format='%aI').split("\n")[-1]
+        else:
+            # New file, mark date as now
+            self._raw['release_date'] = datetime.now(
+                timezone.utc).isoformat(timespec='seconds')
 
     @property
     def cache_prefix(self):
