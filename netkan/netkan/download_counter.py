@@ -109,7 +109,7 @@ class DownloadCounter:
     def update_counts(self):
         self.get_counts()
         self.ckan_meta.remotes.origin.pull(
-            'master', strategy='ours'
+            'master', strategy_option='ours'
         )
         self.write_json()
         if repo_file_add_or_changed(self.ckan_meta, self.output_file):
