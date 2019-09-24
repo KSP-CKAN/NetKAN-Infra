@@ -97,7 +97,7 @@ class CkanMessage:
             yield
         finally:
             self.ckan_meta.remotes.origin.pull(
-                self.mod_version, strategy='ours'
+                self.mod_version, strategy_option='ours'
             )
             self.ckan_meta.remotes.origin.push(self.mod_version)
             self.ckan_meta.heads.master.checkout()
@@ -218,7 +218,7 @@ class MessageHandler:
         if str(self.repo.active_branch) != 'master':
             self.repo.heads.master.checkout()
         self.repo.remotes.origin.pull(
-            'master', strategy='ours'
+            'master', strategy_option='ours'
         )
         if push:
             self.repo.remotes.origin.push('master')
