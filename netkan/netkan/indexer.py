@@ -153,11 +153,10 @@ class CkanMessage:
             self._process_ckan()
         if self.indexed:
             self.github_pr.create_pull_request(
-                title='NetKAN inflated: {}'.format(self.ModIdentifier),
+                title=f'NetKAN inflated: {self.ModIdentifier}',
                 branch=self.mod_version,
-                body='{} has been staged, please test and merge'.format(
-                    self.ModIdentifier
-                )
+                body=getattr(self, 'StagingReason',
+                    f'{self.ModIdentifier} has been staged, please test and merge')
             )
 
     @property
