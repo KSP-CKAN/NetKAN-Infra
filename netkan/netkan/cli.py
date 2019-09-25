@@ -101,14 +101,18 @@ def indexer(queue, metadata, token, repo, user, key,
     '--dev', is_flag=True, default=False,
     help='Disable AWS Credit Checks',
 )
-def scheduler(queue, netkan, max_queued, debug, dev):
+@click.option(
+    '--schedule-all', is_flag=True, default=False,
+    help='Schedule all modules even if we think they should be covered by webhooks'
+)
+def scheduler(queue, netkan, max_queued, debug, dev, schedule_all):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
     logging.info('Scheduler started at log level %s', level)
 
-    scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue)
+    scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue, force_all=schedule_all)
     if scheduler.can_schedule(max_queued, dev):
         init_repo(netkan, '/tmp/NetKAN')
         scheduler.schedule_all_netkans()
