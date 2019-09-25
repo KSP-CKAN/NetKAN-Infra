@@ -1,4 +1,5 @@
-from netkan.scheduler import Netkan, NetkanScheduler
+from netkan.scheduler import NetkanScheduler
+from netkan.metadata import Netkan
 
 import unittest
 from pathlib import Path, PurePath
