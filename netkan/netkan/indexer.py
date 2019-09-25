@@ -88,18 +88,28 @@ class CkanMessage:
             )
             branch.checkout()
         except GitCommandError:
-            branch = self.ckan_meta.create_head(self.mod_version)
+            if self.mod_version not in self.ckan_meta.heads:
+                branch = self.ckan_meta.create_head(self.mod_version)
+            else:
+                branch = getattr(
+                    self.ckan_meta.heads, self.mod_version
+                )
             branch.checkout()
-            self.ckan_meta.remotes.origin.push(
-                '{mod}:{mod}'.format(mod=self.mod_version)
-            )
         try:
             yield
         finally:
-            self.ckan_meta.remotes.origin.pull(
-                self.mod_version, strategy_option='ours'
-            )
-            self.ckan_meta.remotes.origin.push(self.mod_version)
+            if self.indexed:
+                # It's unlikely will hit a scenario where the metadata has
+                # changed upstream of us, but the bot should win if it does.
+                try:
+                    self.ckan_meta.remotes.origin.pull(
+                        self.mod_version, strategy_option='ours'
+                    )
+                except GitCommandError:
+                    pass
+                self.ckan_meta.remotes.origin.push(
+                    '{mod}:{mod}'.format(mod=self.mod_version)
+                )
             self.ckan_meta.heads.master.checkout()
 
     def status_attrs(self, new=False):
@@ -156,7 +166,7 @@ class CkanMessage:
                 title=f'NetKAN inflated: {self.ModIdentifier}',
                 branch=self.mod_version,
                 body=getattr(self, 'StagingReason',
-                    f'{self.ModIdentifier} has been staged, please test and merge')
+                             f'{self.ModIdentifier} has been staged, please test and merge')
             )
 
     @property
