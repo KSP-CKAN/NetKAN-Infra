@@ -18,9 +18,9 @@ class Netkan:
         self.json     = json.loads(self.contents)
 
     def on_spacedock(self):
-        kref = self.json['$kref']
-        if not kref:
+        if not '$kref' in self.json:
             return False
+        kref = self.json['$kref']
         (kind, mod_id) = Netkan.kref_pattern.match(kref).groups()
         return kind == 'spacedock'
 
