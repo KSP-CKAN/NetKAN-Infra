@@ -14,19 +14,25 @@ class Netkan:
         self._raw = json.loads(self.contents)
 
     def __getattr__(self, name):
-        if name == 'kind':
-            kind, self.mod_id = self.kref_pattern.match(self.kref).groups()
-            return kind
-        if name == 'mod_id':
-            self.kind, mod_id = self.kref_pattern.match(self.kref).groups()
-            return mod_id
+        # Extract kind + mod_id from the kref
+        if name in ['kind', 'mod_id']:
+            self.kind, self.mod_id = self.kref_pattern.match(self.kref).groups()
+            return getattr(self, name)
+
+        # Return kref host, ie `self.on_spacedock`. Current krefs include
+        # github, spacedock, curse and netkan.
         if name.startswith('on_'):
             return self._on_kind(name.split('_')[1])
+
+        # Make kref/vref access more pythonic
         if name in ['kref', 'vref']:
             if self._raw.get(f'${name}'):
                 return self._raw.get(f'${name}')
+
+        # Access netkan dictionary as attributes
         if name in self._raw:
             return self._raw[name]
+
         raise AttributeError
 
     def _on_kind(self, kind):
