@@ -8,9 +8,12 @@ class Netkan:
 
     kref_pattern = re.compile('^#/ckan/([^/]+)/(.+)$')
 
-    def __init__(self, filename):
-        self.filename = Path(filename)
-        self.contents = self.filename.read_text()
+    def __init__(self, filename=None, contents=None):
+        if filename:
+            self.filename = Path(filename)
+            self.contents = self.filename.read_text()
+        else:
+            self.contents = contents
         self._raw = json.loads(self.contents)
 
     def __getattr__(self, name):
@@ -40,8 +43,16 @@ class Netkan:
             return kind == self.kind
         return False
 
+    @property
+    def has_kref(self):
+        return hasattr(self, 'kref')
+
+    @property
+    def has_vref(self):
+        return hasattr(self, 'vref')
+
     def hook_only(self):
-        if hasattr(self, 'vref'):
+        if self.has_vref:
             return False
         return self.on_spacedock
 
