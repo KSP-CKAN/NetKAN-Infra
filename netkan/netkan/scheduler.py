@@ -2,41 +2,8 @@ import boto3
 import datetime
 import logging
 import requests
-import json
-import re
 from pathlib import Path
-from hashlib import md5
-
-
-class Netkan:
-
-    kref_pattern = re.compile('^#/ckan/([^/]+)/(.+)$')
-
-    def __init__(self, filename):
-        self.filename = Path(filename)
-        self.contents = self.filename.read_text()
-        self.json     = json.loads(self.contents)
-
-    def on_spacedock(self):
-        if not '$kref' in self.json:
-            return False
-        kref = self.json['$kref']
-        (kind, mod_id) = Netkan.kref_pattern.match(kref).groups()
-        return kind == 'spacedock'
-
-    def has_vref(self):
-        return '$vref' in self.json
-
-    def hook_only(self):
-        return self.on_spacedock() and not self.has_vref()
-
-    def sqs_message(self):
-        return {
-            'Id':                    self.filename.stem,
-            'MessageBody':           self.contents,
-            'MessageGroupId':        '1',
-            'MessageDeduplicationId': md5(self.contents.encode()).hexdigest()
-        }
+from .metadata import Netkan
 
 
 class NetkanScheduler:
