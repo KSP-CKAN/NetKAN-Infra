@@ -44,7 +44,7 @@ class TestNetKANCurseCounts(TestNetKANCounter):
         )
 
     def test_curse_api(self):
-        self.netkan.mod_id = 'a666'
+        self.netkan.kref_id = 'a666'
         self.assertEqual(
             self.netkan.curse_api,
             'https://api.cfwidget.com/kerbal/ksp-mods/a666'

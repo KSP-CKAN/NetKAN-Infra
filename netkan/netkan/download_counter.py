@@ -19,22 +19,22 @@ class NetkanDownloads(Netkan):
 
     @property
     def spacedock_api(self):
-        return f'https://spacedock.info/api/mod/{self.mod_id}'
+        return f'https://spacedock.info/api/mod/{self.kref_id}'
 
     @property
     def github_repo_api(self):
-        (user, repo) = self.github_pattern.match(self.mod_id).groups()
+        (user, repo) = self.github_pattern.match(self.kref_id).groups()
         return f'{self.github_api}{user}/{repo}'
 
     @property
     def curse_api(self):
-        if self.mod_id.isnumeric():
-            return f'https://api.cfwidget.com/project/{self.mod_id}'
-        return f'https://api.cfwidget.com/kerbal/ksp-mods/{self.mod_id}'
+        if self.kref_id.isnumeric():
+            return f'https://api.cfwidget.com/project/{self.kref_id}'
+        return f'https://api.cfwidget.com/kerbal/ksp-mods/{self.kref_id}'
 
     @property
     def remote_netkan(self):
-        return self.mod_id
+        return self.kref_id
 
     def count_from_spacedock(self):
         return requests.get(self.spacedock_api).json()['downloads']
@@ -72,11 +72,11 @@ class NetkanDownloads(Netkan):
         count = 0
         if self.has_kref:
             try:
-                count = getattr(self, f'count_from_{self.kind}')()
+                count = getattr(self, f'count_from_{self.kref_src}')()
             except JSONDecodeError:
                 logging.error(f'Failed decoding count for {self.identifier}')
             except AttributeError:
-                # If the kind isn't defined, we haven't created a counter
+                # If the kref_src isn't defined, we haven't created a counter
                 # for it and likely doesn't have one.
                 pass
         return count

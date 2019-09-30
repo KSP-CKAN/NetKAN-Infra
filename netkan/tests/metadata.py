@@ -19,8 +19,8 @@ class TestNetKANGitHub(TestNetKAN):
     def test_on_github(self):
         self.assertTrue(self.netkan.on_github)
 
-    def test_mod_id(self):
-        self.assertEqual(self.netkan.mod_id, 'pjf/DogeCoinFlag')
+    def test_kref_id(self):
+        self.assertEqual(self.netkan.kref_id, 'pjf/DogeCoinFlag')
 
     def test_hook_only(self):
         self.assertFalse(self.netkan.hook_only())
@@ -37,8 +37,8 @@ class TestNetKANSpaceDock(TestNetKAN):
     def test_on_spacedock(self):
         self.assertTrue(self.netkan.on_spacedock)
 
-    def test_mod_id(self):
-        self.assertEqual(self.netkan.mod_id, '777')
+    def test_kref_id(self):
+        self.assertEqual(self.netkan.kref_id, '777')
 
     def test_hook_only(self):
         self.assertTrue(self.netkan.hook_only())
@@ -55,8 +55,8 @@ class TestNetKANCurse(TestNetKAN):
     def test_on_curse(self):
         self.assertTrue(self.netkan.on_curse)
 
-    def test_mod_id(self):
-        self.assertEqual(self.netkan.mod_id, '666')
+    def test_kref_id(self):
+        self.assertEqual(self.netkan.kref_id, '666')
 
     def test_hook_only(self):
         self.assertFalse(self.netkan.hook_only())
@@ -76,9 +76,9 @@ class TestNetKANNetkan(TestNetKAN):
     def test_on_netkan(self):
         self.assertTrue(self.netkan.on_netkan)
 
-    def test_mod_id(self):
+    def test_kref_id(self):
         self.assertEqual(
-            self.netkan.mod_id,
+            self.netkan.kref_id,
             'http://ksp-ckan.space/netkan/DogeCoinFlag.netkan'
         )
 
