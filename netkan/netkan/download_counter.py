@@ -47,9 +47,10 @@ class NetkanDownloads(Netkan):
         ).json()
 
         total = 0
-        for rel in releases:
-            for asset in rel['assets']:
-                total += asset['download_count']
+        if isinstance(releases, list):
+            for rel in releases:
+                for asset in rel['assets']:
+                    total += asset['download_count']
 
         repo = requests.get(
             url, headers=self.github_headers
