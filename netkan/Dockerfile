@@ -10,13 +10,13 @@ USER root
 RUN rm -Rf /netkan
 
 FROM python:3.7 as dev
-COPY --from=base /home/netkan /home/netkan
-RUN useradd -Ms /bin/bash netkan
-RUN chown -R netkan:netkan /home/netkan
-ADD run_dev.sh /usr/local/bin/
+RUN useradd -ms /bin/bash netkan
+ADD . /netkan
 WORKDIR /home/netkan
+ADD run_dev.sh /usr/local/bin/
+ENV PATH "$PATH:/home/netkan/.local/bin"
 USER netkan
-ENTRYPOINT ["/usr/local/bin/run_dev.sh"]
+RUN pip install --user /netkan/.[development]
 
 FROM python:3.7
 COPY --from=base /home/netkan /home/netkan
