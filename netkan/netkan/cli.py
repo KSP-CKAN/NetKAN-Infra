@@ -17,6 +17,7 @@ from .download_counter import DownloadCounter
 from .ticket_closer import TicketCloser
 from .auto_freezer import AutoFreezer
 from .spacedock_adder import SpaceDockAdder
+from .mirrorer import Mirrorer
 
 
 @click.option(
@@ -315,12 +316,77 @@ def ticket_closer(token, days_limit):
 )
 def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
     init_ssh(key, Path(Path.home(), '.ssh'))
-    af = AutoFreezer(
+    afr = AutoFreezer(
         init_repo(netkan_remote, '/tmp/NetKAN'),
         GitHubPR(token, repo, user)
     )
-    af.freeze_idle_mods(days_limit)
-    af.mark_frozen_mods()
+    afr.freeze_idle_mods(days_limit)
+    afr.mark_frozen_mods()
+
+
+@click.command()
+@click.option(
+    '--queue', envvar='SQS_QUEUE',
+    help='SQS Queue to send netkan metadata for inflation',
+    required=True,
+)
+@click.option(
+    '--timeout', default=300, envvar='SQS_TIMEOUT',
+    help='Reduce message visibility timeout for testing',
+)
+@click.option(
+    '--ckan-meta', envvar='CKANMETA_REMOTE',
+    help='Path/URL/SSH to CKAN-meta repo for mirroring',
+    required=True,
+)
+@click.option(
+    '--ia-access', envvar='IA_access',
+    help='Credentials for Internet Archive',
+    required=True,
+)
+@click.option(
+    '--ia-secret', envvar='IA_secret',
+    help='Credentials for Internet Archive',
+    required=True,
+)
+@click.option(
+    '--ia-collection', envvar='IA_collection',
+    help='Collection to put mirrored mods in on Internet Archive',
+    required=True,
+)
+def mirrorer(queue, timeout, ckan_meta, ia_access, ia_secret, ia_collection):
+    Mirrorer(
+        init_repo(ckan_meta, '/tmp/CKAN-meta'),
+        ia_access, ia_secret, ia_collection
+    ).process_queue(queue, timeout)
+
+
+@click.command()
+@click.option(
+    '--ckan-meta', envvar='CKANMETA_REMOTE',
+    help='Path/URL/SSH to CKAN-meta repo for mirroring',
+    required=True,
+)
+@click.option(
+    '--ia-access', envvar='IA_access',
+    help='Credentials for Internet Archive',
+    required=True,
+)
+@click.option(
+    '--ia-secret', envvar='IA_secret',
+    help='Credentials for Internet Archive',
+    required=True,
+)
+@click.option(
+    '--ia-collection', envvar='IA_collection',
+    help='Collection to put mirrored mods in on Internet Archive',
+    required=True,
+)
+def mirror_purge_epochs(ckan_meta, ia_access, ia_secret, ia_collection):
+    Mirrorer(
+        init_repo(ckan_meta, '/tmp/CKAN-meta'),
+        ia_access, ia_secret, ia_collection
+    ).purge_epochs()
 
 
 @click.command()
@@ -376,3 +442,5 @@ netkan.add_command(download_counter)
 netkan.add_command(ticket_closer)
 netkan.add_command(auto_freezer)
 netkan.add_command(spacedock_adder)
+netkan.add_command(mirrorer)
+netkan.add_command(mirror_purge_epochs)

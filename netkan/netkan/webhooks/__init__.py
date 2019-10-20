@@ -11,6 +11,7 @@ from .inflate import inflate
 from .spacedock_inflate import spacedock_inflate
 from .spacedock_add import spacedock_add
 from .github_inflate import github_inflate
+from .github_mirror import github_mirror
 
 
 def create_app():
@@ -32,6 +33,7 @@ def create_app():
     app.config['inflation_queue'] = sqs.get_queue_by_name(
         QueueName=os.environ.get('INFLATION_SQS_QUEUE'))
     app.config['add_queue'] = sqs.get_queue_by_name(QueueName=os.environ.get('ADD_SQS_QUEUE'))
+    app.config['mirror_queue'] = sqs.get_queue_by_name(QueueName=os.environ.get('MIRROR_SQS_QUEUE'))
 
     # Add the hook handlers
     app.register_blueprint(errors)
@@ -39,5 +41,6 @@ def create_app():
     app.register_blueprint(spacedock_inflate, url_prefix='/sd')
     app.register_blueprint(spacedock_add, url_prefix='/sd')
     app.register_blueprint(github_inflate, url_prefix='/gh')
+    app.register_blueprint(github_mirror, url_prefix='/gh')
 
     return app

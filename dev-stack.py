@@ -1,14 +1,14 @@
 # Converted from SQS_With_CloudWatch_Alarms.template located at:
 # http://aws.amazon.com/cloudformation/aws-cloudformation-templates/
 
+import os
+import sys
 from troposphere import GetAtt, Output, Ref, Sub, Template
 from troposphere.iam import Group, PolicyType
 from troposphere.sqs import Queue
 from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
     ProvisionedThroughput
 from troposphere.s3 import Bucket
-import os
-import sys
 
 zone_id = os.environ.get('CKAN_DEV_ZONEID', False)
 
@@ -32,6 +32,10 @@ addqueue = t.add_resource(Queue("Adding",
                                 QueueName="AddingDev.fifo",
                                 ReceiveMessageWaitTimeSeconds=20,
                                 FifoQueue=True))
+mirrorqueue = t.add_resource(Queue("Mirroring",
+                                   QueueName="MirroringDev.fifo",
+                                   ReceiveMessageWaitTimeSeconds=20,
+                                   FifoQueue=True))
 
 queue_dev_group = t.add_resource(Group("QueueDevGroup"))
 t.add_resource(PolicyType(
@@ -65,7 +69,7 @@ t.add_resource(PolicyType(
     }
 ))
 
-for queue in [inbound, outbound, addqueue]:
+for queue in [inbound, outbound, addqueue, mirrorqueue]:
     t.add_output([
         Output(
             "{}QueueURL".format(queue.title),
