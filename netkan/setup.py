@@ -23,4 +23,13 @@ setup(
             'netkan=netkan.cli:netkan',
         ],
     },
+    extras_require={
+        'development': [
+            'pytest',
+            'ptvsd',
+            'pylint',
+            'autopep8',
+            'troposphere'
+        ]
+    },
 )

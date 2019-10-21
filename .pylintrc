@@ -1,0 +1,11 @@
+[MASTER]
+ignore-patterns=
+    setup.py
+    prod-stack.py
+    dev-stack.py
+
+[MESSAGES CONTROL]
+
+disable=
+    missing-docstring,
+    no-member,

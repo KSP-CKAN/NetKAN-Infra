@@ -1,0 +1,28 @@
+version: '3.4'
+
+services:
+  netkan:
+    user: netkan
+    build:
+      context: netkan/.
+      target: dev
+    environment:
+      SSH_KEY: ${CKAN_NETKAN_SSHKEY}
+      CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
+      CKANMETA_USER: ${CKAN_METADATA_USER}
+      CKANMETA_REPO: ${CKAN_METADATA_REPO}
+      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
+      AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+      GH_Token: ${CKAN_GH_Token}
+      SQS_TIMEOUT: 30
+      STATUS_DB: DevNetKANStatus
+      XKAN_GHSECRET: test
+      INFLATION_SQS_QUEUE: InboundDev.fifo
+      MIRROR_SQS_QUEUE: MirroringDev.fifo
+      STATUS_BUCKET: ckan-test-status
+      STATUS_INTERVAL: 0
+    volumes:
+      - .:/home/netkan/workspace
+    entrypoint: sleep infinity
