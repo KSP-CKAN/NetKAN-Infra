@@ -1,10 +1,10 @@
-import click
-import boto3
 import datetime
 import json
 import logging
 import time
 from pathlib import Path
+import boto3
+import click
 from .utils import init_repo, init_ssh
 from .github import GitHubPR
 from .indexer import MessageHandler
@@ -24,7 +24,7 @@ def netkan():
     help='SQS Queue to poll for metadata'
 )
 @click.option(
-    '--metadata', envvar='METADATA_PATH',
+    '--metadata', envvar='CKANMETA_REMOTE',
     help='Path/URL/SSH to Metadata Repo',
 )
 @click.option(
@@ -32,11 +32,11 @@ def netkan():
     required=True, envvar='GH_Token'
 )
 @click.option(
-    '--repo', envvar='METADATA_REPO',
+    '--repo', envvar='CKANMETA_REPO',
     help='GitHub repo to raise PR against (Org Repo: CKAN-meta)',
 )
 @click.option(
-    '--user', envvar='METADATA_USER',
+    '--user', envvar='CKANMETA_USER',
     help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
 )
 @click.option(
@@ -61,7 +61,7 @@ def indexer(queue, metadata, token, repo, user, key,
     github_pr = GitHubPR(token, repo, user)
     sqs = boto3.resource('sqs')
     queue = sqs.get_queue_by_name(QueueName=queue)
-    logging.info('Opening git repo at {}'.format(ckan_meta.working_dir))
+    logging.info('Opening git repo at %s', ckan_meta.working_dir)
 
     while True:
         messages = queue.receive_messages(
@@ -86,7 +86,7 @@ def indexer(queue, metadata, token, repo, user, key,
     help='SQS Queue to send netkan metadata for scheduling'
 )
 @click.option(
-    '--netkan', envvar='NETKAN_PATH',
+    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE',
     help='Path/URL to NetKAN Repo for dev override',
 )
 @click.option(
@@ -105,18 +105,18 @@ def indexer(queue, metadata, token, repo, user, key,
     '--schedule-all', is_flag=True, default=False,
     help='Schedule all modules even if we think they should be covered by webhooks'
 )
-def scheduler(queue, netkan, max_queued, debug, dev, schedule_all):
+def scheduler(queue, netkan_remote, max_queued, debug, dev, schedule_all):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
     logging.info('Scheduler started at log level %s', level)
 
-    scheduler = NetkanScheduler(Path('/tmp/NetKAN'), queue, force_all=schedule_all)
-    if scheduler.can_schedule(max_queued, dev):
-        init_repo(netkan, '/tmp/NetKAN')
-        scheduler.schedule_all_netkans()
-        logging.info("NetKANs submitted to {}".format(queue))
+    sched = NetkanScheduler(Path('/tmp/NetKAN'), queue, force_all=schedule_all)
+    if sched.can_schedule(max_queued, dev):
+        init_repo(netkan_remote, '/tmp/NetKAN')
+        sched.schedule_all_netkans()
+        logging.info("NetKANs submitted to %s", queue)
 
 
 @click.command()
@@ -139,9 +139,7 @@ def export_status_s3(status_bucket, status_key, interval):
     )
     frequency = 'every {} seconds'.format(
         interval) if interval else 'once'
-    logging.info('Exporting to s3://{}/{} {}'.format(
-        status_bucket, status_key, frequency)
-    )
+    logging.info('Exporting to s3://%s/%s %s', status_bucket, status_key, frequency)
     while True:
         ModStatus.export_to_s3(status_bucket, status_key, interval)
         if not interval:
@@ -223,11 +221,11 @@ def clean_cache(days):
 
 @click.command()
 @click.option(
-    '--netkan', envvar='NETKAN_REPO',
+    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE',
     help='Path/URL/SSH to NetKAN repo for mod list',
 )
 @click.option(
-    '--ckan-meta', envvar='CKANMETA_REPO',
+    '--ckan-meta', envvar='CKANMETA_REMOTE',
     help='Path/URL/SSH to CKAN-meta repo for output',
 )
 @click.option(
@@ -239,14 +237,14 @@ def clean_cache(days):
     '--debug', is_flag=True, default=False,
     help='Enable debug logging',
 )
-def download_counter(netkan, ckan_meta, token, key, debug):
+def download_counter(netkan_remote, ckan_meta, token, key, debug):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
     logging.info('Download Counter started at log level %s', level)
     init_ssh(key, '/home/netkan/.ssh')
-    init_repo(netkan, '/tmp/NetKAN')
+    init_repo(netkan_remote, '/tmp/NetKAN')
     meta = init_repo(ckan_meta, '/tmp/CKAN-meta')
     logging.info('Starting Download Count Calculation...')
     DownloadCounter(

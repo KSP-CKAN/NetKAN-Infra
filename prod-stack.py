@@ -1,3 +1,5 @@
+import os
+import sys
 from troposphere import GetAtt, Output, Ref, Template, Sub, Base64
 from troposphere.iam import Policy, Role, InstanceProfile
 from troposphere.sqs import Queue
@@ -12,19 +14,17 @@ from troposphere.cloudformation import Init, InitFile, InitFiles, \
     InitConfig, InitService, Metadata
 from troposphere.events import Rule, Target, EcsParameters
 from troposphere.route53 import RecordSetType
-import os
-import sys
 
 ZONE_ID = os.environ.get('CKAN_ZONEID', False)
 BOT_FQDN = 'netkan.ksp-ckan.space'
 EMAIL = 'domains@ksp-ckan.space'
 PARAM_NAMESPACE = '/NetKAN/Indexer/'
-NETKAN_HTTP = 'https://github.com/KSP-CKAN/NetKAN.git'
-CKAN_META = 'git@github.com:KSP-CKAN/CKAN-meta.git'
-status_key = 'status/netkan.json'
+NETKAN_REMOTE = 'https://github.com/KSP-CKAN/NetKAN.git'
+CKANMETA_REMOTE = 'git@github.com:KSP-CKAN/CKAN-meta.git'
+CKANMETA_USER = 'KSP-CKAN'
+CKANMETA_REPO = 'CKAN-meta'
 STATUS_BUCKET = 'status.ksp-ckan.space'
-METADATA_USER = 'KSP-CKAN'
-METADATA_REPO = 'CKAN-meta'
+status_key = 'status/netkan.json'
 
 if not ZONE_ID:
     print('Zone ID Required from EnvVar `CKAN_ZONEID`')
@@ -523,9 +523,9 @@ services = [
         'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
-            ('METADATA_PATH', CKAN_META),
-            ('METADATA_USER', METADATA_USER),
-            ('METADATA_REPO', METADATA_REPO),
+            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
+            ('CKANMETA_USER', CKANMETA_USER),
+            ('CKANMETA_REPO', CKANMETA_REPO),
             ('SQS_QUEUE', GetAtt(outbound, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
@@ -540,7 +540,7 @@ services = [
         'secrets': [],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
-            ('NETKAN_PATH', NETKAN_HTTP),
+            ('NETKAN_REMOTE', NETKAN_REMOTE),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'schedule': 'rate(2 hours)',
@@ -593,8 +593,8 @@ services = [
         'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
-            ('NETKAN_REPO', NETKAN_HTTP),
-            ('CKANMETA_REPO', CKAN_META),
+            ('NETKAN_REMOTE', NETKAN_REMOTE),
+            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
         ],
         'schedule': 'rate(1 day)',
     },
@@ -636,8 +636,8 @@ services = [
                     'IA_access', 'IA_secret',
                 ],
                 'env': [
-                    ('CKAN_meta', CKAN_META),
-                    ('NetKAN', NETKAN_HTTP),
+                    ('CKAN_meta', CKANMETA_REMOTE),
+                    ('NetKAN', NETKAN_REMOTE),
                     ('IA_collection', 'kspckanmods'),
                 ],
                 'volumes': [
