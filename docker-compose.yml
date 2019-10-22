@@ -53,18 +53,19 @@ services:
       - ${HOME}/ckan_cache:/home/netkan/ckan_cache
   webhooks:
     build:
-      context: webhooks/.
+      context: netkan/.
+      target: dev
     environment:
-      SSH_KEY: ${CKAN_NETKAN_SSHKEY}
-      GH_Token: ${CKAN_GH_Token}
       XKAN_GHSECRET: test
-      CKAN_meta: ${CKAN_METADATA_PATH}
-      NetKAN: ${NETKAN_METADATA_PATH}
-      IA_access: test
-      IA_secret: test
-      IA_collection: test
-    volumes:
-      - ${HOME}/ckan_cache:/home/netkan/ckan_cache
+      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
+      INFLATION_SQS_QUEUE: InboundDev.fifo
+      AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+    ports:
+      - "5000:5000"
+    entrypoint: .local/bin/gunicorn -b 0.0.0.0:5000
+    command: netkan.webhooks:create_app()
   status:
     build:
       context: netkan/.
