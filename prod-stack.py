@@ -25,6 +25,8 @@ NETKAN_REPO = 'NetKAN'
 CKANMETA_REMOTE = 'git@github.com:KSP-CKAN/CKAN-meta.git'
 CKANMETA_USER = 'KSP-CKAN'
 CKANMETA_REPO = 'CKAN-meta'
+NETKAN_USER = 'KSP-CKAN'
+NETKAN_REPO = 'NetKAN'
 STATUS_BUCKET = 'status.ksp-ckan.space'
 status_key = 'status/netkan.json'
 
@@ -47,9 +49,13 @@ outbound = t.add_resource(Queue("NetKANOutbound",
                                 QueueName="Outbound.fifo",
                                 ReceiveMessageWaitTimeSeconds=20,
                                 FifoQueue=True))
+addqueue = t.add_resource(Queue("Adding",
+                                QueueName="Adding.fifo",
+                                ReceiveMessageWaitTimeSeconds=20,
+                                FifoQueue=True))
 
 
-for queue in [inbound, outbound]:
+for queue in [inbound, outbound, addqueue]:
     t.add_output([
         Output(
             "{}QueueURL".format(queue.title),
@@ -758,6 +764,7 @@ services = [
                     ('CKANMETA_REMOTE', CKANMETA_REMOTE),
                     ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
                     ('INFLATION_SQS_QUEUE', GetAtt(inbound, 'QueueName')),
+                    ('ADD_SQS_QUEUE', GetAtt(addqueue, 'QueueName')),
                 ],
             },
             {
@@ -770,6 +777,18 @@ services = [
                 'depends': ['webhooks', 'legacyhooks']
             },
         ]
+    },
+    {
+        'name': 'Adder',
+        'command': 'spacedock-adder',
+        'memory': '156',
+        'secrets': ['GH_Token'],
+        'env': [
+            ('SQS_QUEUE', GetAtt(addqueue, 'QueueName')),
+            ('NETKAN_REMOTE', NETKAN_REMOTE),
+            ('NETKAN_USER', NETKAN_USER),
+            ('NETKAN_REPO', NETKAN_REPO),
+        ],
     },
 ]
 

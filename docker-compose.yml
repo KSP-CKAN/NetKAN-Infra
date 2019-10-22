@@ -86,6 +86,16 @@ services:
       DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
     entrypoint: .local/bin/gunicorn
     command: -b 0.0.0.0:5000 --access-logfile - "netkan.webhooks:create_app()"
+  adder:
+    build:
+      context: netkan/.
+      target: dev
+    environment:
+      SQS_QUEUE: AddingDev.info
+      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
+      NETKAN_USER: ${CKAN_NETKAN_USER}
+      NETKAN_REPO:  ${CKAN_NETKAN_REPO}
+    command: spacedock-adder
   status:
     build:
       context: netkan/.

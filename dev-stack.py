@@ -28,6 +28,10 @@ outbound = t.add_resource(Queue("OutboundDev",
                                 QueueName="OutboundDev.fifo",
                                 ReceiveMessageWaitTimeSeconds=20,
                                 FifoQueue=True))
+addqueue = t.add_resource(Queue("Adding",
+                                QueueName="AddingDev.fifo",
+                                ReceiveMessageWaitTimeSeconds=20,
+                                FifoQueue=True))
 
 queue_dev_group = t.add_resource(Group("QueueDevGroup"))
 t.add_resource(PolicyType(
@@ -61,7 +65,7 @@ t.add_resource(PolicyType(
     }
 ))
 
-for queue in [inbound, outbound]:
+for queue in [inbound, outbound, addqueue]:
     t.add_output([
         Output(
             "{}QueueURL".format(queue.title),

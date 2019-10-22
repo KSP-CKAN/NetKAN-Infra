@@ -16,6 +16,7 @@ from .status import ModStatus
 from .download_counter import DownloadCounter
 from .ticket_closer import TicketCloser
 from .auto_freezer import AutoFreezer
+from .spacedock_adder import SpaceDockAdder
 
 
 @click.option(
@@ -317,6 +318,42 @@ def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
     af.mark_frozen_mods()
 
 
+@click.command()
+@click.option(
+    '--queue', envvar='SQS_QUEUE',
+    help='SQS Queue to send netkan metadata for inflation',
+    required=True,
+)
+@click.option(
+    '--timeout', default=300, envvar='SQS_TIMEOUT',
+    help='Reduce message visibility timeout for testing',
+)
+@click.option(
+    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE',
+    help='Path/URL to NetKAN Repo for dev override',
+)
+@click.option(
+    '--token', help='GitHub Token for PRs',
+    required=True, envvar='GH_Token'
+)
+@click.option(
+    '--repo', envvar='NETKAN_REPO',
+    help='GitHub repo to raise PR against (Org Repo: CKAN-meta)',
+)
+@click.option(
+    '--user', envvar='NETKAN_USER',
+    help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
+)
+def spacedock_adder(queue, timeout, netkan_remote, token, repo, user):
+    sd_adder = SpaceDockAdder(
+        queue,
+        timeout,
+        init_repo(netkan_remote, "/tmp/NetKAN"),
+        GitHubPR(token, repo, user)
+    )
+    sd_adder.run()
+
+
 netkan.add_command(indexer)
 netkan.add_command(scheduler)
 netkan.add_command(dump_status)
@@ -328,3 +365,4 @@ netkan.add_command(clean_cache)
 netkan.add_command(download_counter)
 netkan.add_command(ticket_closer)
 netkan.add_command(auto_freezer)
+netkan.add_command(spacedock_adder)
