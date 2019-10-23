@@ -694,7 +694,7 @@ services = [
                 'entrypoint': '.local/bin/gunicorn',
                 'command': [
                     '-b', '0.0.0.0:5000', '--access-logfile', '-',
-                    '"netkan.webhooks:create_app()"'
+                    'netkan.webhooks:create_app()'
                 ],
                 'secrets': [
                     'XKAN_GHSECRET',
@@ -712,7 +712,7 @@ services = [
                 'volumes': [
                     ('letsencrypt', '/etc/letsencrypt')
                 ],
-                'depends': 'webhooks',
+                'depends': ['webhooks', 'legacyhooks']
             },
         ]
     },
@@ -738,7 +738,7 @@ for service in services:
         command = container.get('command')
         volumes = container.get('volumes', [])
         ports = container.get('ports', [])
-        depends = container.get('depends')
+        depends = container.get('depends', [])
         definition = ContainerDefinition(
             Image=container.get('image', 'kspckan/netkan'),
             Memory=container.get('memory', '96'),
@@ -794,14 +794,14 @@ for service in services:
                     Protocol='tcp',
                 )
             )
-        if depends:
+        for depend in depends:
             definition.DependsOn.append(
                 ContainerDependency(
                     Condition='START',
-                    ContainerName=depends,
+                    ContainerName=depend,
                 )
             )
-            definition.Links.append(depends)
+            definition.Links.append(depend)
         task.ContainerDefinitions.append(definition)
     t.add_resource(task)
 
