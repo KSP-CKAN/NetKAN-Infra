@@ -1,7 +1,7 @@
 import os
 import sys
 from troposphere import GetAtt, Output, Ref, Template, Sub, Base64
-from troposphere.iam import Policy, Role, InstanceProfile
+from troposphere.iam import Group, Policy, PolicyType, Role, InstanceProfile
 from troposphere.sqs import Queue
 from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
     ProvisionedThroughput
@@ -383,6 +383,51 @@ netkan_scheduler_role = t.add_resource(Role(
             }
         )
     ]
+))
+
+# Build Account Permissions
+# It's useful for the CI to be able to update services upon build, there
+# is a service account with keys that will be exposed to CI for allowing
+# redeployment of services.
+ksp_builder_group = t.add_resource(Group("KspCkanBuilderGroup"))
+builder_services = []
+for service in ['Indexer', 'Inflator', 'Webhooks']:
+    builder_services.append(
+        Sub(
+            'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/NetKANCluster/${service}',
+            service=GetAtt('{}Service'.format(service), 'Name'),
+        )
+    )
+t.add_resource(PolicyType(
+    "KspCkanBuilderRole",
+    PolicyName="KspCkanBuilder",
+    Groups=[Ref(ksp_builder_group)],
+    PolicyDocument={
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": [
+                    "ecs:ListServices",
+                ],
+                "Effect": "Allow",
+                "Resource": "*",
+            },
+            {
+                "Action": [
+                    "ecs:DescribeServices",
+                ],
+                "Effect": "Allow",
+                "Resource": builder_services
+            },
+            {
+                "Action": [
+                    "ecs:UpdateService",
+                ],
+                "Effect": "Allow",
+                "Resource": builder_services
+            },
+        ]
+    }
 ))
 
 # Indexer Compute
