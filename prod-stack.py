@@ -1,5 +1,7 @@
+import os
+import sys
 from troposphere import GetAtt, Output, Ref, Template, Sub, Base64
-from troposphere.iam import Policy, Role, InstanceProfile
+from troposphere.iam import Group, Policy, PolicyType, Role, InstanceProfile
 from troposphere.sqs import Queue
 from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
     ProvisionedThroughput
@@ -12,19 +14,17 @@ from troposphere.cloudformation import Init, InitFile, InitFiles, \
     InitConfig, InitService, Metadata
 from troposphere.events import Rule, Target, EcsParameters
 from troposphere.route53 import RecordSetType
-import os
-import sys
 
 ZONE_ID = os.environ.get('CKAN_ZONEID', False)
 BOT_FQDN = 'netkan.ksp-ckan.space'
 EMAIL = 'domains@ksp-ckan.space'
 PARAM_NAMESPACE = '/NetKAN/Indexer/'
-NETKAN_HTTP = 'https://github.com/KSP-CKAN/NetKAN.git'
-CKAN_META = 'git@github.com:KSP-CKAN/CKAN-meta.git'
-status_key = 'status/netkan.json'
+NETKAN_REMOTE = 'https://github.com/KSP-CKAN/NetKAN.git'
+CKANMETA_REMOTE = 'git@github.com:KSP-CKAN/CKAN-meta.git'
+CKANMETA_USER = 'KSP-CKAN'
+CKANMETA_REPO = 'CKAN-meta'
 STATUS_BUCKET = 'status.ksp-ckan.space'
-METADATA_USER = 'KSP-CKAN'
-METADATA_REPO = 'CKAN-meta'
+status_key = 'status/netkan.json'
 
 if not ZONE_ID:
     print('Zone ID Required from EnvVar `CKAN_ZONEID`')
@@ -385,6 +385,51 @@ netkan_scheduler_role = t.add_resource(Role(
     ]
 ))
 
+# Build Account Permissions
+# It's useful for the CI to be able to update services upon build, there
+# is a service account with keys that will be exposed to CI for allowing
+# redeployment of services.
+ksp_builder_group = t.add_resource(Group("KspCkanBuilderGroup"))
+builder_services = []
+for service in ['Indexer', 'Inflator', 'Webhooks']:
+    builder_services.append(
+        Sub(
+            'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/NetKANCluster/${service}',
+            service=GetAtt('{}Service'.format(service), 'Name'),
+        )
+    )
+t.add_resource(PolicyType(
+    "KspCkanBuilderRole",
+    PolicyName="KspCkanBuilder",
+    Groups=[Ref(ksp_builder_group)],
+    PolicyDocument={
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": [
+                    "ecs:ListServices",
+                ],
+                "Effect": "Allow",
+                "Resource": "*",
+            },
+            {
+                "Action": [
+                    "ecs:DescribeServices",
+                ],
+                "Effect": "Allow",
+                "Resource": builder_services
+            },
+            {
+                "Action": [
+                    "ecs:UpdateService",
+                ],
+                "Effect": "Allow",
+                "Resource": builder_services
+            },
+        ]
+    }
+))
+
 # Indexer Compute
 # We could utilise an autoscaling group, but that is way
 # more complicated for our use case. If at some point we'd
@@ -523,9 +568,9 @@ services = [
         'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
-            ('METADATA_PATH', CKAN_META),
-            ('METADATA_USER', METADATA_USER),
-            ('METADATA_REPO', METADATA_REPO),
+            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
+            ('CKANMETA_USER', CKANMETA_USER),
+            ('CKANMETA_REPO', CKANMETA_REPO),
             ('SQS_QUEUE', GetAtt(outbound, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
@@ -540,7 +585,7 @@ services = [
         'secrets': [],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
-            ('NETKAN_PATH', NETKAN_HTTP),
+            ('NETKAN_REMOTE', NETKAN_REMOTE),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'schedule': 'rate(2 hours)',
@@ -593,8 +638,8 @@ services = [
         'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
-            ('NETKAN_REPO', NETKAN_HTTP),
-            ('CKANMETA_REPO', CKAN_META),
+            ('NETKAN_REMOTE', NETKAN_REMOTE),
+            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
         ],
         'schedule': 'rate(1 day)',
     },
@@ -636,8 +681,8 @@ services = [
                     'IA_access', 'IA_secret',
                 ],
                 'env': [
-                    ('CKAN_meta', CKAN_META),
-                    ('NetKAN', NETKAN_HTTP),
+                    ('CKAN_meta', CKANMETA_REMOTE),
+                    ('NetKAN', NETKAN_REMOTE),
                     ('IA_collection', 'kspckanmods'),
                 ],
                 'volumes': [

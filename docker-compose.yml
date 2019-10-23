@@ -10,9 +10,9 @@ services:
       target: dev
     environment:
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
-      METADATA_PATH: ${CKAN_METADATA_PATH}
-      METADATA_USER: ${CKAN_METADATA_USER}
-      METADATA_REPO: ${CKAN_METADATA_REPO}
+      CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
+      CKANMETA_USER: ${CKAN_METADATA_USER}
+      CKANMETA_REPO: ${CKAN_METADATA_REPO}
       AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
@@ -28,7 +28,7 @@ services:
       context: netkan/.
       target: dev
     environment:
-      NETKAN_PATH: ${NETKAN_METADATA_PATH}
+      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
       AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
@@ -111,8 +111,8 @@ services:
       target: dev
     environment:
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
-      NETKAN_REPO: ${NETKAN_METADATA_PATH}
-      CKANMETA_REPO: ${CKAN_METADATA_PATH}
+      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
+      CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
       GH_Token: ${CKAN_GH_Token}
     volumes:
       - ./netkan:/home/netkan/netkan
@@ -123,8 +123,8 @@ services:
       target: dev
     environment:
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
-      NETKAN_REPO: ${NETKAN_METADATA_PATH}
-      CKANMETA_REPO: ${CKAN_METADATA_PATH}
+      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
+      CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
       GH_Token: ${CKAN_GH_Token}
     volumes:
       - ./netkan:/home/netkan/netkan
