@@ -11,7 +11,8 @@ inflate = Blueprint('inflate', __name__)
 # Payload: { "identifiers": [ "Id1", "Id2", ... ] }
 @inflate.route('/inflate', methods=['POST'])
 def inflate_hook():
-    ids = request.json.get('identifiers')
+    # SpaceDock doesn't set the `Content-Type: application/json` header
+    ids = request.get_json(force=True).get('identifiers')
     if not ids:
         current_app.logger.info('No identifiers received')
         return 'An array of identifiers is required', 400
