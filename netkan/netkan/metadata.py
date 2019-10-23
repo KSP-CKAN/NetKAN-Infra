@@ -6,7 +6,7 @@ from hashlib import md5, sha1
 
 class Netkan:
 
-    kref_pattern = re.compile('^#/ckan/([^/]+)/(.+)$')
+    KREF_PATTERN = re.compile('^#/ckan/([^/]+)/(.+)$')
 
     def __init__(self, filename=None, contents=None):
         if filename:
@@ -16,7 +16,8 @@ class Netkan:
             self.contents = contents
         self._raw = json.loads(self.contents)
         # Extract kref_src + kref_id from the kref
-        self.kref_src, self.kref_id = self.kref_pattern.match(self.kref).groups()
+        self.kref_src, self.kref_id = self.KREF_PATTERN.match(
+            self.kref).groups()
 
     def __getattr__(self, name):
         # Return kref host, ie `self.on_spacedock`. Current krefs include
@@ -100,7 +101,7 @@ class Ckan:
             self.cache_prefix,
             self.identifier,
             self.version.replace(':', '-'),
-            Ckan.MIME_TO_EXTENSION[self.download_content_type],
+            self.MIME_TO_EXTENSION[self.download_content_type],
         )
 
     def authors(self):
