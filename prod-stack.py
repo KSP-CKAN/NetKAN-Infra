@@ -673,11 +673,29 @@ services = [
         'name': 'Webhooks',
         'containers': [
             {
-                'name': 'webhooks',
-                'entrypoint': ['.local/bin/gunicorn', '-b', '0.0.0.0:5000'],
-                'command': ['netkan.webhooks:create_app()'],
-                'ports': ['5000'],
+                'name': 'legacyhooks',
+                'image': 'kspckan/webhooks',
                 'memory': '156',
+                'secrets': [
+                    'SSH_KEY', 'GH_Token', 'XKAN_GHSECRET',
+                    'IA_access', 'IA_secret',
+                ],
+                'env': [
+                    ('CKAN_meta', CKANMETA_REMOTE),
+                    ('NetKAN', NETKAN_REMOTE),
+                    ('IA_collection', 'kspckanmods'),
+                ],
+                'volumes': [
+                    ('ckan_cache', '/home/netkan/ckan_cache')
+                ],
+            },
+            {
+                'name': 'webhooks',
+                'entrypoint': '.local/bin/gunicorn',
+                'command': [
+                    '-b', '0.0.0.0:5000', '--access-logfile', '-',
+                    '"netkan.webhooks:create_app()"'
+                ],
                 'secrets': [
                     'XKAN_GHSECRET',
                 ],
