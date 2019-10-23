@@ -1,12 +1,12 @@
 import json
 import re
 from pathlib import Path
-from hashlib import md5
+from hashlib import md5, sha1
 
 
 class Netkan:
 
-    kref_pattern = re.compile('^#/ckan/([^/]+)/(.+)$')
+    KREF_PATTERN = re.compile('^#/ckan/([^/]+)/(.+)$')
 
     def __init__(self, filename=None, contents=None):
         if filename:
@@ -15,13 +15,11 @@ class Netkan:
         else:
             self.contents = contents
         self._raw = json.loads(self.contents)
+        # Extract kref_src + kref_id from the kref
+        self.kref_src, self.kref_id = self.KREF_PATTERN.match(
+            self.kref).groups()
 
     def __getattr__(self, name):
-        # Extract kref_src + kref_id from the kref
-        if name in ['kref_src', 'kref_id']:
-            self.kref_src, self.kref_id = self.kref_pattern.match(self.kref).groups()
-            return getattr(self, name)
-
         # Return kref host, ie `self.on_spacedock`. Current krefs include
         # github, spacedock, curse and netkan.
         if name.startswith('on_'):
@@ -63,3 +61,59 @@ class Netkan:
             'MessageGroupId': '1',
             'MessageDeduplicationId': md5(self.contents.encode()).hexdigest()
         }
+
+
+class Ckan:
+
+    MIME_TO_EXTENSION = {
+        'application/x-gzip':           'gz',
+        'application/x-tar':            'tar',
+        'application/x-compressed-tar': 'tar.gz',
+        'application/zip':              'zip',
+    }
+
+    def __init__(self, filename=None, contents=None):
+        if filename:
+            self.filename = Path(filename)
+            self.contents = self.filename.read_text()
+        else:
+            self.contents = contents
+        self._raw = json.loads(self.contents)
+
+    def __getattr__(self, name):
+        if name in self._raw:
+            return self._raw[name]
+        if name == 'kind':
+            return self._raw.get('kind', 'package')
+        raise AttributeError
+
+    @property
+    def cache_prefix(self):
+        if not 'download' in self._raw:
+            return None
+        return sha1(self.download.encode()).hexdigest().upper()[0:8]
+
+    @property
+    def cache_filename(self):
+        if not {'download', 'identifier', 'version', 'download_content_type'} <= self._raw.keys():
+            return None
+        return '{}-{}-{}.{}'.format(
+            self.cache_prefix,
+            self.identifier,
+            self.version.replace(':', '-'),
+            self.MIME_TO_EXTENSION[self.download_content_type],
+        )
+
+    def authors(self):
+        auth = self.author
+        if isinstance(auth, list):
+            return auth
+        else:
+            return [auth]
+
+    def licenses(self):
+        lic = self.license
+        if isinstance(lic, list):
+            return lic
+        else:
+            return [lic]

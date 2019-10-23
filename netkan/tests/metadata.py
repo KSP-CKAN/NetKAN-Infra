@@ -1,4 +1,4 @@
-from netkan.metadata import Netkan
+from netkan.metadata import Netkan, Ckan
 
 import unittest
 from pathlib import Path, PurePath
@@ -96,3 +96,60 @@ class TestNetKANVref(TestNetKAN):
 
     def test_hook_only(self):
         self.assertFalse(self.netkan.hook_only())
+
+
+class TestCkanSimple(unittest.TestCase):
+
+    def setUp(self):
+        self.ckan = Ckan(contents = """{
+            "spec_version": "v1.4",
+            "identifier":   "AwesomeMod",
+            "version":      "1.0.0",
+            "ksp_version":  "1.7.3",
+            "author":       "techman83",
+            "license":      "CC-BY-NC-SA-4.0",
+            "download":     "https://awesomesite.org/awesomemod-1.0.0.zip",
+            "download_content_type": "application/zip"
+        }""")
+
+    def test_basic_properties(self):
+        self.assertEqual(self.ckan.spec_version, "v1.4")
+        self.assertEqual(self.ckan.identifier,   "AwesomeMod")
+        self.assertEqual(self.ckan.version,      "1.0.0")
+        self.assertEqual(self.ckan.ksp_version,  "1.7.3")
+
+    def test_default_kind(self):
+        self.assertEqual(self.ckan.kind, "package")
+
+    def test_authors(self):
+        self.assertEqual(self.ckan.authors(), ["techman83"])
+
+    def test_licenses(self):
+        self.assertEqual(self.ckan.licenses(), ["CC-BY-NC-SA-4.0"])
+
+    def test_cache(self):
+        self.assertEqual(self.ckan.cache_prefix,   "3C69B375")
+        self.assertEqual(self.ckan.cache_filename, "3C69B375-AwesomeMod-1.0.0.zip")
+
+
+class TestCkanComplex(unittest.TestCase):
+
+    def setUp(self):
+        self.ckan = Ckan(contents = """{
+            "spec_version": "v1.4",
+            "identifier":   "AwesomeMod",
+            "version":      "1.0.0",
+            "ksp_version":  "1.7.3",
+            "author":       [ "techman83", "DasSkelett", "politas" ],
+            "license":      [ "CC-BY-NC-SA-4.0", "GPL-3.0", "MIT" ],
+            "kind":         "metapackage"
+        }""")
+
+    def test_explicit_kind(self):
+        self.assertEqual(self.ckan.kind, "metapackage")
+
+    def test_authors(self):
+        self.assertEqual(self.ckan.authors(), ["techman83", "DasSkelett", "politas"])
+
+    def test_licenses(self):
+        self.assertEqual(self.ckan.licenses(), ["CC-BY-NC-SA-4.0", "GPL-3.0", "MIT"])

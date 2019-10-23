@@ -3,3 +3,4 @@
 *.pyc
 *.egg-info
 /pr_tester
+__pycache__

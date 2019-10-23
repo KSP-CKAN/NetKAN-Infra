@@ -1,8 +1,8 @@
 [MASTER]
-ignore-patterns=
-    setup.py
-    prod-stack.py
-    dev-stack.py
+ignore=
+    setup.py,
+    prod-stack.py,
+    dev-stack.py,
 
 [MESSAGES CONTROL]
 

@@ -17,6 +17,9 @@ setup(
         # pynamodb requires it, but we're also leaning on it
         'python-dateutil',
         'requests',
+        'flask',
+        'internetarchive',
+        'gunicorn',
     ],
     entry_points={
         'console_scripts': [
