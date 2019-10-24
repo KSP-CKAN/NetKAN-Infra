@@ -22,7 +22,7 @@ class NetkanScheduler:
 
     def netkans(self):
         # This can easily be recursive with '**/*.netkan', however
-        # implemeneting like for like initially.
+        # implementing like for like initially.
         return (Netkan(f) for f in self.path.glob('*.netkan'))
 
     def sqs_batch_entries(self, batch_size=10):

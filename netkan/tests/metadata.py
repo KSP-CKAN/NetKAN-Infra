@@ -86,6 +86,27 @@ class TestNetKANNetkan(TestNetKAN):
         self.assertFalse(self.netkan.hook_only())
 
 
+class TestNetKANNoKref(TestNetKAN):
+
+    def setUp(self):
+        self.netkan = Netkan(contents="""{
+            "spec_version": "v1.4",
+            "identifier":   "LightsOut-Fwiffo",
+            "license":      "MIT",
+            "version":      "v0.1.5.1",
+            "download":     "https://cdn.rawgit.com/rkagerer/KSP-Fwiffo-Repository/master/Mods/LightsOut-Fwiffo-v0.1.5.1.zip"
+        }""")
+
+    def test_kref(self):
+        self.assertFalse(self.netkan.has_kref)
+
+    def test_kref_src(self):
+        self.assertEqual(self.netkan.kref_src, None)
+
+    def test_kref_id(self):
+        self.assertEqual(self.netkan.kref_id, None)
+
+
 class TestNetKANVref(TestNetKAN):
 
     def setUp(self):
@@ -101,7 +122,7 @@ class TestNetKANVref(TestNetKAN):
 class TestCkanSimple(unittest.TestCase):
 
     def setUp(self):
-        self.ckan = Ckan(contents = """{
+        self.ckan = Ckan(contents="""{
             "spec_version": "v1.4",
             "identifier":   "AwesomeMod",
             "version":      "1.0.0",
@@ -135,7 +156,7 @@ class TestCkanSimple(unittest.TestCase):
 class TestCkanComplex(unittest.TestCase):
 
     def setUp(self):
-        self.ckan = Ckan(contents = """{
+        self.ckan = Ckan(contents="""{
             "spec_version": "v1.4",
             "identifier":   "AwesomeMod",
             "version":      "1.0.0",

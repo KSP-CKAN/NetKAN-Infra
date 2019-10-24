@@ -16,8 +16,11 @@ class Netkan:
             self.contents = contents
         self._raw = json.loads(self.contents)
         # Extract kref_src + kref_id from the kref
-        self.kref_src, self.kref_id = self.KREF_PATTERN.match(
-            self.kref).groups()
+        if self.has_kref:
+            self.kref_src, self.kref_id = self.KREF_PATTERN.match(self.kref).groups()
+        else:
+            self.kref_src = None
+            self.kref_id = None
 
     def __getattr__(self, name):
         # Return kref host, ie `self.on_spacedock`. Current krefs include
