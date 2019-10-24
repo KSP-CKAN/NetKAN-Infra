@@ -3,7 +3,7 @@ from flask import Blueprint, current_app, request
 from .common import netkans, sqs_batch_entries
 
 
-inflate = Blueprint('inflate', __name__) # pylint: disable=invalid-name
+inflate = Blueprint('inflate', __name__)  # pylint: disable=invalid-name
 
 
 # For SpaceDock's trigger when new versions are uploaded
@@ -17,7 +17,7 @@ def inflate_hook():
         current_app.logger.info('No identifiers received')
         return 'An array of identifiers is required', 400
     # Make sure our NetKAN repo is up to date
-    current_app.config['netkan_repo'].remotes.origin.pull('master', strategy_option='ours')
+    current_app.config['netkan_repo'].remotes.origin.pull('master', strategy_option='theirs')
     messages = (nk.sqs_message()
                 for nk in netkans(current_app.config['netkan_repo'].working_dir, ids))
     for batch in sqs_batch_entries(messages):

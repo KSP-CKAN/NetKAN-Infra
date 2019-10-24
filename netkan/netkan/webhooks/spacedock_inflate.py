@@ -5,7 +5,7 @@ from ..metadata import Netkan
 from .common import sqs_batch_entries
 
 
-spacedock_inflate = Blueprint('spacedock_inflate', __name__)
+spacedock_inflate = Blueprint('spacedock_inflate', __name__)  # pylint: disable=invalid-name
 
 
 # For after-upload hook on SpaceDock
@@ -14,7 +14,7 @@ spacedock_inflate = Blueprint('spacedock_inflate', __name__)
 @spacedock_inflate.route('/inflate', methods=['POST'])
 def inflate_hook():
     # Make sure our NetKAN repo is up to date
-    current_app.config['netkan_repo'].remotes.origin.pull('master', strategy_option='ours')
+    current_app.config['netkan_repo'].remotes.origin.pull('master', strategy_option='theirs')
     # Get the relevant netkans
     nks = find_netkans(request.form.get('mod_id'))
     if nks:
