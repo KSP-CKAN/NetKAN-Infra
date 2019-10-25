@@ -1,8 +1,10 @@
 import os
+import logging
 import boto3
 from flask import Flask
 
 from ..utils import init_repo
+from ..notifications import setup_log_handler
 from .inflate import inflate
 from .spacedock_inflate import spacedock_inflate
 from .github_inflate import github_inflate
@@ -23,5 +25,8 @@ def create_app():
     app.register_blueprint(inflate)
     app.register_blueprint(spacedock_inflate, url_prefix='/sd')
     app.register_blueprint(github_inflate, url_prefix='/gh')
+
+    # Set up Discord logger so we can see errors
+    setup_log_handler()
 
     return app

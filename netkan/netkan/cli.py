@@ -6,6 +6,7 @@ from pathlib import Path
 import boto3
 import click
 from .utils import init_repo, init_ssh
+from .notifications import setup_log_handler
 from .github import GitHubPR
 from .indexer import MessageHandler
 from .scheduler import NetkanScheduler
@@ -15,7 +16,8 @@ from .download_counter import DownloadCounter
 
 @click.group()
 def netkan():
-    pass
+    # Set up Discord logger so we can see errors
+    setup_log_handler()
 
 
 @click.command()

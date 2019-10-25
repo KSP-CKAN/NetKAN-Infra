@@ -20,6 +20,8 @@ services:
       SQS_QUEUE: OutboundDev.fifo
       SQS_TIMEOUT: 30
       STATUS_DB: DevNetKANStatus
+      DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
+      DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
     volumes:
       - ./netkan:/home/netkan/netkan
     command: indexer
@@ -34,6 +36,8 @@ services:
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
       SQS_QUEUE: InboundDev.fifo
       MAX_QUEUED: 1
+      DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
+      DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
     volumes:
       - ./netkan:/home/netkan/netkan
     command: scheduler --dev
@@ -75,6 +79,8 @@ services:
       AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+      DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
+      DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
     entrypoint: .local/bin/gunicorn
     command: -b 0.0.0.0:5000 --access-logfile - "netkan.webhooks:create_app()"
   status:
@@ -88,6 +94,8 @@ services:
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
       STATUS_INTERVAL: 0
+      DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
+      DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
     volumes:
       - ./netkan:/home/netkan/netkan
     command: export-status-s3
@@ -126,6 +134,8 @@ services:
       NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
       CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
       GH_Token: ${CKAN_GH_Token}
+      DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
+      DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
     volumes:
       - ./netkan:/home/netkan/netkan
     command: download-counter
@@ -138,6 +148,8 @@ services:
       NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
       CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
       GH_Token: ${CKAN_GH_Token}
+      DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
+      DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
     volumes:
       - ./netkan:/home/netkan/netkan
     entrypoint: sleep infinity

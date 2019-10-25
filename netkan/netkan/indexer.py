@@ -1,11 +1,11 @@
 import hashlib
+import logging
 from pathlib import Path, PurePath
 from collections import deque
-from dateutil.parser import parse
 from datetime import datetime, timezone
 from contextlib import contextmanager
+from dateutil.parser import parse
 from git import GitCommandError
-import logging
 
 from .status import ModStatus
 
@@ -46,8 +46,8 @@ class CkanMessage:
         return self.mod_file.stem
 
     def mod_file_md5(self):
-        with open(self.mod_file, mode='rb') as f:
-            return hashlib.md5(f.read()).hexdigest()
+        with open(self.mod_file, mode='rb') as file:
+            return hashlib.md5(file.read()).hexdigest()
 
     def metadata_changed(self):
         if not self.mod_file.exists():
@@ -58,8 +58,8 @@ class CkanMessage:
 
     def write_metadata(self):
         self.mod_path.mkdir(exist_ok=True)
-        with open(self.mod_file, mode='w') as f:
-            f.write(self.body)
+        with open(self.mod_file, mode='w') as file:
+            file.write(self.body)
 
     def commit_metadata(self):
         index = self.ckan_meta.index
@@ -67,7 +67,7 @@ class CkanMessage:
         commit = index.commit(
             'NetKAN generated mods - {}'.format(self.mod_version)
         )
-        logging.info('Committing {}'.format(self.mod_version))
+        logging.info('Committing %s', self.mod_version)
         self.indexed = True
         return commit
 
@@ -137,10 +137,13 @@ class CkanMessage:
         try:
             status = ModStatus.get(self.ModIdentifier)
             attrs = self.status_attrs()
+            if not self.Success and status.last_error != attrs.last_error:
+                logging.error('New inflation error for %s: %s',
+                              self.ModIdentifier, attrs.last_error)
             actions = [
                 getattr(ModStatus, key).set(
                     attrs[key]
-                ) for key in attrs.keys()
+                ) for key in attrs
             ]
             status.update(actions=actions)
         except ModStatus.DoesNotExist:
