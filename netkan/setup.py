@@ -20,6 +20,7 @@ setup(
         'flask',
         'internetarchive',
         'gunicorn',
+        'discord',
     ],
     entry_points={
         'console_scripts': [

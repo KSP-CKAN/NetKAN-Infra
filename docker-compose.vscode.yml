@@ -23,6 +23,8 @@ services:
       MIRROR_SQS_QUEUE: MirroringDev.fifo
       STATUS_BUCKET: ckan-test-status
       STATUS_INTERVAL: 0
+      DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
+      DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
     volumes:
       - .:/home/netkan/workspace
     entrypoint: sleep infinity

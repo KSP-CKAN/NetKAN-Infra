@@ -566,7 +566,9 @@ services = [
         'name': 'Indexer',
         'command': 'indexer',
         'memory': '156',
-        'secrets': ['SSH_KEY', 'GH_Token'],
+        'secrets': [
+            'SSH_KEY', 'GH_Token',
+        ],
         'env': [
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),
             ('CKANMETA_USER', CKANMETA_USER),
@@ -582,7 +584,6 @@ services = [
         'name': 'Scheduler',
         'command': 'scheduler',
         'memory': '156',
-        'secrets': [],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
@@ -596,7 +597,6 @@ services = [
             'clean-cache',
             '--days', '30',
         ],
-        'secrets': [],
         'env': [],
         'volumes': [
             ('ckan_cache', '/home/netkan/ckan_cache')
@@ -636,7 +636,9 @@ services = [
         'name': 'DownloadCounter',
         'command': 'download-counter',
         'memory': '156',
-        'secrets': ['SSH_KEY', 'GH_Token'],
+        'secrets': [
+            'SSH_KEY', 'GH_Token',
+        ],
         'env': [
             ('NETKAN_REMOTE', NETKAN_REMOTE),
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),
@@ -663,7 +665,6 @@ services = [
             '--cluster', 'NetKANCluster',
             '--service-name', 'WebhooksService',
         ],
-        'secrets': [],
         'env': [
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
@@ -696,9 +697,7 @@ services = [
                     '-b', '0.0.0.0:5000', '--access-logfile', '-',
                     'netkan.webhooks:create_app()'
                 ],
-                'secrets': [
-                    'XKAN_GHSECRET',
-                ],
+                'secrets': ['XKAN_GHSECRET'],
                 'env': [
                     ('NETKAN_REMOTE', NETKAN_REMOTE),
                     ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
@@ -732,7 +731,10 @@ for service in services:
     )
 
     for container in containers:
-        secrets = container.get('secrets', [])
+        secrets = [
+            'DISCORD_WEBHOOK_ID', 'DISCORD_WEBHOOK_TOKEN',
+            *container.get('secrets', [])
+        ]
         envs = container.get('env', [])
         entrypoint = container.get('entrypoint')
         command = container.get('command')
