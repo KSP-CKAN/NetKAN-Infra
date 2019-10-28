@@ -568,7 +568,6 @@ services = [
         'memory': '156',
         'secrets': [
             'SSH_KEY', 'GH_Token',
-            'DISCORD_WEBHOOK_ID', 'DISCORD_WEBHOOK_TOKEN',
         ],
         'env': [
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),
@@ -585,7 +584,6 @@ services = [
         'name': 'Scheduler',
         'command': 'scheduler',
         'memory': '156',
-        'secrets': ['DISCORD_WEBHOOK_ID', 'DISCORD_WEBHOOK_TOKEN'],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
@@ -599,7 +597,6 @@ services = [
             'clean-cache',
             '--days', '30',
         ],
-        'secrets': ['DISCORD_WEBHOOK_ID', 'DISCORD_WEBHOOK_TOKEN'],
         'env': [],
         'volumes': [
             ('ckan_cache', '/home/netkan/ckan_cache')
@@ -628,7 +625,6 @@ services = [
     {
         'name': 'StatusDumper',
         'command': 'export-status-s3',
-        'secrets': ['DISCORD_WEBHOOK_ID', 'DISCORD_WEBHOOK_TOKEN'],
         'env': [
             ('STATUS_BUCKET', STATUS_BUCKET),
             ('STATUS_KEY', status_key),
@@ -642,7 +638,6 @@ services = [
         'memory': '156',
         'secrets': [
             'SSH_KEY', 'GH_Token',
-            'DISCORD_WEBHOOK_ID', 'DISCORD_WEBHOOK_TOKEN',
         ],
         'env': [
             ('NETKAN_REMOTE', NETKAN_REMOTE),
@@ -670,7 +665,6 @@ services = [
             '--cluster', 'NetKANCluster',
             '--service-name', 'WebhooksService',
         ],
-        'secrets': ['DISCORD_WEBHOOK_ID', 'DISCORD_WEBHOOK_TOKEN'],
         'env': [
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
@@ -703,10 +697,7 @@ services = [
                     '-b', '0.0.0.0:5000', '--access-logfile', '-',
                     'netkan.webhooks:create_app()'
                 ],
-                'secrets': [
-                    'XKAN_GHSECRET',
-                    'DISCORD_WEBHOOK_ID', 'DISCORD_WEBHOOK_TOKEN',
-                ],
+                'secrets': ['XKAN_GHSECRET'],
                 'env': [
                     ('NETKAN_REMOTE', NETKAN_REMOTE),
                     ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
@@ -740,7 +731,10 @@ for service in services:
     )
 
     for container in containers:
-        secrets = container.get('secrets', [])
+        secrets = [
+            'DISCORD_WEBHOOK_ID', 'DISCORD_WEBHOOK_TOKEN',
+            *container.get('secrets', [])
+        ]
         envs = container.get('env', [])
         entrypoint = container.get('entrypoint')
         command = container.get('command')
