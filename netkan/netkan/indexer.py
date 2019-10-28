@@ -1,3 +1,4 @@
+import json
 import hashlib
 import logging
 from pathlib import Path, PurePath
@@ -29,6 +30,7 @@ class CkanMessage:
         self.receipt_handle = msg.receipt_handle
         self.ckan_meta = ckan_meta
         self.github_pr = github_pr
+        self._raw = json.loads(self.body)
 
     def __str__(self):
         return '{}: {}'.format(self.ModIdentifier, self.CheckTime)
@@ -123,6 +125,8 @@ class CkanMessage:
             # If we have perfomed an inflation, we certainly
             # have checked the mod!
             'last_checked': inflation_time,
+            # Copy the links to the status page
+            **(self._raw.get('resources', {})),
         }
         if new:
             attrs['ModIdentifier'] = self.ModIdentifier

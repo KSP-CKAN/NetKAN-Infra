@@ -36,6 +36,12 @@ class ModStatus(Model):
     last_inflated = UTCDateTimeAttribute(null=True)
     success = BooleanAttribute()
 
+    homepage = UnicodeAttribute(null=True)
+    spacedock = UnicodeAttribute(null=True)
+    repository = UnicodeAttribute(null=True)
+    curse = UnicodeAttribute(null=True)
+    bugtracker = UnicodeAttribute(null=True)
+
     def mod_attrs(self):
         attributes = {}
         for key in self.get_attributes().keys():
