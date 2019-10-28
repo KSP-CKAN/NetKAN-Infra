@@ -74,8 +74,8 @@ class NetkanDownloads(Netkan):
         if self.has_kref:
             try:
                 count = getattr(self, f'count_from_{self.kref_src}')()
-            except JSONDecodeError:
-                logging.error(f'Failed decoding count for {self.identifier}')
+            except JSONDecodeError as e:
+                logging.error(f'Failed decoding count for {self.identifier}: {e}')
             except KeyError as e:
                 logging.error(f'Download count key \'{e}\' missing from api for {self.identifier}')
             except AttributeError:
