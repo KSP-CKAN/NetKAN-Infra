@@ -137,9 +137,9 @@ class CkanMessage:
         try:
             status = ModStatus.get(self.ModIdentifier)
             attrs = self.status_attrs()
-            if not self.Success and status.get('last_error') != attrs.last_error:
+            if not self.Success and getattr(status, 'last_error', None) != self.ErrorMessage:
                 logging.error('New inflation error for %s: %s',
-                              self.ModIdentifier, attrs.last_error)
+                              self.ModIdentifier, self.ErrorMessage)
             actions = [
                 getattr(ModStatus, key).set(
                     attrs[key]
