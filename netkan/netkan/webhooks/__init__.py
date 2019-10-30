@@ -1,10 +1,10 @@
 import os
-import logging
 import boto3
 from flask import Flask
 
 from ..utils import init_repo
 from ..notifications import setup_log_handler
+from .errors import errors
 from .inflate import inflate
 from .spacedock_inflate import spacedock_inflate
 from .github_inflate import github_inflate
@@ -22,6 +22,7 @@ def create_app():
         QueueName=os.environ.get('INFLATION_SQS_QUEUE'))
 
     # Add the hook handlers
+    app.register_blueprint(errors)
     app.register_blueprint(inflate)
     app.register_blueprint(spacedock_inflate, url_prefix='/sd')
     app.register_blueprint(github_inflate, url_prefix='/gh')
