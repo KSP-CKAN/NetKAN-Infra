@@ -61,3 +61,12 @@ class TestNetKANNetkanCounts(TestNetKANCounter):
             self.netkan.remote_netkan,
             'http://ksp-ckan.space/netkan/DogeCoinFlag.netkan'
         )
+
+
+class TestNetKANUnknownCounts(TestNetKANCounter):
+
+    def setUp(self):
+        self.netkan = NetkanDownloads(Path(self.test_data, 'NetKAN/UnknownCoinFlag.netkan'), 'token')
+
+    def test_github_repo_api(self):
+        self.assertEqual(self.netkan.get_count(), 0)
