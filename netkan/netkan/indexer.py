@@ -126,9 +126,10 @@ class CkanMessage:
             # If we have perfomed an inflation, we certainly
             # have checked the mod!
             'last_checked': inflation_time,
-            # Copy the links to the status page
-            **(getattr(self.ckan, 'resources', {})),
         }
+        resources = getattr(self.ckan, 'resources', None)
+        if resources:
+            attrs.resources = resources
         if new:
             attrs['ModIdentifier'] = self.ModIdentifier
         if self.indexed:

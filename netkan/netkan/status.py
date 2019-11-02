@@ -8,7 +8,7 @@ from dateutil.parser import parse
 from pathlib import Path
 from pynamodb.models import Model
 from pynamodb.attributes import (
-    UnicodeAttribute, UTCDateTimeAttribute, BooleanAttribute
+    UnicodeAttribute, UTCDateTimeAttribute, BooleanAttribute, MapAttribute
 )
 
 
@@ -35,12 +35,7 @@ class ModStatus(Model):
     last_indexed = UTCDateTimeAttribute(null=True)
     last_inflated = UTCDateTimeAttribute(null=True)
     success = BooleanAttribute()
-
-    homepage = UnicodeAttribute(null=True)
-    spacedock = UnicodeAttribute(null=True)
-    repository = UnicodeAttribute(null=True)
-    curse = UnicodeAttribute(null=True)
-    bugtracker = UnicodeAttribute(null=True)
+    resources = MapAttribute(default={})
 
     def mod_attrs(self):
         attributes = {}
