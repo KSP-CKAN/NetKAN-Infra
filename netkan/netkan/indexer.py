@@ -129,7 +129,7 @@ class CkanMessage:
         }
         resources = getattr(self.ckan, 'resources', None)
         if resources:
-            attrs.resources = resources
+            attrs['resources'] = resources
         if new:
             attrs['ModIdentifier'] = self.ModIdentifier
         if self.indexed:
