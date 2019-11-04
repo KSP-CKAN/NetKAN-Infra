@@ -45,6 +45,8 @@ class ModStatus(Model):
             attributes[key] = getattr(self, key, None)
             if isinstance(attributes[key], datetime):
                 attributes[key] = attributes[key].isoformat()
+            elif isinstance(attributes[key], MapAttribute):
+                attributes[key] = attributes[key].as_dict()
         return attributes
 
     # If we ever have more than 1MB of Status in the DB we'll need paginate,
