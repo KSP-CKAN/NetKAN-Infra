@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from dateutil.parser import parse
 from git import GitCommandError
 
+from .metadata import Ckan
 from .status import ModStatus
 
 
@@ -14,6 +15,7 @@ class CkanMessage:
 
     def __init__(self, msg, ckan_meta, github_pr=None):
         self.body = msg.body
+        self.ckan = Ckan(contents=self.body)
         self.ErrorMessage = None
         self.indexed = False
         for item in msg.message_attributes.items():
@@ -124,6 +126,9 @@ class CkanMessage:
             # have checked the mod!
             'last_checked': inflation_time,
         }
+        resources = getattr(self.ckan, 'resources', None)
+        if resources:
+            attrs['resources'] = resources
         if new:
             attrs['ModIdentifier'] = self.ModIdentifier
         if self.indexed:

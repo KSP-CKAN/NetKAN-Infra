@@ -1,14 +1,14 @@
-import boto3
 import json
 import logging
 import os
 import time
 from datetime import datetime
-from dateutil.parser import parse
 from pathlib import Path
+import boto3
+from dateutil.parser import parse
 from pynamodb.models import Model
 from pynamodb.attributes import (
-    UnicodeAttribute, UTCDateTimeAttribute, BooleanAttribute
+    UnicodeAttribute, UTCDateTimeAttribute, BooleanAttribute, MapAttribute
 )
 
 
@@ -35,6 +35,7 @@ class ModStatus(Model):
     last_indexed = UTCDateTimeAttribute(null=True)
     last_inflated = UTCDateTimeAttribute(null=True)
     success = BooleanAttribute()
+    resources = MapAttribute(default={})
 
     def mod_attrs(self):
         attributes = {}
@@ -72,7 +73,7 @@ class ModStatus(Model):
             Key=key,
             Body=json.dumps(cls.export_all_mods(compat)).encode(),
         )
-        logging.info('Exported to s3://{}/{}'.format(bucket, key))
+        logging.info('Exported to s3://%s/%s', bucket, key)
 
     # This likely isn't super effecient, but we really should only have to use
     # this operation once to seed the existing history.
