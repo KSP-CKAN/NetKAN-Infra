@@ -14,8 +14,8 @@ setup(
         'click',
         'gitpython',
         'pynamodb',
-        # pynamodb requires it, but we're also leaning on it
-        'python-dateutil',
+        # 2019-11-01 capping to 2.8.0 - https://github.com/boto/botocore/commit/e87e7a745fd972815b235a9ee685232745aa94f9
+        'python-dateutil>=2.1,<2.8.1',
         'requests',
         'flask',
         'internetarchive',

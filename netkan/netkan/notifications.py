@@ -19,7 +19,8 @@ class DiscordLogHandler(logging.Handler):
                                                adapter=discord.RequestsWebhookAdapter())
 
     def emit(self, record):
-        self.webhook.send(self.format(record))
+        fmt = self.format(record)
+        self.webhook.send(f'```{fmt}```' if "\n" in fmt else fmt)
 
 
 def setup_log_handler():
