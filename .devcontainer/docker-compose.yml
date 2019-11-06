@@ -4,7 +4,7 @@ services:
   netkan:
     user: netkan
     build:
-      context: netkan/.
+      context: ../netkan/.
       target: dev
     environment:
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
@@ -26,5 +26,5 @@ services:
       DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
       DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
     volumes:
-      - .:/home/netkan/workspace
+      - ../.:/home/netkan/workspace
     entrypoint: sleep infinity
