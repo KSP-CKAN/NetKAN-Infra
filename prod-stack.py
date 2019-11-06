@@ -426,6 +426,16 @@ t.add_resource(PolicyType(
                 "Effect": "Allow",
                 "Resource": builder_services
             },
+            {
+
+                "Effect": "Allow",
+                "Action": [
+                    "s3:PutObject",
+                ],
+                "Resource": [
+                    "arn:aws:s3:::status.ksp-ckan.space/*"
+                ],
+            },
         ]
     }
 ))
