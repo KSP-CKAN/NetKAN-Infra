@@ -593,14 +593,14 @@ services = [
     },
     {
         'name': 'SchedulerFullPass',
-        'command': ['scheduler', '--schedule-all'],
+        'command': ['scheduler', '--group', 'webhooks', '--min-credits', '100'],
         'memory': '156',
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
-        'schedule': 'cron(0 2 ? * MON *)',
+        'schedule': 'rate(1 day)',
     },
     {
         'name': 'CleanCache',

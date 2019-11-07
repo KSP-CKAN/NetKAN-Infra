@@ -1,4 +1,4 @@
-from ..metadata import Netkan
+from .metadata import Netkan
 
 
 def netkans(path, ids):

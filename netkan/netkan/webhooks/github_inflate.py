@@ -1,7 +1,7 @@
 from pathlib import Path
 from flask import Blueprint, current_app, request, jsonify
 
-from .common import netkans, sqs_batch_entries
+from ..common import netkans, sqs_batch_entries
 from .github_utils import signature_required
 
 

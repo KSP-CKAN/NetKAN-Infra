@@ -2,7 +2,7 @@ from pathlib import Path
 from flask import Blueprint, current_app, request
 
 from ..metadata import Netkan
-from .common import sqs_batch_entries
+from ..common import sqs_batch_entries
 
 
 spacedock_inflate = Blueprint('spacedock_inflate', __name__)  # pylint: disable=invalid-name
