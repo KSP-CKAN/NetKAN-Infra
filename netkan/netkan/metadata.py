@@ -1,7 +1,8 @@
 import json
 import re
 from pathlib import Path
-from hashlib import md5, sha1
+from hashlib import sha1
+import uuid
 
 
 class Netkan:
@@ -59,10 +60,10 @@ class Netkan:
 
     def sqs_message(self):
         return {
-            'Id': self.filename.stem,
+            'Id': self.identifier,
             'MessageBody': self.contents,
             'MessageGroupId': '1',
-            'MessageDeduplicationId': md5(self.contents.encode()).hexdigest()
+            'MessageDeduplicationId': uuid.uuid4().hex,
         }
 
 
