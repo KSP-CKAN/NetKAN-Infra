@@ -4,13 +4,15 @@ import logging
 import requests
 from pathlib import Path
 from .metadata import Netkan
+from .common import sqs_batch_entries
 
 
 class NetkanScheduler:
 
-    def __init__(self, path, queue, base='NetKAN/', force_all=False):
+    def __init__(self, path, queue, base='NetKAN/', nonhooks_group=False, webhooks_group=False):
         self.path = Path(path, base)
-        self.force_all = force_all
+        self.nonhooks_group = nonhooks_group
+        self.webhooks_group = webhooks_group
 
         # TODO: This isn't super neat, do something better.
         self.queue_url = 'test_url'
@@ -25,29 +27,24 @@ class NetkanScheduler:
         # implementing like for like initially.
         return (Netkan(f) for f in self.path.glob('*.netkan'))
 
-    def sqs_batch_entries(self, batch_size=10):
-        batch = []
-
-        for netkan in self.netkans():
-            if self.force_all or not netkan.hook_only():
-                batch.append(netkan.sqs_message())
-                if len(batch) == batch_size:
-                    yield(batch)
-                    batch = []
-        if len(batch):
-            yield(batch)
-
     def sqs_batch_attrs(self, batch):
         return {
             'QueueUrl': self.queue_url,
             'Entries': batch
         }
 
+    def _in_group(self, netkan):
+        if netkan.hook_only():
+            return self.webhooks_group
+        else:
+            return self.nonhooks_group
+
     def schedule_all_netkans(self):
-        for batch in self.sqs_batch_entries():
+        messages = (nk.sqs_message() for nk in self.netkans() if self._in_group(nk))
+        for batch in sqs_batch_entries(messages):
             self.client.send_message_batch(**self.sqs_batch_attrs(batch))
 
-    def can_schedule(self, max_queued, dev=False):
+    def can_schedule(self, max_queued, dev=False, min_credits=200):
         if not dev:
             end = datetime.datetime.utcnow()
             start = end - datetime.timedelta(minutes=10)
@@ -77,7 +74,7 @@ class NetkanScheduler:
                 credits = stats['Datapoints'][0]['Average']
             except IndexError:
                 logging.error("Couldn't acquire CPU Credit Stats")
-            if int(credits) < 100:
+            if int(credits) < min_credits:
                 logging.info(
                     "Run skipped, below credit target (Current Avg: {})".format(
                         credits

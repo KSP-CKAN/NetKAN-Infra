@@ -107,18 +107,27 @@ def indexer(queue, metadata, token, repo, user, key,
     help='Disable AWS Credit Checks',
 )
 @click.option(
-    '--schedule-all', is_flag=True, default=False,
-    help='Schedule all modules even if we think they should be covered by webhooks'
+    '--group',
+    type=click.Choice(['all', 'webhooks', 'nonhooks']), default="nonhooks",
+    help='Which mods to schedule'
 )
-def scheduler(queue, netkan_remote, max_queued, debug, dev, schedule_all):
+@click.option(
+    '--min-credits', default=200,
+    help='Only schedule if we have at least this many credits remaining'
+)
+def scheduler(queue, netkan_remote, max_queued, debug, dev, group, min_credits):
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
         format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
     )
     logging.info('Scheduler started at log level %s', level)
 
-    sched = NetkanScheduler(Path('/tmp/NetKAN'), queue, force_all=schedule_all)
-    if sched.can_schedule(max_queued, dev):
+    sched = NetkanScheduler(
+        Path('/tmp/NetKAN'), queue,
+        nonhooks_group=(group == 'all' or group == 'nonhooks'),
+        webhooks_group=(group == 'all' or group == 'webhooks'),
+    )
+    if sched.can_schedule(max_queued, dev, min_credits):
         init_repo(netkan_remote, '/tmp/NetKAN')
         sched.schedule_all_netkans()
         logging.info("NetKANs submitted to %s", queue)

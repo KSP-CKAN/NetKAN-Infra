@@ -330,7 +330,7 @@ netkan_ecs_role = t.add_resource(Role(
 # the tasks.
 scheduler_resources = []
 for task in [
-        'Scheduler', 'CertBot', 'StatusDumper', 'DownloadCounter']:
+        'Scheduler', 'SchedulerWebhooksPass', 'CertBot', 'StatusDumper', 'DownloadCounter']:
     scheduler_resources.append(Sub(
         'arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBot${Task}:*',
         Task=task
@@ -590,6 +590,16 @@ services = [
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'schedule': 'rate(2 hours)',
+    },
+    {
+        'name': 'SchedulerWebhooksPass',
+        'command': ['scheduler', '--group', 'webhooks', '--min-credits', '100'],
+        'env': [
+            ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
+            ('NETKAN_REMOTE', NETKAN_REMOTE),
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+        ],
+        'schedule': 'rate(1 day)',
     },
     {
         'name': 'CleanCache',

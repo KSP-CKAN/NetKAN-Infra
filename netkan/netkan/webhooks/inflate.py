@@ -1,6 +1,6 @@
 from flask import Blueprint, current_app, request
 
-from .common import netkans, sqs_batch_entries
+from ..common import netkans, sqs_batch_entries
 
 
 inflate = Blueprint('inflate', __name__)  # pylint: disable=invalid-name
