@@ -608,6 +608,8 @@ services = [
                 '--max-queued', '2000',
                 '--min-credits', '100'
         ],
+        'command': ['scheduler', '--group', 'webhooks', '--min-credits', '100'],
+        'memory': '156',
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
