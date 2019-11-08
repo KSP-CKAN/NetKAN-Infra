@@ -330,7 +330,7 @@ netkan_ecs_role = t.add_resource(Role(
 # the tasks.
 scheduler_resources = []
 for task in [
-        'Scheduler', 'SchedulerFullPass', 'CertBot', 'StatusDumper', 'DownloadCounter']:
+        'Scheduler', 'SchedulerWebhooksPass', 'CertBot', 'StatusDumper', 'DownloadCounter']:
     scheduler_resources.append(Sub(
         'arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBot${Task}:*',
         Task=task
@@ -592,9 +592,8 @@ services = [
         'schedule': 'rate(2 hours)',
     },
     {
-        'name': 'SchedulerFullPass',
+        'name': 'SchedulerWebhooksPass',
         'command': ['scheduler', '--group', 'webhooks', '--min-credits', '100'],
-        'memory': '156',
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
