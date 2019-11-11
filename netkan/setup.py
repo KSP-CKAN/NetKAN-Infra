@@ -19,7 +19,7 @@ setup(
         'requests',
         'flask',
         'internetarchive',
-        'gunicorn',
+        'gunicorn>=19.9,<20.0.0',
         'discord',
     ],
     entry_points={
