@@ -1,8 +1,9 @@
-import boto3
 import datetime
 import logging
-import requests
 from pathlib import Path
+import boto3
+import requests
+
 from .metadata import Netkan
 from .common import sqs_batch_entries
 
@@ -62,23 +63,17 @@ class NetkanScheduler:
                 Period=10,
                 Statistics=['Average'],
             )
-            # TODO: Make this a cli option. The amount of times I've changed it! My
-            #       current thinking is we should calculate how many credits we use
-            #       per run vs how many we accrue and schedule with a frequency just
-            #       a little less as to always be giving us headroom. Currently it's
-            #       around 40 credits, with an accrue rate of 24/hr. So running every
-            #       2 hours should see using just a touch less than we gain in that
-            #       time period.
-            credits = 0
+            # A pass consumes around 40 credits, with an accrue rate of 24/hr.
+            # So running every 2 hours should see using just a touch less than
+            # we gain in that time period.
+            creds = 0
             try:
-                credits = stats['Datapoints'][0]['Average']
+                creds = stats['Datapoints'][0]['Average']
             except IndexError:
                 logging.error("Couldn't acquire CPU Credit Stats")
-            if int(credits) < min_credits:
+            if int(creds) < min_credits:
                 logging.info(
-                    "Run skipped, below credit target (Current Avg: {})".format(
-                        credits
-                    )
+                    "Run skipped, below credit target (Current Avg: %s)", creds
                 )
                 return False
 
@@ -88,9 +83,8 @@ class NetkanScheduler:
         )
         if message_count > max_queued:
             logging.info(
-                "Run skipped, too many NetKANs to process ({} left)".format(
-                    message_count
-                )
+                "Run skipped, too many NetKANs to process (%s left)",
+                message_count
             )
             return False
 

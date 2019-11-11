@@ -593,7 +593,11 @@ services = [
     },
     {
         'name': 'SchedulerWebhooksPass',
-        'command': ['scheduler', '--group', 'webhooks', '--min-credits', '100'],
+        'command': [
+            'scheduler', '--group', 'webhooks',
+                '--max-queued', '2000',
+                '--min-credits', '100'
+        ],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
