@@ -3,27 +3,26 @@ RUN useradd -ms /bin/bash netkan
 ADD . /netkan
 WORKDIR /netkan
 USER netkan
-RUN pip install --user .
+RUN pip install --user . --no-warn-script-location
 RUN python -m unittest -v
-WORKDIR /
-USER root
-RUN rm -Rf /netkan
 
-FROM python:3.7 as dev
-RUN useradd -ms /bin/bash netkan
-ADD . /netkan
-WORKDIR /home/netkan
-ADD run_dev.sh /usr/local/bin/
-ENV PATH "$PATH:/home/netkan/.local/bin"
-USER netkan
-RUN pip install --user /netkan/.[development]
-
-FROM python:3.7
+FROM python:3.7 as production
 COPY --from=base /home/netkan /home/netkan
 RUN useradd -Ms /bin/bash netkan
 RUN chown -R netkan:netkan /home/netkan
 WORKDIR /home/netkan
 USER netkan
 ADD .gitconfig .
+ENV PATH "$PATH:/home/netkan/.local/bin"
 ENTRYPOINT [".local/bin/netkan"]
 CMD ["--help"]
+
+FROM production as dev
+USER root
+ADD . /netkan
+ADD run_dev.sh /usr/local/bin/
+USER netkan
+RUN pip install --user /netkan/.[development]
+ENTRYPOINT ["/usr/local/bin/run_dev.sh"]
+
+FROM production

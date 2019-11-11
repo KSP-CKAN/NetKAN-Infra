@@ -11,11 +11,12 @@ env:
 before_script:
 - docker pull "kspckan/netkan" || true
 script:
-- docker build netkan/. -t kspckan/netkan
+- docker build netkan/. -t kspckan/netkan --target production
 before_deploy:
 - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 deploy:
   provider: script
   script: bin/push_deploy_containers.sh
   on:
+    repo: KSP-CKAN/NetKAN-Infra
     branch: master

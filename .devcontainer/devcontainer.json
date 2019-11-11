@@ -1,13 +1,13 @@
 {
 	"name": "NetKAN Indexing",
 	"dockerComposeFile": [
-		"../docker-compose.vscode.yml"
+		"docker-compose.yml"
 	],
 	"service": "netkan",
 	"workspaceFolder": "/home/netkan/workspace",
-	"settings": { 
-		// This will ignore your local shell user setting for Linux since shells like zsh are typically 
-		// not in base container images. You can also update this to an specific shell to ensure VS Code 
+	"settings": {
+		// This will ignore your local shell user setting for Linux since shells like zsh are typically
+		// not in base container images. You can also update this to an specific shell to ensure VS Code
 		// uses the right one for terminals and tasks. For example, /bin/bash (or /bin/ash for Alpine).
 		"terminal.integrated.shell.linux": null
 	},
