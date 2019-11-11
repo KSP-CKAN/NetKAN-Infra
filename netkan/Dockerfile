@@ -21,7 +21,6 @@ FROM production as dev
 USER root
 ADD . /netkan
 ADD run_dev.sh /usr/local/bin/
-WORKDIR /home/netkan
 USER netkan
 RUN pip install --user /netkan/.[development]
 ENTRYPOINT ["/usr/local/bin/run_dev.sh"]
