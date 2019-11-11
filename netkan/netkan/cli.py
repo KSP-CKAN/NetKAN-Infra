@@ -16,10 +16,14 @@ from .download_counter import DownloadCounter
 from .ticket_closer import TicketCloser
 
 
+@click.option(
+    '--debug', is_flag=True, default=False,
+    help='Enable debug logging',
+)
 @click.group()
-def netkan():
+def netkan(debug):
     # Set up Discord logger so we can see errors
-    if setup_log_handler():
+    if setup_log_handler(debug):
         # Catch uncaught exceptions and log them
         sys.excepthook = catch_all
 
@@ -46,24 +50,14 @@ def netkan():
     help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
 )
 @click.option(
-    '--debug', is_flag=True, default=False,
-    help='Enable debug logging',
-)
-@click.option(
     '--timeout', default=300, envvar='SQS_TIMEOUT',
     help='Reduce message visibility timeout for testing',
 )
 @click.option('--key', envvar='SSH_KEY', required=True)
-def indexer(queue, metadata, token, repo, user, key,
-            debug, timeout):
-    level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(
-        format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
-    )
+def indexer(queue, metadata, token, repo, user, key, timeout):
     init_ssh(key, '/home/netkan/.ssh')
     ckan_meta = init_repo(metadata, '/tmp/CKAN-meta')
 
-    logging.info('Indexer started at log level %s', level)
     github_pr = GitHubPR(token, repo, user)
     sqs = boto3.resource('sqs')
     queue = sqs.get_queue_by_name(QueueName=queue)
@@ -100,10 +94,6 @@ def indexer(queue, metadata, token, repo, user, key,
     help='SQS Queue to send netkan metadata for scheduling'
 )
 @click.option(
-    '--debug', is_flag=True, default=False,
-    help='Enable debug logging',
-)
-@click.option(
     '--dev', is_flag=True, default=False,
     help='Disable AWS Credit Checks',
 )
@@ -116,13 +106,7 @@ def indexer(queue, metadata, token, repo, user, key,
     '--min-credits', default=200,
     help='Only schedule if we have at least this many credits remaining'
 )
-def scheduler(queue, netkan_remote, max_queued, debug, dev, group, min_credits):
-    level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(
-        format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
-    )
-    logging.info('Scheduler started at log level %s', level)
-
+def scheduler(queue, netkan_remote, max_queued, dev, group, min_credits):
     sched = NetkanScheduler(
         Path('/tmp/NetKAN'), queue,
         nonhooks_group=(group == 'all' or group == 'nonhooks'),
@@ -148,13 +132,10 @@ def scheduler(queue, netkan_remote, max_queued, debug, dev, group, min_credits):
     help='Dump status to S3 every `interval` seconds'
 )
 def export_status_s3(status_bucket, status_key, interval):
-    logging.basicConfig(
-        format='[%(asctime)s] [%(levelname)-8s] %(message)s',
-        level=logging.INFO
-    )
     frequency = 'every {} seconds'.format(
         interval) if interval else 'once'
-    logging.info('Exporting to s3://%s/%s %s', status_bucket, status_key, frequency)
+    logging.info('Exporting to s3://%s/%s %s',
+                 status_bucket, status_key, frequency)
     while True:
         ModStatus.export_to_s3(status_bucket, status_key, interval)
         if not interval:
@@ -248,16 +229,7 @@ def clean_cache(days):
     help='GitHub token for API calls',
 )
 @click.option('--key', envvar='SSH_KEY', required=True)
-@click.option(
-    '--debug', is_flag=True, default=False,
-    help='Enable debug logging',
-)
-def download_counter(netkan_remote, ckan_meta, token, key, debug):
-    level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(
-        format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
-    )
-    logging.info('Download Counter started at log level %s', level)
+def download_counter(netkan_remote, ckan_meta, token, key):
     init_ssh(key, '/home/netkan/.ssh')
     init_repo(netkan_remote, '/tmp/NetKAN')
     meta = init_repo(ckan_meta, '/tmp/CKAN-meta')
