@@ -24,11 +24,12 @@ class DiscordLogHandler(logging.Handler):
 
 
 def setup_log_handler(debug=False):
-    level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(
-        format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
-    )
-    logging.info('Logging started for \'%s\' at log level %s', sys.argv[1], level)
+    if not sys.argv[0].endswith('gunicorn'):
+        level = logging.DEBUG if debug else logging.INFO
+        logging.basicConfig(
+            format='[%(asctime)s] [%(levelname)-8s] %(message)s', level=level
+        )
+        logging.info('Logging started for \'%s\' at log level %s', sys.argv[1], level)
 
     # Set up Discord logger so we can see errors
     discord_webhook_id = os.environ.get('DISCORD_WEBHOOK_ID')
