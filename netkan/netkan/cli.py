@@ -8,7 +8,7 @@ import boto3
 import click
 from .utils import init_repo, init_ssh
 from .notifications import setup_log_handler, catch_all
-from .github import GitHubPR
+from .github_pr import GitHubPR
 from .indexer import MessageHandler
 from .scheduler import NetkanScheduler
 from .status import ModStatus
@@ -269,6 +269,20 @@ def download_counter(netkan_remote, ckan_meta, token, key, debug):
     logging.info('Download Counter completed!')
 
 
+@click.command()
+@click.option(
+    '--token', required=True, envvar='GH_Token'
+    help='GitHub token for querying and closing issues',
+)
+@click.option(
+    '--days-limit', default=7,
+    help='Number of days to wait for OP to reply',
+)
+def ticket_closer(token, days_limit):
+    tc = TicketCloser(token)
+    tc.close_tickets(days_limit)
+
+
 netkan.add_command(indexer)
 netkan.add_command(scheduler)
 netkan.add_command(dump_status)
@@ -277,3 +291,4 @@ netkan.add_command(restore_status)
 netkan.add_command(redeploy_service)
 netkan.add_command(clean_cache)
 netkan.add_command(download_counter)
+netkan.add_command(ticket_closer)

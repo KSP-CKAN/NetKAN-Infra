@@ -33,7 +33,8 @@ setup(
             'ptvsd',
             'pylint',
             'autopep8',
-            'troposphere'
+            'troposphere',
+            'PyGithub',
         ]
     },
 )
