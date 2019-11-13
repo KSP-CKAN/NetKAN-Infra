@@ -21,6 +21,7 @@ setup(
         'internetarchive',
         'gunicorn>=19.9,<20.0.0',
         'discord',
+        'PyGithub',
     ],
     entry_points={
         'console_scripts': [
@@ -34,7 +35,6 @@ setup(
             'pylint',
             'autopep8',
             'troposphere',
-            'PyGithub',
         ]
     },
 )
