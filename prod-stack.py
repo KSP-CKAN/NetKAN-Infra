@@ -697,6 +697,13 @@ services = [
         'schedule': 'cron(30 0 ? * MON *)',
     },
     {
+        'name': 'TicketCloser',
+        'command': 'ticket-closer',
+        'env': [],
+        'secrets': ['GH_Token'],
+        'schedule': 'rate(1 day)',
+    },
+    {
         'name': 'Webhooks',
         'containers': [
             {
@@ -738,13 +745,6 @@ services = [
                     ('letsencrypt', '/etc/letsencrypt')
                 ],
                 'depends': ['webhooks', 'legacyhooks']
-            },
-            {
-                'name': 'TicketCloser',
-                'command': 'ticket-closer',
-                'env': [],
-                'secrets': ['GH_Token'],
-                'schedule': 'rate(1 day)',
             },
         ]
     },
