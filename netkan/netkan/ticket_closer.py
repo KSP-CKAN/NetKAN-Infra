@@ -43,6 +43,15 @@ class TicketCloser:
                     'Closing: %s (%s#%s)',
                     issue.title, repo_name, issue.number)
 
-                issue.create_comment("Hey there! I'm a fun-loving automated bot who's responsible for making sure old support tickets get closed out. As we haven't seen any activity on this ticket for a while, we're hoping the problem has been resolved and I'm closing out the ticket automatically. If I'm doing this in error, please add a comment to this ticket to let us know, and we'll re-open it!")
+                comment_body = (
+                    "Hey there! I'm a fun-loving automated bot who's "
+                    "responsible for making sure old support tickets get "
+                    "closed out. As we haven't seen any activity on this "
+                    "ticket for a while, we're hoping the problem has been "
+                    "resolved and I'm closing out the ticket automatically. "
+                    "If I'm doing this in error, please add a comment to this"
+                    " ticket to let us know, and we'll re-open it!"
+                )
+                issue.create_comment(comment_body)
 
                 issue.edit(state='closed')
