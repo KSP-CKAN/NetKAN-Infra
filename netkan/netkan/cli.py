@@ -13,6 +13,7 @@ from .indexer import MessageHandler
 from .scheduler import NetkanScheduler
 from .status import ModStatus
 from .download_counter import DownloadCounter
+from .ticket_closer import TicketCloser
 
 
 @click.group()
@@ -271,7 +272,7 @@ def download_counter(netkan_remote, ckan_meta, token, key, debug):
 
 @click.command()
 @click.option(
-    '--token', required=True, envvar='GH_Token'
+    '--token', required=True, envvar='GH_Token',
     help='GitHub token for querying and closing issues',
 )
 @click.option(
@@ -279,8 +280,7 @@ def download_counter(netkan_remote, ckan_meta, token, key, debug):
     help='Number of days to wait for OP to reply',
 )
 def ticket_closer(token, days_limit):
-    tc = TicketCloser(token)
-    tc.close_tickets(days_limit)
+    TicketCloser(token).close_tickets(days_limit)
 
 
 netkan.add_command(indexer)
