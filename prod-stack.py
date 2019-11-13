@@ -330,7 +330,7 @@ netkan_ecs_role = t.add_resource(Role(
 # the tasks.
 scheduler_resources = []
 for task in [
-        'Scheduler', 'SchedulerWebhooksPass', 'CertBot', 'StatusDumper', 'DownloadCounter']:
+        'Scheduler', 'SchedulerWebhooksPass', 'CertBot', 'StatusDumper', 'DownloadCounter', 'TicketCloser']:
     scheduler_resources.append(Sub(
         'arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBot${Task}:*',
         Task=task
@@ -738,6 +738,13 @@ services = [
                     ('letsencrypt', '/etc/letsencrypt')
                 ],
                 'depends': ['webhooks', 'legacyhooks']
+            },
+            {
+                'name': 'TicketCloser',
+                'command': 'ticket-closer',
+                'env': [],
+                'secrets': ['GH_Token'],
+                'schedule': 'rate(1 day)',
             },
         ]
     },
