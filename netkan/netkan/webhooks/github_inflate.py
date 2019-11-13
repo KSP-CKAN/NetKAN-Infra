@@ -40,10 +40,10 @@ def ids_from_commits(commits):
     files = set()
     for commit in commits:
         added = commit.get('added')
-        if added:
+        if added and added.endswith('.netkan'):
             files |= set(added)
         modified = commit.get('modified')
-        if modified:
+        if modified and modified.endswith('.netkan'):
             files |= set(modified)
     return (Path(f).stem for f in files)
 
