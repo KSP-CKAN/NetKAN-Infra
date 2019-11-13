@@ -5,6 +5,7 @@ WORKDIR /netkan
 USER netkan
 RUN pip install --user . --no-warn-script-location
 RUN python -m unittest -v
+RUN /home/netkan/.local/bin/netkan --help
 
 FROM python:3.7 as production
 COPY --from=base /home/netkan /home/netkan
