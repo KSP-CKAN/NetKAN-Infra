@@ -204,11 +204,10 @@ class MessageHandler:
     # we can ensure we call close on it and run our handler inside
     # a context manager
     def __enter__(self):
-        self.update_master()
+        self._update_master()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.update_master(push=True)
         self.repo.close()
 
     def append(self, message):
@@ -222,7 +221,7 @@ class MessageHandler:
         else:
             self.staged.append(ckan)
 
-    def process_queue(self, queue):
+    def _process_queue(self, queue):
         while queue:
             ckan = queue.popleft()
             ckan.process_ckan()
@@ -231,7 +230,7 @@ class MessageHandler:
     def sqs_delete_entries(self):
         return [c.delete_attrs for c in self.processed]
 
-    def update_master(self, push=False):
+    def _update_master(self, push=False):
         if str(self.repo.active_branch) != 'master':
             self.repo.heads.master.checkout()
         self.repo.remotes.origin.pull(
@@ -244,5 +243,6 @@ class MessageHandler:
     # separating them out will be a little more efficient
     # with our push/pull traffic.
     def process_ckans(self):
-        self.process_queue(self.master)
-        self.process_queue(self.staged)
+        self._process_queue(self.master)
+        self._update_master(push=True)
+        self._process_queue(self.staged)
