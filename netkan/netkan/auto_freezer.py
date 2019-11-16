@@ -52,7 +52,8 @@ class AutoFreezer:
         last_indexed = getattr(status, 'last_indexed', None)
         if not last_indexed:
             # Never indexed since the start of status tracking = 4+ years old
-            return True
+            # ... except for mods that were updated by the old webhooks :(
+            return False
         else:
             return last_indexed < update_cutoff
 
