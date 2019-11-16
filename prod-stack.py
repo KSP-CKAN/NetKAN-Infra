@@ -19,7 +19,9 @@ ZONE_ID = os.environ.get('CKAN_ZONEID', False)
 BOT_FQDN = 'netkan.ksp-ckan.space'
 EMAIL = 'domains@ksp-ckan.space'
 PARAM_NAMESPACE = '/NetKAN/Indexer/'
-NETKAN_REMOTE = 'https://github.com/KSP-CKAN/NetKAN.git'
+NETKAN_REMOTE = 'git@github.com:KSP-CKAN/NetKAN.git'
+NETKAN_USER = 'KSP-CKAN'
+NETKAN_REPO = 'NetKAN'
 CKANMETA_REMOTE = 'git@github.com:KSP-CKAN/CKAN-meta.git'
 CKANMETA_USER = 'KSP-CKAN'
 CKANMETA_REPO = 'CKAN-meta'
@@ -330,7 +332,8 @@ netkan_ecs_role = t.add_resource(Role(
 # the tasks.
 scheduler_resources = []
 for task in [
-        'Scheduler', 'SchedulerWebhooksPass', 'CertBot', 'StatusDumper', 'DownloadCounter', 'TicketCloser']:
+        'Scheduler', 'SchedulerWebhooksPass', 'CertBot', 'StatusDumper',
+        'DownloadCounter', 'TicketCloser', 'AutoFreezer']:
     scheduler_resources.append(Sub(
         'arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBot${Task}:*',
         Task=task
@@ -701,6 +704,19 @@ services = [
         'env': [],
         'secrets': ['GH_Token'],
         'schedule': 'rate(1 day)',
+    },
+    {
+        'name': 'AutoFreezer',
+        'command': 'auto-freezer',
+        'env': [
+            ('NETKAN_REMOTE', NETKAN_REMOTE),
+            ('NETKAN_USER', NETKAN_USER),
+            ('NETKAN_REPO', NETKAN_REPO),
+        ],
+        'secrets': [
+            'SSH_KEY', 'GH_Token',
+        ],
+        'schedule': 'rate(1 week)',
     },
     {
         'name': 'Webhooks',
