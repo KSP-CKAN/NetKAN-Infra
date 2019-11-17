@@ -108,7 +108,7 @@ class ModStatus(Model):
     @classmethod
     def last_indexed_from_git(cls, ckanmeta_repo, identifier):
         try:
-            return parse(ckanmeta_repo.git.log('--', identifier, format='%aI').split("\n")[0])
+            return parse(ckanmeta_repo.git.log('--', identifier, format='%aI', max_count=1).split("\n")[0])
         except Exception as exc:  # pylint: disable=broad-except
             logging.error('Unable to recover last_indexed for %s',
                           identifier, exc_info=exc)
