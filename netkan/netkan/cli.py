@@ -161,6 +161,15 @@ def restore_status(filename):
 
 @click.command()
 @click.option(
+    '--ckanmeta-remote', envvar='CKANMETA_REMOTE',
+    help='Path/URL/SSH to Metadata Repo',
+)
+def recover_status_timestamps(ckanmeta_remote):
+    ModStatus.recover_timestamps(init_repo(ckanmeta_remote, '/tmp/CKAN-meta'))
+
+
+@click.command()
+@click.option(
     '--cluster', help='ECS Cluster running the service'
 )
 @click.option(
@@ -260,6 +269,7 @@ netkan.add_command(scheduler)
 netkan.add_command(dump_status)
 netkan.add_command(export_status_s3)
 netkan.add_command(restore_status)
+netkan.add_command(recover_status_timestamps)
 netkan.add_command(redeploy_service)
 netkan.add_command(clean_cache)
 netkan.add_command(download_counter)

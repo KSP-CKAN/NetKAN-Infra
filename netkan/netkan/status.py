@@ -104,3 +104,22 @@ class ModStatus(Model):
                     time.sleep(1)
 
                 batch.save(ModStatus(**item))
+
+    @classmethod
+    def last_indexed_from_git(cls, ckanmeta_repo, identifier):
+        try:
+            return parse(ckanmeta_repo.git.log('--', identifier, format='%aI', max_count=1).split("\n")[0])
+        except Exception as exc:  # pylint: disable=broad-except
+            logging.error('Unable to recover last_indexed for %s',
+                          identifier, exc_info=exc)
+            return None
+
+    @classmethod
+    def recover_timestamps(cls, ckanmeta_repo):
+        with cls.batch_write() as batch:
+            for mod in cls.scan(rate_limit=5):
+                if not mod.last_indexed:
+                    mod.last_indexed = cls.last_indexed_from_git(
+                        ckanmeta_repo, mod.ModIdentifier)
+                    if mod.last_indexed:
+                        batch.save(mod)
