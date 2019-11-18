@@ -14,6 +14,10 @@ github_inflate = Blueprint('github_inflate', __name__)  # pylint: disable=invali
 @signature_required
 def inflate_hook():
     raw = request.get_json(silent=True)
+    branch = raw.get('ref')
+    if branch != current_app.config['netkan_repo'].head.ref.path:
+        current_app.logger.info('Received inflation request for wrong ref %s, ignoring', branch)
+        return jsonify({'message': 'Wrong branch'}), 200
     commits = raw.get('commits')
     if not commits:
         current_app.logger.info('No commits received')
