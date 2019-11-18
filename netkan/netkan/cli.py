@@ -161,7 +161,7 @@ def restore_status(filename):
 
 @click.command()
 @click.option(
-    '--ckanmeta-remote', envvar='CKANMETA_REMOTE',
+    '--ckanmeta-remote', required=True, envvar='CKANMETA_REMOTE',
     help='Path/URL/SSH to Metadata Repo',
 )
 def recover_status_timestamps(ckanmeta_remote):
