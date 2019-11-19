@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import boto3
 from dateutil.parser import parse
@@ -108,7 +108,7 @@ class ModStatus(Model):
     @classmethod
     def last_indexed_from_git(cls, ckanmeta_repo, identifier):
         try:
-            return parse(ckanmeta_repo.git.log('--', identifier, format='%aI', max_count=1).split("\n")[0])
+            return parse(ckanmeta_repo.git.log('--', identifier, format='%aI', max_count=1).split("\n")[0]).astimezone(timezone.utc)
         except Exception as exc:  # pylint: disable=broad-except
             logging.error('Unable to recover last_indexed for %s',
                           identifier, exc_info=exc)
@@ -117,9 +117,13 @@ class ModStatus(Model):
     @classmethod
     def recover_timestamps(cls, ckanmeta_repo):
         with cls.batch_write() as batch:
+            logging.info('Recovering timestamps...')
             for mod in cls.scan(rate_limit=5):
                 if not mod.last_indexed:
+                    logging.info('Looking up timestamp for %s', mod.ModIdentifier)
                     mod.last_indexed = cls.last_indexed_from_git(
                         ckanmeta_repo, mod.ModIdentifier)
                     if mod.last_indexed:
+                        logging.info('Saving %s: %s', mod.ModIdentifier, mod.last_indexed)
                         batch.save(mod)
+            logging.info('Done!')
