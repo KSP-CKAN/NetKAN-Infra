@@ -597,6 +597,7 @@ services = [
         'name': 'Scheduler',
         'command': 'scheduler',
         'memory': '156',
+        'secrets': ['SSH_KEY'],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
@@ -612,6 +613,7 @@ services = [
                 '--min-credits', '100'
         ],
         'memory': '156',
+        'secrets': ['SSH_KEY'],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
@@ -745,7 +747,9 @@ services = [
                     '-b', '0.0.0.0:5000', '--access-logfile', '-',
                     'netkan.webhooks:create_app()'
                 ],
-                'secrets': ['XKAN_GHSECRET'],
+                'secrets': [
+                    'XKAN_GHSECRET', 'SSH_KEY',
+                ],
                 'env': [
                     ('NETKAN_REMOTE', NETKAN_REMOTE),
                     ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),

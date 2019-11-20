@@ -55,7 +55,10 @@ def netkan(debug):
     '--timeout', default=300, envvar='SQS_TIMEOUT',
     help='Reduce message visibility timeout for testing',
 )
-@click.option('--key', envvar='SSH_KEY', required=True)
+@click.option(
+    '--key', envvar='SSH_KEY', required=True,
+    help='SSH key for accessing repositories'
+)
 def indexer(queue, metadata, token, repo, user, key, timeout):
     init_ssh(key, '/home/netkan/.ssh')
     ckan_meta = init_repo(metadata, '/tmp/CKAN-meta')
@@ -92,6 +95,10 @@ def indexer(queue, metadata, token, repo, user, key, timeout):
     help='Path/URL to NetKAN Repo for dev override',
 )
 @click.option(
+    '--key', envvar='SSH_KEY', required=True,
+    help='SSH key for accessing repositories'
+)
+@click.option(
     '--max-queued', default=20, envvar='MAX_QUEUED',
     help='SQS Queue to send netkan metadata for scheduling'
 )
@@ -108,7 +115,8 @@ def indexer(queue, metadata, token, repo, user, key, timeout):
     '--min-credits', default=200,
     help='Only schedule if we have at least this many credits remaining'
 )
-def scheduler(queue, netkan_remote, max_queued, dev, group, min_credits):
+def scheduler(queue, netkan_remote, key, max_queued, dev, group, min_credits):
+    init_ssh(key, '/home/netkan/.ssh')
     sched = NetkanScheduler(
         Path('/tmp/NetKAN'), queue,
         nonhooks_group=(group == 'all' or group == 'nonhooks'),
@@ -239,7 +247,10 @@ def clean_cache(days):
     '--token', envvar='GH_Token', required=True,
     help='GitHub token for API calls',
 )
-@click.option('--key', envvar='SSH_KEY', required=True)
+@click.option(
+    '--key', envvar='SSH_KEY', required=True,
+    help='SSH key for accessing repositories'
+)
 def download_counter(netkan_remote, ckan_meta, token, key):
     init_ssh(key, '/home/netkan/.ssh')
     init_repo(netkan_remote, '/tmp/NetKAN')
@@ -288,7 +299,8 @@ def ticket_closer(token, days_limit):
     help='Number of days to wait before freezing a mod as idle',
 )
 @click.option(
-    '--key', envvar='SSH_KEY', required=True
+    '--key', envvar='SSH_KEY', required=True,
+    help='SSH key for accessing repositories'
 )
 def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
     init_ssh(key, '/home/netkan/.ssh')
