@@ -1,5 +1,5 @@
 import logging
-import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import git
 
@@ -17,7 +17,7 @@ class AutoFreezer:
         self.github_pr = github_pr
 
     def freeze_idle_mods(self, days_limit):
-        update_cutoff = datetime.datetime.now() - datetime.timedelta(days=days_limit)
+        update_cutoff = datetime.now(timezone.utc) - timedelta(days=days_limit)
         self.netkan_repo.remotes.origin.pull('master', strategy_option='ours')
         ids_to_freeze = [ident for ident in self._ids() if self._too_old(ident, update_cutoff)]
         if ids_to_freeze:
