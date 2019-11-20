@@ -292,10 +292,12 @@ def ticket_closer(token, days_limit):
 )
 def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
     init_ssh(key, '/home/netkan/.ssh')
-    AutoFreezer(
+    af = AutoFreezer(
         init_repo(netkan_remote, '/tmp/NetKAN'),
         GitHubPR(token, repo, user)
-    ).freeze_idle_mods(days_limit)
+    )
+    af.freeze_idle_mods(days_limit)
+    af.mark_frozen_mods()
 
 
 netkan.add_command(indexer)

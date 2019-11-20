@@ -34,6 +34,19 @@ class AutoFreezer:
             self._submit_pr(self.BRANCH_NAME, days_limit)
             self.netkan_repo.heads.master.checkout()
 
+    def mark_frozen_mods(self):
+        with ModStatus.batch_write() as batch:
+            logging.info('Marking frozen mods...')
+            for mod in ModStatus.scan(rate_limit=5):
+                if not mod.frozen and self._is_frozen(mod.ModIdentifier):
+                    logging.info('Marking frozen: %s', mod.ModIdentifier)
+                    mod.frozen = True
+                    batch.save(mod)
+            logging.info('Done!')
+
+    def _is_frozen(self, ident):
+        return not Path(self.netkan_repo.working_dir, 'NetKAN', f'{ident}.netkan').exists()
+
     def _checkout_branch(self, name):
         try:
             self.netkan_repo.remotes.origin.fetch(name)

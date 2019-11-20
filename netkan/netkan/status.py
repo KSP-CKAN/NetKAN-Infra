@@ -35,6 +35,7 @@ class ModStatus(Model):
     last_indexed = UTCDateTimeAttribute(null=True)
     last_inflated = UTCDateTimeAttribute(null=True)
     success = BooleanAttribute()
+    frozen = BooleanAttribute(default=False)
     resources = MapAttribute(default={})
 
     def mod_attrs(self):

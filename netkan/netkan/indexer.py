@@ -125,6 +125,8 @@ class CkanMessage:
             # If we have perfomed an inflation, we certainly
             # have checked the mod!
             'last_checked': inflation_time,
+            # If we're inflating it, it's not frozen
+            'frozen': False,
         }
         resources = getattr(self.ckan, 'resources', None)
         if resources:
