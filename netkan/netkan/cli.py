@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 import boto3
 import click
+
 from .utils import init_repo, init_ssh
 from .notifications import setup_log_handler, catch_all
 from .github_pr import GitHubPR
@@ -14,6 +15,7 @@ from .scheduler import NetkanScheduler
 from .status import ModStatus
 from .download_counter import DownloadCounter
 from .ticket_closer import TicketCloser
+from .auto_freezer import AutoFreezer
 
 
 @click.option(
@@ -264,6 +266,40 @@ def ticket_closer(token, days_limit):
     TicketCloser(token).close_tickets(days_limit)
 
 
+@click.command()
+@click.option(
+    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE',
+    help='Path/URL/SSH to NetKAN repo for mod list',
+)
+@click.option(
+    '--token', required=True, envvar='GH_Token',
+    help='GitHub token for querying and closing issues',
+)
+@click.option(
+    '--repo', envvar='NETKAN_REPO',
+    help='GitHub repo to raise PR against (Org Repo: NetKAN)',
+)
+@click.option(
+    '--user', envvar='NETKAN_USER',
+    help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
+)
+@click.option(
+    '--days-limit', default=1000,
+    help='Number of days to wait before freezing a mod as idle',
+)
+@click.option(
+    '--key', envvar='SSH_KEY', required=True
+)
+def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
+    init_ssh(key, '/home/netkan/.ssh')
+    af = AutoFreezer(
+        init_repo(netkan_remote, '/tmp/NetKAN'),
+        GitHubPR(token, repo, user)
+    )
+    af.freeze_idle_mods(days_limit)
+    af.mark_frozen_mods()
+
+
 netkan.add_command(indexer)
 netkan.add_command(scheduler)
 netkan.add_command(dump_status)
@@ -274,3 +310,4 @@ netkan.add_command(redeploy_service)
 netkan.add_command(clean_cache)
 netkan.add_command(download_counter)
 netkan.add_command(ticket_closer)
+netkan.add_command(auto_freezer)
