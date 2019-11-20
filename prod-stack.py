@@ -716,7 +716,7 @@ services = [
         'secrets': [
             'SSH_KEY', 'GH_Token',
         ],
-        'schedule': 'rate(1 week)',
+        'schedule': 'rate(7 days)',
     },
     {
         'name': 'Webhooks',
