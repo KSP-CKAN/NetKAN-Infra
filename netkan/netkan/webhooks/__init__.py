@@ -2,7 +2,7 @@ import os
 import boto3
 from flask import Flask
 
-from ..utils import init_repo
+from ..utils import init_repo, init_ssh
 from ..notifications import setup_log_handler
 from .errors import errors
 from .inflate import inflate
@@ -12,6 +12,8 @@ from .github_inflate import github_inflate
 
 def create_app():
     app = Flask(__name__)
+
+    init_ssh(os.environ.get('SSH_KEY'), '/home/netkan/.ssh')
 
     # Set up config
     app.config['secret'] = os.environ.get('XKAN_GHSECRET')
