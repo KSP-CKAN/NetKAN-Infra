@@ -136,7 +136,7 @@ class TestCkanSimple(unittest.TestCase):
     def test_basic_properties(self):
         self.assertEqual(self.ckan.spec_version, "v1.4")
         self.assertEqual(self.ckan.identifier,   "AwesomeMod")
-        self.assertEqual(self.ckan.version,      "1.0.0")
+        self.assertEqual(self.ckan.version.string,      "1.0.0")
         self.assertEqual(self.ckan.ksp_version,  "1.7.3")
 
     def test_default_kind(self):
@@ -174,3 +174,96 @@ class TestCkanComplex(unittest.TestCase):
 
     def test_licenses(self):
         self.assertEqual(self.ckan.licenses(), ["CC-BY-NC-SA-4.0", "GPL-3.0", "MIT"])
+
+    def test_version(self):
+        self.assertEqual('1.0.0', self.ckan.version.string)
+
+
+class TestVersionConstruction(unittest.TestCase):
+
+    def test_str(self):
+        string = '1.2.3'
+        v1 = Ckan.Version(string)
+
+        self.assertEqual(string, str(v1))
+        self.assertEqual(string, v1.string)
+
+
+class TestVersionComparison(unittest.TestCase):
+
+    def test_alpha(self):
+        v1 = Ckan.Version('apple')
+        v2 = Ckan.Version('banana')
+
+        self.assertLess(v1, v2)
+
+    def test_basic(self):
+        v0 = Ckan.Version('1.2.0')
+        v1 = Ckan.Version('1.2.0')
+        v2 = Ckan.Version('1.2.1')
+
+        self.assertLess(v1, v2)
+        self.assertGreater(v2, v1)
+        self.assertEqual(v1, v0)
+
+    def test_issue1076(self):
+        v0 = Ckan.Version('1.01')
+        v1 = Ckan.Version('1.1')
+
+        self.assertEqual(v1, v0)
+
+    def test_sortAllNumbersBeforeDot(self):
+        v0 = Ckan.Version('1.0_beta')
+        v1 = Ckan.Version('1.0.1_beta')
+
+        self.assertLess(v0, v1)
+        self.assertGreater(v1, v0)
+
+    def test_dotSeparatorForExtraData(self):
+        v0 = Ckan.Version('1.0')
+        v1 = Ckan.Version('1.0.repackaged')
+        v2 = Ckan.Version('1.0.1')
+
+        self.assertLess(v0, v1)
+        self.assertLess(v1, v2)
+        self.assertGreater(v1, v0)
+        self.assertGreater(v2, v1)
+
+    def test_unevenVersioning(self):
+        v0 = Ckan.Version('1.1.0.0')
+        v1 = Ckan.Version('1.1.1')
+
+        self.assertLess(v0, v1)
+        self.assertGreater(v1, v0)
+
+    def test_complex(self):
+        v1 = Ckan.Version('v6a12')
+        v2 = Ckan.Version('v6a5')
+
+        self.assertLess(v2, v1)
+        self.assertGreater(v1,v2)
+        self.assertNotEqual(v1, v2)
+
+    def test_Epoch(self):
+        v1 = Ckan.Version('1.2.0')
+        v2 = Ckan.Version('1:1.2.0')
+
+        self.assertLess(v1, v2)
+
+    def test_agExt(self):
+        v1 = Ckan.Version('1.20')
+        v2 = Ckan.Version('1.22a')
+
+        self.assertGreater(v2, v1)
+
+    def test_differentEpochs(self):
+        v1 = Ckan.Version('1:1')
+        v2 = Ckan.Version('2:1')
+
+        self.assertNotEqual(v1, v2)
+
+    def test_testSuite(self):
+        v1 = Ckan.Version('1.0')
+        v2 = Ckan.Version('2.0')
+
+        self.assertTrue(v1 < v2)
