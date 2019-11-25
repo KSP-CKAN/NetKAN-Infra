@@ -36,7 +36,7 @@ def netkan(debug):
     help='SQS Queue to poll for metadata'
 )
 @click.option(
-    '--metadata', envvar='CKANMETA_REMOTE',
+    '--ckanmeta-remote', '--metadata', envvar='CKANMETA_REMOTE',
     help='Path/URL/SSH to Metadata Repo',
 )
 @click.option(
@@ -59,9 +59,9 @@ def netkan(debug):
     '--key', envvar='SSH_KEY', required=True,
     help='SSH key for accessing repositories'
 )
-def indexer(queue, metadata, token, repo, user, key, timeout):
+def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
     init_ssh(key, '/home/netkan/.ssh')
-    ckan_meta = init_repo(metadata, '/tmp/CKAN-meta')
+    ckan_meta = init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
 
     github_pr = GitHubPR(token, repo, user)
     sqs = boto3.resource('sqs')
@@ -95,6 +95,10 @@ def indexer(queue, metadata, token, repo, user, key, timeout):
     help='Path/URL to NetKAN Repo for dev override',
 )
 @click.option(
+    '--ckanmeta-remote', envvar='CKANMETA_REMOTE',
+    help='Path/URL/SSH to Metadata Repo',
+)
+@click.option(
     '--key', envvar='SSH_KEY', required=True,
     help='SSH key for accessing repositories'
 )
@@ -115,15 +119,16 @@ def indexer(queue, metadata, token, repo, user, key, timeout):
     '--min-credits', default=200,
     help='Only schedule if we have at least this many credits remaining'
 )
-def scheduler(queue, netkan_remote, key, max_queued, dev, group, min_credits):
+def scheduler(queue, netkan_remote, ckanmeta_remote, key, max_queued, dev, group, min_credits):
     init_ssh(key, '/home/netkan/.ssh')
     sched = NetkanScheduler(
-        Path('/tmp/NetKAN'), queue,
+        Path('/tmp/NetKAN'), Path('/tmp/CKAN-meta'), queue,
         nonhooks_group=(group == 'all' or group == 'nonhooks'),
         webhooks_group=(group == 'all' or group == 'webhooks'),
     )
     if sched.can_schedule(max_queued, dev, min_credits):
         init_repo(netkan_remote, '/tmp/NetKAN')
+        init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
         sched.schedule_all_netkans()
         logging.info("NetKANs submitted to %s", queue)
 
@@ -240,7 +245,7 @@ def clean_cache(days):
     help='Path/URL/SSH to NetKAN repo for mod list',
 )
 @click.option(
-    '--ckan-meta', envvar='CKANMETA_REMOTE',
+    '--ckanmeta-remote', '--ckan-meta', envvar='CKANMETA_REMOTE',
     help='Path/URL/SSH to CKAN-meta repo for output',
 )
 @click.option(
@@ -251,10 +256,10 @@ def clean_cache(days):
     '--key', envvar='SSH_KEY', required=True,
     help='SSH key for accessing repositories'
 )
-def download_counter(netkan_remote, ckan_meta, token, key):
+def download_counter(netkan_remote, ckanmeta_remote, token, key, debug):
     init_ssh(key, '/home/netkan/.ssh')
     init_repo(netkan_remote, '/tmp/NetKAN')
-    meta = init_repo(ckan_meta, '/tmp/CKAN-meta')
+    meta = init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
     logging.info('Starting Download Count Calculation...')
     DownloadCounter(
         '/tmp/NetKAN',
