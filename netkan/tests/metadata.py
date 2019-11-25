@@ -179,6 +179,21 @@ class TestCkanComplex(unittest.TestCase):
         self.assertEqual('1.0.0', self.ckan.version.string)
 
 
+class TestCkanEmpty(unittest.TestCase):
+
+    def setUp(self):
+        self.ckan = Ckan(contents='{}')
+
+    def test_version_none(self):
+        self.assertIsNone(self.ckan.version)
+
+    def test_cache_prefix(self):
+        self.assertIsNone(self.ckan.cache_prefix)
+
+    def test_cache_filename(self):
+        self.assertIsNone(self.ckan.cache_filename)
+
+
 class TestVersionConstruction(unittest.TestCase):
 
     def test_str(self):
