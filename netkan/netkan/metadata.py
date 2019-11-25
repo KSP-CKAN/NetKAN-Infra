@@ -84,7 +84,6 @@ class Ckan:
         else:
             self.contents = contents
         self._raw = json.loads(self.contents)
-        self.version = self.Version(self._raw.get('version'))
 
     def __getattr__(self, name):
         if name in self._raw:
@@ -92,6 +91,11 @@ class Ckan:
         if name == 'kind':
             return self._raw.get('kind', 'package')
         raise AttributeError
+
+    @property
+    def version(self):
+        if self._raw.get('version'):
+            return self.Version(self._raw.get('version'))
 
     @property
     def cache_prefix(self):
