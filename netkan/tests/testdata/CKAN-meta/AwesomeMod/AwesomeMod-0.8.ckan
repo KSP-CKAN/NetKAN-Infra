@@ -1,0 +1,6 @@
+{
+	"spec_version": "v1.4",
+	"identifier":   "AwesomeMod",
+	"version":      "0.8",
+	"download":     "https://fake.url/awesomemod.zip"
+}

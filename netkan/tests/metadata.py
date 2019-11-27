@@ -1,4 +1,4 @@
-from netkan.metadata import Netkan, Ckan
+from netkan.metadata import Netkan, Ckan, CkanGroup
 
 import unittest
 from pathlib import Path, PurePath
@@ -256,7 +256,7 @@ class TestVersionComparison(unittest.TestCase):
         v2 = Ckan.Version('v6a5')
 
         self.assertLess(v2, v1)
-        self.assertGreater(v1,v2)
+        self.assertGreater(v1, v2)
         self.assertNotEqual(v1, v2)
 
     def test_Epoch(self):
@@ -282,3 +282,20 @@ class TestVersionComparison(unittest.TestCase):
         v2 = Ckan.Version('2.0')
 
         self.assertTrue(v1 < v2)
+
+
+class TestCkanGroup(unittest.TestCase):
+
+    TEST_PATH = Path(PurePath(__file__).parent, 'testdata/CKAN-meta')
+
+    def test_highest_version_epoch(self):
+        ckg = CkanGroup(self.TEST_PATH, 'AdequateMod')
+        self.assertEqual(ckg.highest_version().string, '1:0.2')
+
+    def test_highest_version_v(self):
+        ckg = CkanGroup(self.TEST_PATH, 'AmazingMod')
+        self.assertEqual(ckg.highest_version().string, 'v1.1')
+
+    def test_highest_version_numeric(self):
+        ckg = CkanGroup(self.TEST_PATH, 'AwesomeMod')
+        self.assertEqual(ckg.highest_version().string, '0.11')

@@ -67,11 +67,11 @@ class Netkan:
 
     def sqs_message(self, ckan_group=None):
         return {
-            'Id':                     self.identifier,
-            'MessageBody':            self.contents,
-            'MessageGroupId':         '1',
+            'Id': self.identifier,
+            'MessageBody': self.contents,
+            'MessageGroupId': '1',
             'MessageDeduplicationId': uuid.uuid4().hex,
-            'MessageAttributes':      self.sqs_message_attribs(ckan_group),
+            'MessageAttributes': self.sqs_message_attribs(ckan_group),
         }
 
 
@@ -290,6 +290,11 @@ class Ckan:
 
 
 class CkanGroup:
+
+    """
+    Represents all Ckans from CKAN-meta associated with a particular identifier.
+    Allows us to calculate things about the group, such as the highest module version.
+    """
 
     def __init__(self, ckan_meta_path, identifier):
         self.path = Path(ckan_meta_path, identifier)
