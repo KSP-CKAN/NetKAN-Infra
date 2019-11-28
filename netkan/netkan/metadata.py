@@ -59,12 +59,19 @@ class Netkan:
             return False
         return self.on_spacedock
 
-    def sqs_message(self):
+    def sqs_message_attribs(self, ckan_group=None):
+        attribs = {}
+        if ckan_group and not getattr(self, 'x_netkan_allow_out_of_order', False):
+            attribs['HighestVersion'] = ckan_group.highest_version().string
+        return attribs
+
+    def sqs_message(self, ckan_group=None):
         return {
             'Id': self.identifier,
             'MessageBody': self.contents,
             'MessageGroupId': '1',
             'MessageDeduplicationId': uuid.uuid4().hex,
+            'MessageAttributes': self.sqs_message_attribs(ckan_group),
         }
 
 
@@ -255,7 +262,8 @@ class Ckan:
             # Process our strings while there are characters remaining
             while len(first_remainder) > 0 and len(second_remainder) > 0:
                 # Start by comparing the string parts.
-                (result, first_remainder, second_remainder) = _string_compare(first_remainder, second_remainder)
+                (result, first_remainder, second_remainder) = _string_compare(
+                    first_remainder, second_remainder)
 
                 if result != 0:
                     return result > 0
@@ -263,7 +271,8 @@ class Ckan:
                 # Otherwise, compare the number parts.
                 # It's okay not to check if our strings are exhausted, because
                 # if they are the exhausted parts will return zero.
-                (result, first_remainder, second_remainder) = _number_compare(first_remainder, second_remainder)
+                (result, first_remainder, second_remainder) = _number_compare(
+                    first_remainder, second_remainder)
 
                 # Again, return difference if found.
                 if result != 0:
@@ -278,3 +287,21 @@ class Ckan:
 
         def __str__(self):
             return self.string
+
+
+class CkanGroup:
+
+    """
+    Represents all Ckans from CKAN-meta associated with a particular identifier.
+    Allows us to calculate things about the group, such as the highest module version.
+    """
+
+    def __init__(self, ckan_meta_path, identifier):
+        self.path = Path(ckan_meta_path, identifier)
+
+    def highest_version(self):
+        ckans = (Ckan(p) for p in self.path.glob('**/*.ckan'))
+        highest = max(ckans, default=None, key=lambda ck: ck.version)
+        if highest:
+            return highest.version
+        return None

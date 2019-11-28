@@ -1,7 +1,7 @@
 from pathlib import Path
 from flask import Blueprint, current_app, request
 
-from ..metadata import Netkan
+from ..metadata import Netkan, CkanGroup
 from ..common import sqs_batch_entries
 
 
@@ -19,7 +19,8 @@ def inflate_hook():
     nks = find_netkans(request.form.get('mod_id'))
     if nks:
         # Submit them to the queue
-        messages = (nk.sqs_message() for nk in nks)
+        messages = (nk.sqs_message(CkanGroup(current_app.config['ckanmeta_repo'].working_dir, nk.identifier))
+                    for nk in nks)
         for batch in sqs_batch_entries(messages):
             current_app.config['client'].send_message_batch(
                 QueueUrl=current_app.config['inflation_queue'].url,

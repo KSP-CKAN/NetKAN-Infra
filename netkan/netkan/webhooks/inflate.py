@@ -1,6 +1,7 @@
 from flask import Blueprint, current_app, request
 
 from ..common import netkans, sqs_batch_entries
+from ..metadata import CkanGroup
 
 
 inflate = Blueprint('inflate', __name__)  # pylint: disable=invalid-name
@@ -18,7 +19,7 @@ def inflate_hook():
         return 'An array of identifiers is required', 400
     # Make sure our NetKAN repo is up to date
     current_app.config['netkan_repo'].remotes.origin.pull('master', strategy_option='theirs')
-    messages = (nk.sqs_message()
+    messages = (nk.sqs_message(CkanGroup(current_app.config['ckanmeta_repo'].working_dir, nk.identifier))
                 for nk in netkans(current_app.config['netkan_repo'].working_dir, ids))
     for batch in sqs_batch_entries(messages):
         current_app.logger.info(f'Queueing inflation request batch: {batch}')

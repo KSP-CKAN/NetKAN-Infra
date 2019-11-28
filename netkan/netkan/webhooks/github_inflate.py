@@ -3,6 +3,7 @@ from flask import Blueprint, current_app, request, jsonify
 
 from ..common import netkans, sqs_batch_entries
 from .github_utils import signature_required
+from ..metadata import CkanGroup
 
 
 github_inflate = Blueprint('github_inflate', __name__)  # pylint: disable=invalid-name
@@ -55,7 +56,7 @@ def ids_from_commits(commits):
 def inflate(ids):
     # Make sure our NetKAN repo is up to date
     current_app.config['netkan_repo'].remotes.origin.pull('master', strategy_option='theirs')
-    messages = (nk.sqs_message()
+    messages = (nk.sqs_message(CkanGroup(current_app.config['ckanmeta_repo'].working_dir, nk.identifier))
                 for nk in netkans(current_app.config['netkan_repo'].working_dir, ids))
     for batch in sqs_batch_entries(messages):
         current_app.config['client'].send_message_batch(

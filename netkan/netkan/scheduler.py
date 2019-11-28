@@ -4,16 +4,17 @@ from pathlib import Path
 import boto3
 import requests
 
-from .metadata import Netkan
+from .metadata import Netkan, CkanGroup
 from .common import sqs_batch_entries
 
 
 class NetkanScheduler:
 
-    def __init__(self, path, queue, base='NetKAN/', nonhooks_group=False, webhooks_group=False):
+    def __init__(self, path, ckan_meta_path, queue, base='NetKAN/', nonhooks_group=False, webhooks_group=False):
         self.path = Path(path, base)
         self.nonhooks_group = nonhooks_group
         self.webhooks_group = webhooks_group
+        self.ckan_meta_path = ckan_meta_path
 
         # TODO: This isn't super neat, do something better.
         self.queue_url = 'test_url'
@@ -42,7 +43,8 @@ class NetkanScheduler:
             return self.nonhooks_group
 
     def schedule_all_netkans(self):
-        messages = (nk.sqs_message() for nk in self.netkans() if self._in_group(nk))
+        messages = (nk.sqs_message(CkanGroup(self.ckan_meta_path, nk.identifier))
+                    for nk in self.netkans() if self._in_group(nk))
         for batch in sqs_batch_entries(messages):
             self.client.send_message_batch(**self.sqs_batch_attrs(batch))
 

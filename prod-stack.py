@@ -601,6 +601,7 @@ services = [
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
+            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'schedule': 'rate(2 hours)',
@@ -752,6 +753,7 @@ services = [
                 ],
                 'env': [
                     ('NETKAN_REMOTE', NETKAN_REMOTE),
+                    ('CKANMETA_REMOTE', CKANMETA_REMOTE),
                     ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
                     ('INFLATION_SQS_QUEUE', GetAtt(inbound, 'QueueName')),
                 ],
