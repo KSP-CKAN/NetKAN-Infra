@@ -32,23 +32,23 @@ def netkan(debug):
 
 @click.command()
 @click.option(
-    '--queue', envvar='SQS_QUEUE',
-    help='SQS Queue to poll for metadata'
+    '--queue', envvar='SQS_QUEUE', required=True,
+    help='SQS Queue to poll for metadata',
 )
 @click.option(
-    '--ckanmeta-remote', '--metadata', envvar='CKANMETA_REMOTE',
+    '--ckanmeta-remote', '--metadata', envvar='CKANMETA_REMOTE', required=True,
     help='Path/URL/SSH to Metadata Repo',
 )
 @click.option(
-    '--token', help='GitHub Token for PRs',
-    required=True, envvar='GH_Token'
+    '--token', envvar='GH_Token', required=True,
+    help='GitHub Token for PRs',
 )
 @click.option(
-    '--repo', envvar='CKANMETA_REPO',
+    '--repo', envvar='CKANMETA_REPO', required=True,
     help='GitHub repo to raise PR against (Org Repo: CKAN-meta)',
 )
 @click.option(
-    '--user', envvar='CKANMETA_USER',
+    '--user', envvar='CKANMETA_USER', required=True,
     help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
 )
 @click.option(
@@ -57,7 +57,7 @@ def netkan(debug):
 )
 @click.option(
     '--key', envvar='SSH_KEY', required=True,
-    help='SSH key for accessing repositories'
+    help='SSH key for accessing repositories',
 )
 def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
     init_ssh(key, '/home/netkan/.ssh')
@@ -87,24 +87,24 @@ def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
 
 @click.command()
 @click.option(
-    '--queue', envvar='SQS_QUEUE',
-    help='SQS Queue to send netkan metadata for scheduling'
+    '--queue', envvar='SQS_QUEUE', required=True,
+    help='SQS Queue to send netkan metadata for scheduling',
 )
 @click.option(
-    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE',
+    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE', required=True,
     help='Path/URL to NetKAN Repo for dev override',
 )
 @click.option(
-    '--ckanmeta-remote', envvar='CKANMETA_REMOTE',
+    '--ckanmeta-remote', envvar='CKANMETA_REMOTE', required=True,
     help='Path/URL/SSH to Metadata Repo',
 )
 @click.option(
     '--key', envvar='SSH_KEY', required=True,
-    help='SSH key for accessing repositories'
+    help='SSH key for accessing repositories',
 )
 @click.option(
     '--max-queued', default=20, envvar='MAX_QUEUED',
-    help='SQS Queue to send netkan metadata for scheduling'
+    help='SQS Queue to send netkan metadata for scheduling',
 )
 @click.option(
     '--dev', is_flag=True, default=False,
@@ -113,11 +113,11 @@ def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
 @click.option(
     '--group',
     type=click.Choice(['all', 'webhooks', 'nonhooks']), default="nonhooks",
-    help='Which mods to schedule'
+    help='Which mods to schedule',
 )
 @click.option(
     '--min-credits', default=200,
-    help='Only schedule if we have at least this many credits remaining'
+    help='Only schedule if we have at least this many credits remaining',
 )
 def scheduler(queue, netkan_remote, ckanmeta_remote, key, max_queued, dev, group, min_credits):
     init_ssh(key, '/home/netkan/.ssh')
@@ -136,15 +136,15 @@ def scheduler(queue, netkan_remote, ckanmeta_remote, key, max_queued, dev, group
 @click.command()
 @click.option(
     '--status-bucket', envvar='STATUS_BUCKET', required=True,
-    help='Bucket to Dump status.json'
+    help='Bucket to Dump status.json',
 )
 @click.option(
     '--status-key', envvar='STATUS_KEY', default='status/netkan.json',
-    help='Overwrite bucket key, defaults to `status/netkan.json`'
+    help='Overwrite bucket key, defaults to `status/netkan.json`',
 )
 @click.option(
     '--interval', envvar='STATUS_INTERVAL', default=300,
-    help='Dump status to S3 every `interval` seconds'
+    help='Dump status to S3 every `interval` seconds',
 )
 def export_status_s3(status_bucket, status_key, interval):
     frequency = 'every {} seconds'.format(
@@ -185,10 +185,10 @@ def recover_status_timestamps(ckanmeta_remote):
 
 @click.command()
 @click.option(
-    '--cluster', help='ECS Cluster running the service'
+    '--cluster', help='ECS Cluster running the service',
 )
 @click.option(
-    '--service-name', help='Name of ECS Service to restart'
+    '--service-name', help='Name of ECS Service to restart',
 )
 def redeploy_service(cluster, service_name):
     click.secho(
@@ -224,7 +224,7 @@ def redeploy_service(cluster, service_name):
 
 @click.command()
 @click.option(
-    '--days', help='Purge items older than X from cache'
+    '--days', help='Purge items older than X from cache',
 )
 def clean_cache(days):
     older_than = (
@@ -241,11 +241,11 @@ def clean_cache(days):
 
 @click.command()
 @click.option(
-    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE',
+    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE', required=True,
     help='Path/URL/SSH to NetKAN repo for mod list',
 )
 @click.option(
-    '--ckanmeta-remote', '--ckan-meta', envvar='CKANMETA_REMOTE',
+    '--ckanmeta-remote', '--ckan-meta', envvar='CKANMETA_REMOTE', required=True,
     help='Path/URL/SSH to CKAN-meta repo for output',
 )
 @click.option(
@@ -254,7 +254,7 @@ def clean_cache(days):
 )
 @click.option(
     '--key', envvar='SSH_KEY', required=True,
-    help='SSH key for accessing repositories'
+    help='SSH key for accessing repositories',
 )
 def download_counter(netkan_remote, ckanmeta_remote, token, key, debug):
     init_ssh(key, '/home/netkan/.ssh')
@@ -284,7 +284,7 @@ def ticket_closer(token, days_limit):
 
 @click.command()
 @click.option(
-    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE',
+    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE', required=True,
     help='Path/URL/SSH to NetKAN repo for mod list',
 )
 @click.option(
@@ -292,11 +292,11 @@ def ticket_closer(token, days_limit):
     help='GitHub token for querying and closing issues',
 )
 @click.option(
-    '--repo', envvar='NETKAN_REPO',
+    '--repo', envvar='NETKAN_REPO', required=True,
     help='GitHub repo to raise PR against (Org Repo: NetKAN)',
 )
 @click.option(
-    '--user', envvar='NETKAN_USER',
+    '--user', envvar='NETKAN_USER', required=True,
     help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
 )
 @click.option(
@@ -305,7 +305,7 @@ def ticket_closer(token, days_limit):
 )
 @click.option(
     '--key', envvar='SSH_KEY', required=True,
-    help='SSH key for accessing repositories'
+    help='SSH key for accessing repositories',
 )
 def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
     init_ssh(key, '/home/netkan/.ssh')
