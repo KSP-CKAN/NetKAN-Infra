@@ -59,10 +59,16 @@ class Netkan:
             return False
         return self.on_spacedock
 
+    def string_attrib(self, val):
+        return {
+            'DataType': 'String',
+            'StringValue': val,
+        }
+
     def sqs_message_attribs(self, ckan_group=None):
         attribs = {}
         if ckan_group and not getattr(self, 'x_netkan_allow_out_of_order', False):
-            attribs['HighestVersion'] = ckan_group.highest_version().string
+            attribs['HighestVersion'] = self.string_attrib(ckan_group.highest_version().string)
         return attribs
 
     def sqs_message(self, ckan_group=None):
