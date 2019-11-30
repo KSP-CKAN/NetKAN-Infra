@@ -19,7 +19,7 @@ setup(
         'requests',
         'flask',
         'internetarchive',
-        'gunicorn>=19.9,<20.0.0',
+        'gunicorn>=19.9,!=20.0.0',
         'discord',
         'PyGithub',
     ],
