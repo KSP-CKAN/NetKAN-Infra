@@ -68,7 +68,9 @@ class Netkan:
     def sqs_message_attribs(self, ckan_group=None):
         attribs = {}
         if ckan_group and not getattr(self, 'x_netkan_allow_out_of_order', False):
-            attribs['HighestVersion'] = self.string_attrib(ckan_group.highest_version().string)
+            highVer = ckan_group.highest_version()
+            if highVer:
+                attribs['HighestVersion'] = self.string_attrib(highVer.string)
         return attribs
 
     def sqs_message(self, ckan_group=None):
