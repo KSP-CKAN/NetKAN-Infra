@@ -256,7 +256,7 @@ def clean_cache(days):
     '--key', envvar='SSH_KEY', required=True,
     help='SSH key for accessing repositories',
 )
-def download_counter(netkan_remote, ckanmeta_remote, token, key, debug):
+def download_counter(netkan_remote, ckanmeta_remote, token, key):
     init_ssh(key, '/home/netkan/.ssh')
     init_repo(netkan_remote, '/tmp/NetKAN')
     meta = init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
