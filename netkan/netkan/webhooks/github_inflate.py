@@ -1,7 +1,7 @@
 from pathlib import Path
 from flask import Blueprint, current_app, request, jsonify
 
-from ..common import netkans, sqs_batch_entries
+from ..common import netkans, sqs_batch_entries, pull_all
 from .github_utils import signature_required
 from ..metadata import CkanGroup
 
@@ -54,8 +54,8 @@ def ids_from_commits(commits):
 
 
 def inflate(ids):
-    # Make sure our NetKAN repo is up to date
-    current_app.config['netkan_repo'].remotes.origin.pull('master', strategy_option='theirs')
+    # Make sure our NetKAN and CKAN-meta repos are up to date
+    pull_all(current_app.config['repos'])
     messages = (nk.sqs_message(CkanGroup(current_app.config['ckanmeta_repo'].working_dir, nk.identifier))
                 for nk in netkans(current_app.config['netkan_repo'].working_dir, ids))
     for batch in sqs_batch_entries(messages):
