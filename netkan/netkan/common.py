@@ -14,3 +14,8 @@ def sqs_batch_entries(messages, batch_size=10):
             batch = []
     if len(batch) > 0:
         yield batch
+
+
+def pull_all(repos):
+    for r in repos:
+        r.remotes.origin.pull('master', strategy_option='theirs')

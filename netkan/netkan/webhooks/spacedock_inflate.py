@@ -1,8 +1,8 @@
 from pathlib import Path
 from flask import Blueprint, current_app, request
 
+from ..common import sqs_batch_entries, pull_all
 from ..metadata import Netkan, CkanGroup
-from ..common import sqs_batch_entries
 
 
 spacedock_inflate = Blueprint('spacedock_inflate', __name__)  # pylint: disable=invalid-name
@@ -13,8 +13,8 @@ spacedock_inflate = Blueprint('spacedock_inflate', __name__)  # pylint: disable=
 # POST form parameters: mod_id=1234&event_type=update
 @spacedock_inflate.route('/inflate', methods=['POST'])
 def inflate_hook():
-    # Make sure our NetKAN repo is up to date
-    current_app.config['netkan_repo'].remotes.origin.pull('master', strategy_option='theirs')
+    # Make sure our NetKAN and CKAN-meta repos are up to date
+    pull_all(current_app.config['repos'])
     # Get the relevant netkans
     nks = find_netkans(request.form.get('mod_id'))
     if nks:
