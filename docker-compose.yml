@@ -142,17 +142,3 @@ services:
     volumes:
       - ./netkan:/home/netkan/netkan
     command: download-counter
-  dev:
-    build:
-      context: netkan/.
-      target: dev
-    environment:
-      SSH_KEY: ${CKAN_NETKAN_SSHKEY}
-      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
-      CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
-      GH_Token: ${CKAN_GH_Token}
-      DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
-      DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
-    volumes:
-      - ./netkan:/home/netkan/netkan
-    entrypoint: sleep infinity

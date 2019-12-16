@@ -17,8 +17,8 @@ def init_repo(metadata, path):
 
 def init_ssh(key, path):
     if not key:
-        logging.error('Private Key required for SSH Git')
-        sys.exit(1)
+        logging.warning('Private Key required for SSH Git')
+        return
     logging.info('Private Key found, writing to disk')
     key_path = Path(path)
     key_path.mkdir(exist_ok=True)

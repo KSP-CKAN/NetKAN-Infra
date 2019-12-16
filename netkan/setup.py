@@ -30,7 +30,6 @@ setup(
     },
     extras_require={
         'development': [
-            'pytest',
             'ptvsd',
             'pylint',
             'autopep8',
