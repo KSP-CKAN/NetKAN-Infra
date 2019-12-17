@@ -612,7 +612,7 @@ services = [
         'command': [
             'scheduler', '--group', 'webhooks',
                 '--max-queued', '2000',
-                '--min-credits', '100'
+                '--min-credits', '25'
         ],
         'memory': '156',
         'secrets': ['SSH_KEY'],

@@ -95,7 +95,7 @@ class NetkanScheduler:
             logging.error("Couldn't acquire Volume Credit Stats")
         return int(creds)
 
-    def can_schedule(self, max_queued, dev=False, min_credits=200):
+    def can_schedule(self, max_queued, dev=False, min_credits=50):
         if not dev:
             end = datetime.datetime.utcnow()
             start = end - datetime.timedelta(minutes=10)
