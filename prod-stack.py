@@ -233,6 +233,7 @@ netkan_role = t.add_resource(Role(
                     {
                         "Action": [
                             "cloudwatch:GetMetricStatistics",
+                            "ec2:DescribeVolumes"
                         ],
                         "Effect": "Allow",
                         "Resource": "*"
