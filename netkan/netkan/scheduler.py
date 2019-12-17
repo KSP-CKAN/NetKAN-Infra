@@ -59,9 +59,9 @@ class NetkanScheduler:
             Period=10,
             Statistics=['Average'],
         )
-        # A pass consumes around 40 credits, with an accrue rate of 24/hr.
-        # So running every 2 hours should see using just a touch less than
-        # we gain in that time period.
+        # An initial pass after redeployment of the inflator consumes around 15 credits
+        # and followup passes around 5, with an accrue rate of 24/hr. This is a historical
+        # check, but useful to avoid DoS'ing the service when we're doing high CPU operations.
         creds = 0
         try:
             creds = stats['Datapoints'][0]['Average']
