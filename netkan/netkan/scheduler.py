@@ -117,7 +117,7 @@ class NetkanScheduler:
             # our max, something has gone wrong and we should not queue any more inflations.
             vol_credits_percent = self.volume_credits_percent(cloudwatch, instance_id, start, end)
             if vol_credits_percent < 30:
-                logging.info(
+                logging.error(
                     "Run skipped, below volume credit target (Current Avg: %s %)", vol_credits_percent
                 )
                 return False
