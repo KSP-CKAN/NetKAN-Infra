@@ -69,7 +69,7 @@ class NetkanScheduler:
             logging.error("Couldn't acquire CPU Credit Stats")
         return int(creds)
 
-    def volume_credits(self, cloudwatch, instance_id, start, end):
+    def volume_credits_percent(self, cloudwatch, instance_id, start, end):
         client = boto3.client('ec2')
         response = client.describe_volumes(
             Filters=[{
@@ -81,7 +81,7 @@ class NetkanScheduler:
         volume = list(filter(lambda x: x['VolumeType'] == 'gp2', response['Volumes']))[0]
         volume_id = volume['Attachments'][0]['VolumeId']
         stats = cloudwatch.get_metric_statistics(
-            Dimensions=[{'Name': 'VolumeId', 'Value': 'vol-02cdb3dfd4b2a69f9'}],
+            Dimensions=[{'Name': 'VolumeId', 'Value': volume_id}],
             MetricName='BurstBalance',
             Namespace='AWS/EBS',
             StartTime=start.strftime("%Y-%m-%dT%H:%MZ"),
@@ -115,10 +115,10 @@ class NetkanScheduler:
             # Volume Burst balance measured in a percentage of 5.4million credits. Credits are
             # accrued at a rate of 3 per GB, per second. If we are are down to 30 percent of
             # our max, something has gone wrong and we should not queue any more inflations.
-            vol_credits = self.volume_credits(cloudwatch, instance_id, start, end)
-            if vol_credits < 30:
+            vol_credits_percent = self.volume_credits_percent(cloudwatch, instance_id, start, end)
+            if vol_credits_percent < 30:
                 logging.info(
-                    "Run skipped, below volume credit target (Current Avg: %s %)", vol_credits
+                    "Run skipped, below volume credit target (Current Avg: %s %)", vol_credits_percent
                 )
                 return False
 
