@@ -11,6 +11,9 @@ from .github_inflate import github_inflate
 
 
 def create_app():
+    # Set up Discord logger so we can see errors
+    setup_log_handler()
+
     app = Flask(__name__)
 
     init_ssh(os.environ.get('SSH_KEY'), '/home/netkan/.ssh')
@@ -30,8 +33,5 @@ def create_app():
     app.register_blueprint(inflate)
     app.register_blueprint(spacedock_inflate, url_prefix='/sd')
     app.register_blueprint(github_inflate, url_prefix='/gh')
-
-    # Set up Discord logger so we can see errors
-    setup_log_handler()
 
     return app
