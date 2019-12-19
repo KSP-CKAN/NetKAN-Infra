@@ -1,9 +1,10 @@
 import os
+import sys
 import boto3
 from flask import Flask
 
 from ..utils import init_repo, init_ssh
-from ..notifications import setup_log_handler
+from ..notifications import setup_log_handler, catch_all
 from .errors import errors
 from .inflate import inflate
 from .spacedock_inflate import spacedock_inflate
@@ -12,7 +13,8 @@ from .github_inflate import github_inflate
 
 def create_app():
     # Set up Discord logger so we can see errors
-    setup_log_handler()
+    if setup_log_handler():
+        sys.excepthook = catch_all
 
     app = Flask(__name__)
 
