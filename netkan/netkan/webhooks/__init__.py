@@ -1,9 +1,10 @@
 import os
+import sys
 import boto3
 from flask import Flask
 
 from ..utils import init_repo, init_ssh
-from ..notifications import setup_log_handler
+from ..notifications import setup_log_handler, catch_all
 from .errors import errors
 from .inflate import inflate
 from .spacedock_inflate import spacedock_inflate
@@ -11,6 +12,10 @@ from .github_inflate import github_inflate
 
 
 def create_app():
+    # Set up Discord logger so we can see errors
+    if setup_log_handler():
+        sys.excepthook = catch_all
+
     app = Flask(__name__)
 
     init_ssh(os.environ.get('SSH_KEY'), '/home/netkan/.ssh')
@@ -30,8 +35,5 @@ def create_app():
     app.register_blueprint(inflate)
     app.register_blueprint(spacedock_inflate, url_prefix='/sd')
     app.register_blueprint(github_inflate, url_prefix='/gh')
-
-    # Set up Discord logger so we can see errors
-    setup_log_handler()
 
     return app
