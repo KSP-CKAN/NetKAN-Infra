@@ -1,6 +1,5 @@
 import logging
 import subprocess
-import sys
 from git import Repo
 from pathlib import Path
 

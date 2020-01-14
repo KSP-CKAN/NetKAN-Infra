@@ -2,6 +2,7 @@ import os
 import sys
 import boto3
 from flask import Flask
+from pathlib import Path
 
 from ..utils import init_repo, init_ssh
 from ..notifications import setup_log_handler, catch_all
@@ -18,7 +19,7 @@ def create_app():
 
     app = Flask(__name__)
 
-    init_ssh(os.environ.get('SSH_KEY'), '/home/netkan/.ssh')
+    init_ssh(os.environ.get('SSH_KEY'), str(Path.home()) + '/.ssh')
 
     # Set up config
     app.config['secret'] = os.environ.get('XKAN_GHSECRET')

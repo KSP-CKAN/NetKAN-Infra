@@ -8,10 +8,10 @@ from shutil import copy2
 from click.testing import CliRunner
 
 
-# This file is intended to test the command in cli.py, running them directly via click.testing.CliRunner().invoke().
+# This file is intended to test the commands in cli.py, running them directly via click.testing.CliRunner().invoke().
 class TestCleanCache(unittest.TestCase):
 
-    cache_path = Path('/home/netkan/ckan_cache/')
+    cache_path = Path(PurePath(__file__).parent, 'test_cache')
     testdata_path = Path(PurePath(__file__).parent, 'testdata/NetKAN/NetKAN/')
 
     cache_path.mkdir(exist_ok=True)
@@ -45,7 +45,7 @@ class TestCleanCache(unittest.TestCase):
 
     def test_clean_all(self):
 
-        result = self.runner.invoke(clean_cache, ['--days', '42'])
+        result = self.runner.invoke(clean_cache, ['--days', '42', '--cache', str(self.cache_path)])
 
         self.assertEqual(result.exit_code, 0)
         self.assertFalse(Path.exists(self.target_file_1))
