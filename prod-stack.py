@@ -786,6 +786,7 @@ services = [
         'secrets': ['GH_Token', 'SSH_KEY'],
         'env': [
             ('SQS_QUEUE', GetAtt(addqueue, 'QueueName')),
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
             ('NETKAN_USER', NETKAN_USER),
             ('NETKAN_REPO', NETKAN_REPO),
