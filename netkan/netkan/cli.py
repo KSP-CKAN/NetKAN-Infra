@@ -344,7 +344,12 @@ def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
     '--user', envvar='NETKAN_USER',
     help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
 )
-def spacedock_adder(queue, timeout, netkan_remote, token, repo, user):
+@click.option(
+    '--key', envvar='SSH_KEY', required=True,
+    help='SSH key for accessing repositories',
+)
+def spacedock_adder(queue, timeout, netkan_remote, token, repo, user, key):
+    init_ssh(key, '/home/netkan/.ssh')
     sd_adder = SpaceDockAdder(
         queue,
         timeout,
