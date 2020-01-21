@@ -9,6 +9,9 @@ setup(
     author='Leon Wright',
     author_email='techman83@gmail.com',
     packages=find_packages(),
+    package_data={
+        "": [ "*.txt" ],
+    },
     install_requires=[
         'boto3',
         'click',

@@ -8,6 +8,7 @@ from ..notifications import setup_log_handler, catch_all
 from .errors import errors
 from .inflate import inflate
 from .spacedock_inflate import spacedock_inflate
+from .spacedock_add import spacedock_add
 from .github_inflate import github_inflate
 
 
@@ -29,11 +30,13 @@ def create_app():
     sqs = boto3.resource('sqs')
     app.config['inflation_queue'] = sqs.get_queue_by_name(
         QueueName=os.environ.get('INFLATION_SQS_QUEUE'))
+    app.config['add_queue'] = sqs.get_queue_by_name(QueueName=os.environ.get('ADD_SQS_QUEUE'))
 
     # Add the hook handlers
     app.register_blueprint(errors)
     app.register_blueprint(inflate)
     app.register_blueprint(spacedock_inflate, url_prefix='/sd')
+    app.register_blueprint(spacedock_add, url_prefix='/sd')
     app.register_blueprint(github_inflate, url_prefix='/gh')
 
     return app
