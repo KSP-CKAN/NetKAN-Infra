@@ -144,7 +144,8 @@ netkan_role = t.add_resource(Role(
                         ],
                         "Resource": [
                             GetAtt(inbound, "Arn"),
-                            GetAtt(outbound, "Arn")
+                            GetAtt(outbound, "Arn"),
+                            GetAtt(addqueue, "Arn"),
                         ]
                     },
                     {
@@ -782,7 +783,7 @@ services = [
         'name': 'Adder',
         'command': 'spacedock-adder',
         'memory': '156',
-        'secrets': ['GH_Token'],
+        'secrets': ['GH_Token', 'SSH_KEY'],
         'env': [
             ('SQS_QUEUE', GetAtt(addqueue, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
