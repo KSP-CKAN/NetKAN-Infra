@@ -20,18 +20,16 @@ from .spacedock_adder import SpaceDockAdder
 from .mirrorer import Mirrorer
 
 
-@click.option(
-    '--debug', is_flag=True, default=False,
-    help='Enable debug logging',
-)
-@click.group()
-def netkan(debug):
-    # Set up Discord logger so we can see errors
-    if setup_log_handler(debug):
-        # Catch uncaught exceptions and log them
-        sys.excepthook = catch_all
+class SharedArgs(object):
 
+    def __init__(self):
+        self._environment_data = None
+        self._debug = None
+        self._ssh_key = None
+        self._ckanmeta_remote_repo = None
+        self._netkan_remote_repo = None
 
+<<<<<<< HEAD
 @click.command()
 @click.option(
     '--queue', envvar='SQS_QUEUE', required=True,
@@ -64,21 +62,119 @@ def netkan(debug):
 def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
     init_ssh(key, Path(Path.home(), '.ssh'))
     ckan_meta = init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
+=======
+    def __getattribute__(self, name):
+        attr = super().__getattribute__(name)
+        if not name.startswith('_') and attr is None:
+            logging.fatal("Expecting attribute '%s' to be set; exiting disgracefully!", name)
+            sys.exit(1)
+        return attr
 
-    github_pr = GitHubPR(token, repo, user)
+    @property
+    def debug(self):
+        return self._debug
+
+    @debug.setter
+    def debug(self, value):
+        # When there isn't a flag passed we get a None instead, setting
+        # it as a 'False' for consistency.
+        self._debug = value or False
+        # Attempt to set up Discord logger so we can see errors
+        if setup_log_handler(self._debug):
+            # Catch uncaught exceptions and log them
+            sys.excepthook = catch_all
+
+    @property
+    def ssh_key(self):
+        return self._ssh_key
+>>>>>>> Initial CLI Refactor
+
+    @ssh_key.setter
+    def ssh_key(self, value):
+        init_ssh(value, Path(Path.home(), '.ssh'))
+        self._ssh_key = value
+
+    @property
+    def ckanmeta_remote(self):
+        if not self._ckanmeta_remote_repo:
+            self._ckanmeta_remote_repo = init_repo(self._ckanmeta_remote, '/tmp/CKAN-meta')
+        return self._ckanmeta_remote_repo
+
+    @ckanmeta_remote.setter
+    def ckanmeta_remote(self, value):
+        self._ckanmeta_remote = value
+
+    @property
+    def netkan_remote(self):
+        if not self._netkan_remote_repo:
+            self._netkan_remote_repo = init_repo(self._netkan_remote, '/tmp/NetKAN')
+        return self._netkan_remote_repo
+
+    @netkan_remote.setter
+    def netkan_remote(self, value):
+        self._netkan_remote = value
+
+pass_state = click.make_pass_decorator(SharedArgs, ensure=True)
+
+
+def ctx_callback(ctx, param, value):
+    shared = ctx.ensure_object(SharedArgs)
+    setattr(shared, param.name, value)
+    return value
+
+
+_common_options = [
+    click.option('--debug', is_flag=True, default=False, expose_value=False,
+                 help='Enable debug logging', callback=ctx_callback),
+    click.option('--queue', envvar='SQS_QUEUE', expose_value=False,
+                 help='SQS Queue to poll for metadata', callback=ctx_callback),
+    click.option('--ssh-key', envvar='SSH_KEY', expose_value=False,
+                 help='SSH key for accessing repositories', callback=ctx_callback),
+    click.option('--ckanmeta-remote', envvar='CKANMETA_REMOTE', expose_value=False,
+                 help='Path/URL/SSH to Metadata Repo', callback=ctx_callback),
+    click.option('--netkan-remote', envvar='NETKAN_REMOTE', expose_value=False,
+                 help='Path/URL/SSH to the Stub Metadata Repo', callback=ctx_callback),
+    click.option('--token', envvar='GH_Token', expose_value=False,
+                 help='GitHub Token for PRs', callback=ctx_callback),
+    click.option('--repo', envvar='CKANMETA_REPO', expose_value=False,
+                 help='GitHub repo to raise PR against (Org Repo: CKAN-meta)',
+                 callback=ctx_callback),
+    click.option('--user', envvar='CKANMETA_USER', expose_value=False,
+                 help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
+                 callback=ctx_callback),
+    click.option('--timeout', default=300, envvar='SQS_TIMEOUT', expose_value=False,
+                 help='Reduce message visibility timeout for testing', callback=ctx_callback),
+    click.option('--dev', is_flag=True, default=False, expose_value=False,
+                 help='Disable Production Checks', callback=ctx_callback),
+]
+
+def common_options(func):
+    for option in reversed(_common_options):
+        func = option(func)
+    return func
+
+
+@click.group()
+def netkan():
+    pass
+
+@click.command()
+@common_options
+@pass_state
+def indexer(common):
+    github_pr = GitHubPR(common.token, common.repo, common.user)
     sqs = boto3.resource('sqs')
-    queue = sqs.get_queue_by_name(QueueName=queue)
-    logging.info('Opening git repo at %s', ckan_meta.working_dir)
+    queue = sqs.get_queue_by_name(QueueName=common.queue)
 
     while True:
         messages = queue.receive_messages(
             MaxNumberOfMessages=10,
             MessageAttributeNames=['All'],
-            VisibilityTimeout=timeout
+            VisibilityTimeout=common.timeout
         )
         if not messages:
             continue
-        with MessageHandler(ckan_meta, github_pr) as handler:
+        with MessageHandler(common.ckanmeta_remote, github_pr) as handler:
             for message in messages:
                 handler.append(message)
             handler.process_ckans()
@@ -89,28 +185,8 @@ def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
 
 @click.command()
 @click.option(
-    '--queue', envvar='SQS_QUEUE', required=True,
-    help='SQS Queue to send netkan metadata for scheduling',
-)
-@click.option(
-    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE', required=True,
-    help='Path/URL to NetKAN Repo for dev override',
-)
-@click.option(
-    '--ckanmeta-remote', envvar='CKANMETA_REMOTE', required=True,
-    help='Path/URL/SSH to Metadata Repo',
-)
-@click.option(
-    '--key', envvar='SSH_KEY', required=True,
-    help='SSH key for accessing repositories',
-)
-@click.option(
     '--max-queued', default=20, envvar='MAX_QUEUED',
     help='SQS Queue to send netkan metadata for scheduling',
-)
-@click.option(
-    '--dev', is_flag=True, default=False,
-    help='Disable AWS Credit Checks',
 )
 @click.option(
     '--group',
@@ -121,18 +197,17 @@ def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
     '--min-credits', default=200,
     help='Only schedule if we have at least this many credits remaining',
 )
-def scheduler(queue, netkan_remote, ckanmeta_remote, key, max_queued, dev, group, min_credits):
-    init_ssh(key, Path(Path.home(), '.ssh'))
+@common_options
+@pass_state
+def scheduler(common, max_queued, group, min_credits):
     sched = NetkanScheduler(
-        Path('/tmp/NetKAN'), Path('/tmp/CKAN-meta'), queue,
+        common.netkan_remote.working_dir, common.ckanmeta_remote.working_dir, common.queue,
         nonhooks_group=(group == 'all' or group == 'nonhooks'),
         webhooks_group=(group == 'all' or group == 'webhooks'),
     )
-    if sched.can_schedule(max_queued, dev, min_credits):
-        init_repo(netkan_remote, '/tmp/NetKAN')
-        init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
+    if sched.can_schedule(max_queued, common.dev, min_credits):
         sched.schedule_all_netkans()
-        logging.info("NetKANs submitted to %s", queue)
+        logging.info("NetKANs submitted to %s", common.queue)
 
 
 @click.command()
@@ -177,12 +252,10 @@ def restore_status(filename):
 
 
 @click.command()
-@click.option(
-    '--ckanmeta-remote', required=True, envvar='CKANMETA_REMOTE',
-    help='Path/URL/SSH to Metadata Repo',
-)
-def recover_status_timestamps(ckanmeta_remote):
-    ModStatus.recover_timestamps(init_repo(ckanmeta_remote, '/tmp/CKAN-meta'))
+@common_options
+@pass_state
+def recover_status_timestamps(common):
+    ModStatus.recover_timestamps(common.ckanmeta_remote)
 
 
 @click.command()
@@ -247,69 +320,35 @@ def clean_cache(days, cache):
 
 
 @click.command()
-@click.option(
-    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE', required=True,
-    help='Path/URL/SSH to NetKAN repo for mod list',
-)
-@click.option(
-    '--ckanmeta-remote', '--ckan-meta', envvar='CKANMETA_REMOTE', required=True,
-    help='Path/URL/SSH to CKAN-meta repo for output',
-)
-@click.option(
-    '--token', envvar='GH_Token', required=True,
-    help='GitHub token for API calls',
-)
-@click.option(
-    '--key', envvar='SSH_KEY', required=True,
-    help='SSH key for accessing repositories',
-)
-def download_counter(netkan_remote, ckanmeta_remote, token, key):
-    init_ssh(key, Path(Path.home(), '.ssh'))
-    init_repo(netkan_remote, '/tmp/NetKAN')
-    meta = init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
+@common_options
+@pass_state
+def download_counter(common):
     logging.info('Starting Download Count Calculation...')
     DownloadCounter(
-        '/tmp/NetKAN',
-        meta,
-        token
+        common.netkan_remote.working_dir,
+        common.ckanmeta_remote,
+        common.token
     ).update_counts()
     logging.info('Download Counter completed!')
 
 
 @click.command()
 @click.option(
-    '--token', required=True, envvar='GH_Token',
-    help='GitHub token for querying and closing issues',
-)
-@click.option(
     '--days-limit', default=7,
     help='Number of days to wait for OP to reply',
 )
-def ticket_closer(token, days_limit):
-    TicketCloser(token).close_tickets(days_limit)
+@common_options
+@pass_state
+def ticket_closer(common, days_limit):
+    TicketCloser(common.token).close_tickets(days_limit)
 
 
 @click.command()
 @click.option(
-    '--netkan-remote', '--netkan', envvar='NETKAN_REMOTE', required=True,
-    help='Path/URL/SSH to NetKAN repo for mod list',
-)
-@click.option(
-    '--token', required=True, envvar='GH_Token',
-    help='GitHub token for querying and closing issues',
-)
-@click.option(
-    '--repo', envvar='NETKAN_REPO', required=True,
-    help='GitHub repo to raise PR against (Org Repo: NetKAN)',
-)
-@click.option(
-    '--user', envvar='NETKAN_USER', required=True,
-    help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
-)
-@click.option(
     '--days-limit', default=1000,
     help='Number of days to wait before freezing a mod as idle',
 )
+<<<<<<< HEAD
 @click.option(
     '--key', envvar='SSH_KEY', required=True,
     help='SSH key for accessing repositories',
@@ -431,11 +470,28 @@ def mirror_purge_epochs(ckan_meta, ia_access, ia_secret, ia_collection, dry_run)
 )
 def spacedock_adder(queue, timeout, netkan_remote, token, repo, user, key):
     init_ssh(key, Path(Path.home(), '.ssh'))
+=======
+@common_options
+@pass_state
+def auto_freezer(common, days_limit):
+    afr = AutoFreezer(
+        common.netkan_remote,
+        GitHubPR(common.token, common.repo, common.user)
+    )
+    afr.freeze_idle_mods(days_limit)
+    afr.mark_frozen_mods()
+
+
+@click.command()
+@common_options
+@pass_state
+def spacedock_adder(common):
+>>>>>>> Initial CLI Refactor
     sd_adder = SpaceDockAdder(
-        queue,
-        timeout,
-        init_repo(netkan_remote, "/tmp/NetKAN"),
-        GitHubPR(token, repo, user)
+        common.queue,
+        common.timeout,
+        common.netkan_remote,
+        GitHubPR(common.token, common.repo, common.user)
     )
     sd_adder.run()
 
