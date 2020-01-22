@@ -19,7 +19,7 @@ def create_app():
 
     app = Flask(__name__)
 
-    init_ssh(os.environ.get('SSH_KEY'), str(Path.home()) + '/.ssh')
+    init_ssh(os.environ.get('SSH_KEY'), Path(Path.home(), '.ssh'))
 
     # Set up config
     app.config['secret'] = os.environ.get('XKAN_GHSECRET')

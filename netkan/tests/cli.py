@@ -5,22 +5,21 @@ from time import time
 from os import utime
 from pathlib import Path, PurePath
 from shutil import copy2
+from tempfile import TemporaryDirectory
 from click.testing import CliRunner
 
 
 # This file is intended to test the commands in cli.py, running them directly via click.testing.CliRunner().invoke().
 class TestCleanCache(unittest.TestCase):
 
-    cache_path = Path(PurePath(__file__).parent, 'test_cache')
+    cache_path = TemporaryDirectory()
     testdata_path = Path(PurePath(__file__).parent, 'testdata/NetKAN/NetKAN/')
-
-    cache_path.mkdir(exist_ok=True)
 
     source_file_1 = Path(testdata_path, 'DogeCoinFlag.netkan')
     source_file_2 = Path(testdata_path, 'FlagCoinDoge.netkan')
     # Pretend they are zip files.
-    target_file_1 = Path(cache_path, 'DogeCoinFlag.zip')
-    target_file_2 = Path(cache_path, 'FlagCoinDoge.zip')
+    target_file_1 = Path(cache_path.name, 'DogeCoinFlag.zip')
+    target_file_2 = Path(cache_path.name, 'FlagCoinDoge.zip')
 
     def setUp(self):
 
@@ -38,14 +37,11 @@ class TestCleanCache(unittest.TestCase):
 
     def tearDown(self):
 
-        if self.target_file_1.exists():
-            self.target_file_1.unlink()
-        if self.target_file_2.exists():
-            self.target_file_2.unlink()
+        self.cache_path.cleanup()
 
     def test_clean_all(self):
 
-        result = self.runner.invoke(clean_cache, ['--days', '42', '--cache', str(self.cache_path)])
+        result = self.runner.invoke(clean_cache, ['--days', '42', '--cache', self.cache_path.name])
 
         self.assertEqual(result.exit_code, 0)
         self.assertFalse(Path.exists(self.target_file_1))

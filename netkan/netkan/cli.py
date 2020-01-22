@@ -60,7 +60,7 @@ def netkan(debug):
     help='SSH key for accessing repositories',
 )
 def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
-    init_ssh(key,  str(Path.home()) + '/.ssh')
+    init_ssh(key,  Path(Path.home(), '.ssh'))
     ckan_meta = init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
 
     github_pr = GitHubPR(token, repo, user)
@@ -120,7 +120,7 @@ def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
     help='Only schedule if we have at least this many credits remaining',
 )
 def scheduler(queue, netkan_remote, ckanmeta_remote, key, max_queued, dev, group, min_credits):
-    init_ssh(key, str(Path.home()) + '/.ssh')
+    init_ssh(key, Path(Path.home(), '.ssh'))
     sched = NetkanScheduler(
         Path('/tmp/NetKAN'), Path('/tmp/CKAN-meta'), queue,
         nonhooks_group=(group == 'all' or group == 'nonhooks'),
@@ -228,7 +228,8 @@ def redeploy_service(cluster, service_name):
 )
 @click.option(
     '--cache', envvar='NETKAN_CACHE', default=str(Path.home()) + '/ckan_cache/',
-    help='Absolute path to the mod download cache',
+    type=click.Path(exists=True, writable=True),
+    help='Absolute path to the mod download cache'
 )
 def clean_cache(days, cache):
     older_than = (
@@ -261,7 +262,7 @@ def clean_cache(days, cache):
     help='SSH key for accessing repositories',
 )
 def download_counter(netkan_remote, ckanmeta_remote, token, key):
-    init_ssh(key, str(Path.home()) + '/.ssh')
+    init_ssh(key, Path(Path.home(), '.ssh'))
     init_repo(netkan_remote, '/tmp/NetKAN')
     meta = init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
     logging.info('Starting Download Count Calculation...')
@@ -312,7 +313,7 @@ def ticket_closer(token, days_limit):
     help='SSH key for accessing repositories',
 )
 def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
-    init_ssh(key, str(Path.home()) + '/.ssh')
+    init_ssh(key, Path(Path.home(), '.ssh'))
     af = AutoFreezer(
         init_repo(netkan_remote, '/tmp/NetKAN'),
         GitHubPR(token, repo, user)
