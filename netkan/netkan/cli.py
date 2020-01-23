@@ -354,7 +354,7 @@ def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
     help='SSH key for accessing repositories',
 )
 def spacedock_adder(queue, timeout, netkan_remote, token, repo, user, key):
-    init_ssh(key, '/home/netkan/.ssh')
+    init_ssh(key,  Path(Path.home(), '.ssh'))
     sd_adder = SpaceDockAdder(
         queue,
         timeout,
