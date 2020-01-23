@@ -61,7 +61,7 @@ def netkan(debug):
     help='SSH key for accessing repositories',
 )
 def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
-    init_ssh(key, '/home/netkan/.ssh')
+    init_ssh(key,  Path(Path.home(), '.ssh'))
     ckan_meta = init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
 
     github_pr = GitHubPR(token, repo, user)
@@ -121,7 +121,7 @@ def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
     help='Only schedule if we have at least this many credits remaining',
 )
 def scheduler(queue, netkan_remote, ckanmeta_remote, key, max_queued, dev, group, min_credits):
-    init_ssh(key, '/home/netkan/.ssh')
+    init_ssh(key, Path(Path.home(), '.ssh'))
     sched = NetkanScheduler(
         Path('/tmp/NetKAN'), Path('/tmp/CKAN-meta'), queue,
         nonhooks_group=(group == 'all' or group == 'nonhooks'),
@@ -227,12 +227,17 @@ def redeploy_service(cluster, service_name):
 @click.option(
     '--days', help='Purge items older than X from cache',
 )
-def clean_cache(days):
+@click.option(
+    '--cache', envvar='NETKAN_CACHE', default=str(Path.home()) + '/ckan_cache/',
+    type=click.Path(exists=True, writable=True),
+    help='Absolute path to the mod download cache'
+)
+def clean_cache(days, cache):
     older_than = (
         datetime.datetime.now() - datetime.timedelta(days=int(days))
     ).timestamp()
     click.echo('Checking cache for files older than {} days'.format(days))
-    for item in Path('/home/netkan/ckan_cache/').glob('*'):
+    for item in Path(cache).glob('*'):
         if item.is_file() and item.stat().st_mtime < older_than:
             click.echo('Purging {} from ckan cache'.format(
                 item.name
@@ -258,7 +263,7 @@ def clean_cache(days):
     help='SSH key for accessing repositories',
 )
 def download_counter(netkan_remote, ckanmeta_remote, token, key):
-    init_ssh(key, '/home/netkan/.ssh')
+    init_ssh(key, Path(Path.home(), '.ssh'))
     init_repo(netkan_remote, '/tmp/NetKAN')
     meta = init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
     logging.info('Starting Download Count Calculation...')
@@ -309,7 +314,7 @@ def ticket_closer(token, days_limit):
     help='SSH key for accessing repositories',
 )
 def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
-    init_ssh(key, '/home/netkan/.ssh')
+    init_ssh(key, Path(Path.home(), '.ssh'))
     af = AutoFreezer(
         init_repo(netkan_remote, '/tmp/NetKAN'),
         GitHubPR(token, repo, user)

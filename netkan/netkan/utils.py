@@ -1,6 +1,5 @@
 import logging
 import subprocess
-import sys
 from git import Repo
 from pathlib import Path
 
@@ -15,12 +14,11 @@ def init_repo(metadata, path):
     return repo
 
 
-def init_ssh(key, path):
+def init_ssh(key, key_path: Path):
     if not key:
         logging.warning('Private Key required for SSH Git')
         return
     logging.info('Private Key found, writing to disk')
-    key_path = Path(path)
     key_path.mkdir(exist_ok=True)
     key_file = Path(key_path, 'id_rsa')
     if not key_file.exists():
