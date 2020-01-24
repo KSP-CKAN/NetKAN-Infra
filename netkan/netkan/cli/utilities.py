@@ -10,7 +10,6 @@ import click
 
 from .common import common_options, pass_state
 
-from ..github_pr import GitHubPR
 from ..status import ModStatus
 from ..download_counter import DownloadCounter
 from ..ticket_closer import TicketCloser
@@ -27,7 +26,7 @@ from ..auto_freezer import AutoFreezer
 def auto_freezer(common, days_limit):
     afr = AutoFreezer(
         common.netkan_remote,
-        GitHubPR(common.token, common.repo, common.user)
+        common.github_pr,
     )
     afr.freeze_idle_mods(days_limit)
     afr.mark_frozen_mods()

@@ -5,7 +5,6 @@ import click
 
 from .common import common_options, pass_state
 
-from ..github_pr import GitHubPR
 from ..indexer import MessageHandler
 from ..scheduler import NetkanScheduler
 from ..spacedock_adder import SpaceDockAdder
@@ -15,7 +14,6 @@ from ..spacedock_adder import SpaceDockAdder
 @common_options
 @pass_state
 def indexer(common):
-    github_pr = GitHubPR(common.token, common.repo, common.user)
     sqs = boto3.resource('sqs')
     queue = sqs.get_queue_by_name(QueueName=common.queue)
 
@@ -27,7 +25,7 @@ def indexer(common):
         )
         if not messages:
             continue
-        with MessageHandler(common.ckanmeta_remote, github_pr) as handler:
+        with MessageHandler(common.ckanmeta_remote, common.github_pr) as handler:
             for message in messages:
                 handler.append(message)
             handler.process_ckans()
@@ -71,6 +69,6 @@ def spacedock_adder(common):
         common.queue,
         common.timeout,
         common.netkan_remote,
-        GitHubPR(common.token, common.repo, common.user)
+        common.github_pr,
     )
     sd_adder.run()

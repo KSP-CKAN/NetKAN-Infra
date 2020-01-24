@@ -7,6 +7,7 @@ import click
 
 from ..utils import init_repo, init_ssh
 from ..notifications import setup_log_handler, catch_all
+from ..github_pr import GitHubPR
 
 
 def ctx_callback(ctx, param, value):
@@ -49,6 +50,7 @@ class SharedArgs(object):
         self._ssh_key = None
         self._ckanmeta_remote_repo = None
         self._netkan_remote_repo = None
+        self._github_pr = None
 
     def __getattribute__(self, name):
         attr = super().__getattribute__(name)
@@ -99,6 +101,12 @@ class SharedArgs(object):
     @netkan_remote.setter
     def netkan_remote(self, value):
         self._netkan_remote = value
+
+    @property
+    def github_pr(self):
+        if not self._github_pr:
+            self._github_pr = GitHubPR(self.token, self.repo, self.user)
+        return self._github_pr
 
 pass_state = click.make_pass_decorator(SharedArgs, ensure=True)  # pylint: disable=invalid-name
 
