@@ -13,7 +13,7 @@ from .metadata import Ckan
 
 class Mirrorer:
 
-    CACHE_PATH = Path('/home/netkan/ckan_cache/')
+    CACHE_PATH = Path.home().joinpath('ckan_cache')
     EPOCH_ID_REGEXP = re.compile('-[0-9]+-')
     EPOCH_TITLE_REGEXP = re.compile(' - [0-9]+:')
 
