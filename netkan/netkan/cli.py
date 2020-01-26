@@ -62,7 +62,7 @@ def netkan(debug):
     help='SSH key for accessing repositories',
 )
 def indexer(queue, ckanmeta_remote, token, repo, user, key, timeout):
-    init_ssh(key,  Path(Path.home(), '.ssh'))
+    init_ssh(key, Path(Path.home(), '.ssh'))
     ckan_meta = init_repo(ckanmeta_remote, '/tmp/CKAN-meta')
 
     github_pr = GitHubPR(token, repo, user)
@@ -208,7 +208,7 @@ def redeploy_service(cluster, service_name):
         )
         raise click.UsageError(
             "Service '{}' not found. Available services:\n    - {}".format(
-                service, available)
+                service_name, available)
         )
     client.update_service(
         cluster=cluster,
@@ -382,11 +382,16 @@ def mirrorer(queue, timeout, ckan_meta, ia_access, ia_secret, ia_collection):
     help='Collection to put mirrored mods in on Internet Archive',
     required=True,
 )
-def mirror_purge_epochs(ckan_meta, ia_access, ia_secret, ia_collection):
+@click.option(
+    '--dry-run',
+    help='',
+    default=False,
+)
+def mirror_purge_epochs(ckan_meta, ia_access, ia_secret, ia_collection, dry_run):
     Mirrorer(
         init_repo(ckan_meta, '/tmp/CKAN-meta'),
         ia_access, ia_secret, ia_collection
-    ).purge_epochs()
+    ).purge_epochs(dry_run)
 
 
 @click.command()
@@ -420,7 +425,7 @@ def mirror_purge_epochs(ckan_meta, ia_access, ia_secret, ia_collection):
     help='SSH key for accessing repositories',
 )
 def spacedock_adder(queue, timeout, netkan_remote, token, repo, user, key):
-    init_ssh(key,  Path(Path.home(), '.ssh'))
+    init_ssh(key, Path(Path.home(), '.ssh'))
     sd_adder = SpaceDockAdder(
         queue,
         timeout,

@@ -18,7 +18,6 @@ class Mirrorer:
     EPOCH_TITLE_REGEXP = re.compile(' - [0-9]+:')
 
     def __init__(self, ckan_meta_repo, ia_access, ia_secret, ia_collection):
-        sqs = boto3.resource('sqs')
         self.sqs_client = boto3.client('sqs')
         self.ckan_meta_repo = ckan_meta_repo
         self.ia_collection = ia_collection
@@ -31,7 +30,7 @@ class Mirrorer:
         })
 
     def process_queue(self, queue_name, timeout):
-        queue = sqs.get_queue_by_name(QueueName=queue_name)
+        queue = self.sqs_client.get_queue_by_name(QueueName=queue_name)
         while True:
             messages = queue.receive_messages(
                 MaxNumberOfMessages=10,
@@ -61,11 +60,11 @@ class Mirrorer:
     def try_mirror(self, ckan):
         if not ckan.can_mirror:
             # If we can't mirror, then we're done with this message
-            logging.info('Ckan %s cannot be mirrored', ckan.mirror_item)
+            logging.info('Ckan %s cannot be mirrored', ckan.mirror_item())
             return True
         if ckan.mirrored(self.ia_session):
             # If it's already mirrored, then we're done with this message
-            logging.info('Ckan %s is already mirrored', ckan.mirror_item)
+            logging.info('Ckan %s is already mirrored', ckan.mirror_item())
             return True
         cached_file = self.cache_find_file(ckan)
         if cached_file:
@@ -78,7 +77,7 @@ class Mirrorer:
             with tempfile.NamedTemporaryFile() as tmp:
                 logging.info('Downloading %s', ckan.download)
                 urllib.request.urlretrieve(ckan.download, tmp.name)
-                logging.info('Downloaded %s to %s', ckan.mirror_item, tmp.name)
+                logging.info('Downloaded %s to %s', ckan.mirror_item(), tmp.name)
                 return self.try_upload(ckan, tmp.file)
         return True
 
@@ -93,11 +92,11 @@ class Mirrorer:
             # Bad download, try again later
             logging.info('Hash mismatch')
             return False
-        logging.info('Uploading %s', ckan.mirror_item)
+        logging.info('Uploading %s', ckan.mirror_item())
         lic_urls = ckan.license_urls()
-        item = internetarchive.Item(self.ia_session, ckan.mirror_item)
-        return item.upload_file(file.name, ckan.mirror_item, {
-            'title':       ckan.mirror_title,
+        item = internetarchive.Item(self.ia_session, ckan.mirror_item())
+        return item.upload_file(file.name, ckan.mirror_item(), {
+            'title':       ckan.mirror_title(),
             'description': ckan.mirror_description,
             'creator':     ckan.authors(),
             'collection':  self.ia_collection,
@@ -110,13 +109,15 @@ class Mirrorer:
             'x-amz-auto-make-bucket': 1,
         })
 
-    def large_file_sha256(self, file, block_size=8192):
+    @staticmethod
+    def large_file_sha256(file, block_size=8192):
         sha = hashlib.sha256()
         for block in iter(lambda: file.read(block_size), b''):
             sha.update(block)
         return sha.hexdigest().upper()
 
-    def deletion_msg(self, msg):
+    @staticmethod
+    def deletion_msg(msg):
         return {
             'Id':            msg.message_id,
             'ReceiptHandle': msg.receipt_handle,
@@ -129,15 +130,19 @@ class Mirrorer:
             )
         ).status_code == 503
 
-    def purge_epochs(self):
+    def purge_epochs(self, dry_run):
+        if dry_run:
+            logging.info('Dry run mode enabled, no changes will be made')
         for result in self._epoch_search():
             ident = result.get('identifier')
             if ident:
-                item = session.get_item(ident)
-                item.modify_metadata({
-                    'identifier': self.EPOCH_ID_REGEXP.sub('-', ident),
-                    'title': self.EPOCH_TITLE_REGEXP.sub(' - ', item.metadata.get('title')),
-                })
+                item = self.ia_session.get_item(ident)
+                logging.info('Found epoch to purge: %s (%s)', ident, item.metadata.get('title'))
+                if not dry_run:
+                    item.modify_metadata({
+                        'identifier': self.EPOCH_ID_REGEXP.sub('-', ident),
+                        'title': self.EPOCH_TITLE_REGEXP.sub(' - ', item.metadata.get('title')),
+                    })
 
     def _epoch_search(self):
         return filter(
@@ -163,8 +168,8 @@ class CkanMirror(Ckan):
         "CC-BY", "CC-BY-1.0", "CC-BY-2.0", "CC-BY-2.5", "CC-BY-3.0", "CC-BY-4.0",
         "CC-BY-SA", "CC-BY-SA-1.0", "CC-BY-SA-2.0", "CC-BY-SA-2.5", "CC-BY-SA-3.0", "CC-BY-SA-4.0",
         "CC-BY-NC", "CC-BY-NC-1.0", "CC-BY-NC-2.0", "CC-BY-NC-2.5", "CC-BY-NC-3.0", "CC-BY-NC-4.0",
-        "CC-BY-NC-SA", "CC-BY-NC-SA-1.0", "CC-BY-NC-SA-2.0", "CC-BY-NC-SA-2.5", "CC-BY-NC-SA-3.0", "CC-BY-NC-SA-4.0",
-        "CC-BY-NC-ND", "CC-BY-NC-ND-1.0", "CC-BY-NC-ND-2.0", "CC-BY-NC-ND-2.5", "CC-BY-NC-ND-3.0", "CC-BY-NC-ND-4.0",
+        "CC-BY-NC-SA", "CC-BY-NC-SA-1.0", "CC-BY-NC-SA-2.0", "CC-BY-NC-SA-2.5", "CC-BY-NC-SA-3.0", "CC-BY-NC-SA-4.0", # pylint: disable=line-too-long
+        "CC-BY-NC-ND", "CC-BY-NC-ND-1.0", "CC-BY-NC-ND-2.0", "CC-BY-NC-ND-2.5", "CC-BY-NC-ND-3.0", "CC-BY-NC-ND-4.0", # pylint: disable=line-too-long
         "CC-BY-ND", "CC-BY-ND-1.0", "CC-BY-ND-2.0", "CC-BY-ND-2.5", "CC-BY-ND-3.0", "CC-BY-ND-4.0",
         "CC0",
         "CDDL", "CPL",
@@ -257,7 +262,7 @@ class CkanMirror(Ckan):
         "Perl"              : 'http://dev.perl.org/licenses/',
         "Python-2.0"        : 'https://www.python.org/download/releases/2.0/license/',
         "QPL-1.0"           : 'https://opensource.org/licenses/QPL-1.0',
-        "W3C"               : 'https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document',
+        "W3C"               : 'https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document', # pylint: disable=line-too-long
         "Zlib"              : 'http://www.zlib.net/zlib_license.html',
         "Zope"              : 'http://old.zope.org/Resources/License.1',
         "Unlicense"         : 'https://unlicense.org/UNLICENSE',
@@ -274,7 +279,7 @@ class CkanMirror(Ckan):
         )
 
     def mirrored(self, iarchive):
-        results = iarchive.search_items(self.mirror_item)
+        results = iarchive.search_items(self.mirror_item())
         return True if results else False
 
     def license_urls(self):
@@ -288,14 +293,12 @@ class CkanMirror(Ckan):
                 return True
         return False
 
-    @property
     def mirror_item(self, with_epoch=False):
         return '{}-{}'.format(
             self.identifier,
             self._format_version(with_epoch)
         )
 
-    @property
     def mirror_filename(self, with_epoch=False):
         if not 'download_hash' in self._raw:
             return None
@@ -306,7 +309,6 @@ class CkanMirror(Ckan):
             Ckan.MIME_TO_EXTENSION[self.download_content_type],
         )
 
-    @property
     def mirror_title(self, with_epoch=False):
         return '{} - {}'.format(
             self.name,
@@ -316,8 +318,7 @@ class CkanMirror(Ckan):
     def _format_version(self, with_epoch):
         if with_epoch:
             return self.version.string.replace(':', '-')
-        else:
-            return self.EPOCH_VERSION_REGEXP.sub('', self.version.string)
+        return self.EPOCH_VERSION_REGEXP.sub('', self.version.string)
 
     @property
     def mirror_description(self):

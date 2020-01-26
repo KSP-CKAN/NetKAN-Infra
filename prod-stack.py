@@ -150,6 +150,7 @@ netkan_role = t.add_resource(Role(
                             GetAtt(inbound, "Arn"),
                             GetAtt(outbound, "Arn"),
                             GetAtt(addqueue, "Arn"),
+                            GetAtt(mirrorqueue, "Arn"),
                         ]
                     },
                     {
@@ -406,7 +407,7 @@ netkan_scheduler_role = t.add_resource(Role(
 # redeployment of services.
 ksp_builder_group = t.add_resource(Group("KspCkanBuilderGroup"))
 builder_services = []
-for service in ['Indexer', 'Inflator', 'Webhooks', 'Adder']:
+for service in ['Indexer', 'Inflator', 'Webhooks', 'Adder', 'Mirrorer']:
     builder_services.append(
         Sub(
             'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/NetKANCluster/${service}',
