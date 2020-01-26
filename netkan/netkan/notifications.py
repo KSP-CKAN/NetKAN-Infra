@@ -20,7 +20,17 @@ class DiscordLogHandler(logging.Handler):
 
     def emit(self, record):
         fmt = self.format(record)
-        self.webhook.send(f'```{fmt}```' if "\n" in fmt else fmt)
+        as_code = "\n" in fmt
+        for part in self._message_parts(fmt, as_code):
+            self.webhook.send(part)
+
+
+    @staticmethod
+    def _message_parts(msg, as_code, max_len=2000):
+        if as_code:
+            return (f'```{msg[start:start+max_len-6]}```'
+                    for start in range(0, len(msg), max_len - 6))
+        return (msg[start:start+max_len] for start in range(0, len(msg), max_len))
 
 
 def setup_log_handler(debug=False):
