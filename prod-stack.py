@@ -755,7 +755,7 @@ services = [
                 'entrypoint': '.local/bin/gunicorn',
                 'command': [
                     '-b', '0.0.0.0:5000', '--access-logfile', '-',
-                    'netkan.webhooks:create_app()'
+                    '--preload', 'netkan.webhooks:create_app()'
                 ],
                 'secrets': [
                     'XKAN_GHSECRET', 'SSH_KEY',
