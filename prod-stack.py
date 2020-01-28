@@ -801,12 +801,12 @@ services = [
         'name': 'Mirrorer',
         'command': 'mirrorer',
         'secrets': [
-            'IA_access', 'IA_secret',
+            'IA_access', 'IA_secret', 'SSH_KEY'
         ],
         'env': [
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),
             ('IA_collection', 'kspckanmods'),
-            ('MIRROR_SQS_QUEUE', GetAtt(mirrorqueue, 'QueueName')),
+            ('SQS_QUEUE', GetAtt(mirrorqueue, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'volumes': [
