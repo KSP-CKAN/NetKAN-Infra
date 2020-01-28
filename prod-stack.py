@@ -760,11 +760,12 @@ services = [
             {
                 'name': 'WebhooksProxy',
                 'image': 'kspckan/webhooks-proxy',
+                'memory': '32',
                 'ports': ['80', '443'],
                 'volumes': [
                     ('letsencrypt', '/etc/letsencrypt')
                 ],
-                'depends': ['webhooks', 'legacyhooks']
+                'depends': ['webhooks']
             },
         ]
     },
