@@ -361,9 +361,9 @@ def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
 def mirrorer(queue, timeout, ckan_meta, ia_access, ia_secret, ia_collection, key):
     init_ssh(key, Path(Path.home(), '.ssh'))
     Mirrorer(
-        init_repo(ckan_meta, '/tmp/CKAN-meta'), queue,
+        init_repo(ckan_meta, '/tmp/CKAN-meta'),
         ia_access, ia_secret, ia_collection
-    ).process_queue(timeout)
+    ).process_queue(queue, timeout)
 
 
 @click.command()

@@ -17,10 +17,7 @@ class Mirrorer:
     EPOCH_ID_REGEXP = re.compile('-[0-9]+-')
     EPOCH_TITLE_REGEXP = re.compile(' - [0-9]+:')
 
-    def __init__(self, ckan_meta_repo, queue, ia_access, ia_secret, ia_collection):
-        sqs = boto3.resource('sqs')
-        self.sqs_client = boto3.client('sqs')
-        self.queue = sqs.get_queue_by_name(QueueName=queue)
+    def __init__(self, ckan_meta_repo, ia_access, ia_secret, ia_collection):
         self.ckan_meta_repo = ckan_meta_repo
         self.ia_collection = ia_collection
         self.ia_access = ia_access
@@ -31,9 +28,10 @@ class Mirrorer:
             }
         })
 
-    def process_queue(self, timeout):
+    def process_queue(self, queue_name, timeout):
+        queue = boto3.resource('sqs').get_queue_by_name(QueueName=queue_name)
         while True:
-            messages = self.queue.receive_messages(
+            messages = queue.receive_messages(
                 MaxNumberOfMessages=10,
                 MessageAttributeNames=['All'],
                 VisibilityTimeout=timeout,
@@ -54,7 +52,7 @@ class Mirrorer:
                     if self.try_mirror(CkanMirror(path)):
                         # Successfully handled -> OK to delete
                         to_delete.append(self.deletion_msg(msg))
-                self.queue.delete_messages(Entries=to_delete)
+                queue.delete_messages(Entries=to_delete)
                 # Clean up GitPython's lingering file handles between batches
                 self.ckan_meta_repo.close()
 
@@ -96,7 +94,7 @@ class Mirrorer:
         logging.info('Uploading %s', ckan.mirror_item())
         lic_urls = ckan.license_urls()
         item = internetarchive.Item(self.ia_session, ckan.mirror_item())
-        return item.upload_file(file.name, ckan.mirror_item(), {
+        return item.upload_file(file.name, ckan.mirror_filename(), {
             'title':       ckan.mirror_title(),
             'description': ckan.mirror_description,
             'creator':     ckan.authors(),
@@ -294,13 +292,13 @@ class CkanMirror(Ckan):
                 return True
         return False
 
-    def mirror_item(self, with_epoch=False):
+    def mirror_item(self, with_epoch=True):
         return '{}-{}'.format(
             self.identifier,
             self._format_version(with_epoch)
         )
 
-    def mirror_filename(self, with_epoch=False):
+    def mirror_filename(self, with_epoch=True):
         if not 'download_hash' in self._raw:
             return None
         return '{}-{}-{}.{}'.format(
@@ -310,7 +308,7 @@ class CkanMirror(Ckan):
             Ckan.MIME_TO_EXTENSION[self.download_content_type],
         )
 
-    def mirror_title(self, with_epoch=False):
+    def mirror_title(self, with_epoch=True):
         return '{} - {}'.format(
             self.name,
             self._format_version(with_epoch),
