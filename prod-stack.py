@@ -53,9 +53,13 @@ addqueue = t.add_resource(Queue("Adding",
                                 QueueName="Adding.fifo",
                                 ReceiveMessageWaitTimeSeconds=20,
                                 FifoQueue=True))
+mirrorqueue = t.add_resource(Queue("Mirroring",
+                                   QueueName="Mirroring.fifo",
+                                   ReceiveMessageWaitTimeSeconds=20,
+                                   FifoQueue=True))
 
 
-for queue in [inbound, outbound, addqueue]:
+for queue in [inbound, outbound, addqueue, mirrorqueue]:
     t.add_output([
         Output(
             "{}QueueURL".format(queue.title),
@@ -146,6 +150,7 @@ netkan_role = t.add_resource(Role(
                             GetAtt(inbound, "Arn"),
                             GetAtt(outbound, "Arn"),
                             GetAtt(addqueue, "Arn"),
+                            GetAtt(mirrorqueue, "Arn"),
                         ]
                     },
                     {
@@ -402,7 +407,7 @@ netkan_scheduler_role = t.add_resource(Role(
 # redeployment of services.
 ksp_builder_group = t.add_resource(Group("KspCkanBuilderGroup"))
 builder_services = []
-for service in ['Indexer', 'Inflator', 'Webhooks', 'Adder']:
+for service in ['Indexer', 'Inflator', 'Webhooks', 'Adder', 'Mirrorer']:
     builder_services.append(
         Sub(
             'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/NetKANCluster/${service}',
@@ -766,6 +771,7 @@ services = [
                     ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
                     ('INFLATION_SQS_QUEUE', GetAtt(inbound, 'QueueName')),
                     ('ADD_SQS_QUEUE', GetAtt(addqueue, 'QueueName')),
+                    ('MIRROR_SQS_QUEUE', GetAtt(mirrorqueue, 'QueueName')),
                 ],
             },
             {
@@ -789,6 +795,22 @@ services = [
             ('NETKAN_REMOTE', NETKAN_REMOTE),
             ('NETKAN_USER', NETKAN_USER),
             ('NETKAN_REPO', NETKAN_REPO),
+        ],
+    },
+    {
+        'name': 'Mirrorer',
+        'command': 'mirrorer',
+        'secrets': [
+            'IA_access', 'IA_secret',
+        ],
+        'env': [
+            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
+            ('IA_collection', 'kspckanmods'),
+            ('MIRROR_SQS_QUEUE', GetAtt(mirrorqueue, 'QueueName')),
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+        ],
+        'volumes': [
+            ('ckan_cache', '/home/netkan/ckan_cache'),
         ],
     },
 ]

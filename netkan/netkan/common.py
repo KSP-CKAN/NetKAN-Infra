@@ -17,5 +17,5 @@ def sqs_batch_entries(messages, batch_size=10):
 
 
 def pull_all(repos):
-    for r in repos:
-        r.remotes.origin.pull('master', strategy_option='theirs')
+    for repo in repos:
+        repo.remotes.origin.pull('master', strategy_option='theirs')

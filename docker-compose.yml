@@ -79,6 +79,7 @@ services:
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
       NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
       INFLATION_SQS_QUEUE: InboundDev.fifo
+      MIRROR_SQS_QUEUE: MirroringDev.fifo
       AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
@@ -96,6 +97,23 @@ services:
       NETKAN_USER: ${CKAN_NETKAN_USER}
       NETKAN_REPO:  ${CKAN_NETKAN_REPO}
     command: spacedock-adder
+  mirrorer:
+    build:
+      context: netkan/.
+      target: dev
+    environment:
+      SQS_QUEUE: MirroringDev.fifo
+      SQS_TIMEOUT: 30
+      AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+      CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
+      IA_access: test
+      IA_secret: test
+      IA_collection: test
+    volumes:
+      - ${HOME}/ckan_cache:/home/netkan/ckan_cache
+    command: mirrorer
   status:
     build:
       context: netkan/.
