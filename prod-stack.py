@@ -739,23 +739,6 @@ services = [
         'name': 'Webhooks',
         'containers': [
             {
-                'name': 'legacyhooks',
-                'image': 'kspckan/webhooks',
-                'memory': '156',
-                'secrets': [
-                    'SSH_KEY', 'GH_Token', 'XKAN_GHSECRET',
-                    'IA_access', 'IA_secret',
-                ],
-                'env': [
-                    ('CKAN_meta', CKANMETA_REMOTE),
-                    ('NetKAN', NETKAN_REMOTE),
-                    ('IA_collection', 'kspckanmods'),
-                ],
-                'volumes': [
-                    ('ckan_cache', '/home/netkan/ckan_cache')
-                ],
-            },
-            {
                 'name': 'webhooks',
                 'entrypoint': '.local/bin/gunicorn',
                 'command': [
