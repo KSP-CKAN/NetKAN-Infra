@@ -354,11 +354,16 @@ def auto_freezer(netkan_remote, token, repo, user, days_limit, key):
     help='Collection to put mirrored mods in on Internet Archive',
     required=True,
 )
-def mirrorer(queue, timeout, ckan_meta, ia_access, ia_secret, ia_collection):
+@click.option(
+    '--key', envvar='SSH_KEY', required=True,
+    help='SSH key for accessing repositories',
+)
+def mirrorer(queue, timeout, ckan_meta, ia_access, ia_secret, ia_collection, key):
+    init_ssh(key, Path(Path.home(), '.ssh'))
     Mirrorer(
-        init_repo(ckan_meta, '/tmp/CKAN-meta'),
+        init_repo(ckan_meta, '/tmp/CKAN-meta'), queue,
         ia_access, ia_secret, ia_collection
-    ).process_queue(queue, timeout)
+    ).process_queue(timeout)
 
 
 @click.command()

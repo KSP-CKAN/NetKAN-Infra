@@ -17,8 +17,10 @@ class Mirrorer:
     EPOCH_ID_REGEXP = re.compile('-[0-9]+-')
     EPOCH_TITLE_REGEXP = re.compile(' - [0-9]+:')
 
-    def __init__(self, ckan_meta_repo, ia_access, ia_secret, ia_collection):
+    def __init__(self, ckan_meta_repo, queue, ia_access, ia_secret, ia_collection):
+        sqs = boto3.resource('sqs')
         self.sqs_client = boto3.client('sqs')
+        self.queue = sqs.get_queue_by_name(QueueName=queue)
         self.ckan_meta_repo = ckan_meta_repo
         self.ia_collection = ia_collection
         self.ia_access = ia_access
@@ -29,10 +31,9 @@ class Mirrorer:
             }
         })
 
-    def process_queue(self, queue_name, timeout):
-        queue = self.sqs_client.get_queue_by_name(QueueName=queue_name)
+    def process_queue(self, timeout):
         while True:
-            messages = queue.receive_messages(
+            messages = self.queue.receive_messages(
                 MaxNumberOfMessages=10,
                 MessageAttributeNames=['All'],
                 VisibilityTimeout=timeout,
@@ -53,7 +54,7 @@ class Mirrorer:
                     if self.try_mirror(CkanMirror(path)):
                         # Successfully handled -> OK to delete
                         to_delete.append(self.deletion_msg(msg))
-                queue.delete_messages(Entries=to_delete)
+                self.queue.delete_messages(Entries=to_delete)
                 # Clean up GitPython's lingering file handles between batches
                 self.ckan_meta_repo.close()
 

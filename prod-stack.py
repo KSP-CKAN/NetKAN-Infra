@@ -739,23 +739,6 @@ services = [
         'name': 'Webhooks',
         'containers': [
             {
-                'name': 'legacyhooks',
-                'image': 'kspckan/webhooks',
-                'memory': '156',
-                'secrets': [
-                    'SSH_KEY', 'GH_Token', 'XKAN_GHSECRET',
-                    'IA_access', 'IA_secret',
-                ],
-                'env': [
-                    ('CKAN_meta', CKANMETA_REMOTE),
-                    ('NetKAN', NETKAN_REMOTE),
-                    ('IA_collection', 'kspckanmods'),
-                ],
-                'volumes': [
-                    ('ckan_cache', '/home/netkan/ckan_cache')
-                ],
-            },
-            {
                 'name': 'webhooks',
                 'entrypoint': '.local/bin/gunicorn',
                 'command': [
@@ -777,11 +760,12 @@ services = [
             {
                 'name': 'WebhooksProxy',
                 'image': 'kspckan/webhooks-proxy',
+                'memory': '32',
                 'ports': ['80', '443'],
                 'volumes': [
                     ('letsencrypt', '/etc/letsencrypt')
                 ],
-                'depends': ['webhooks', 'legacyhooks']
+                'depends': ['webhooks']
             },
         ]
     },
@@ -801,12 +785,12 @@ services = [
         'name': 'Mirrorer',
         'command': 'mirrorer',
         'secrets': [
-            'IA_access', 'IA_secret',
+            'IA_access', 'IA_secret', 'SSH_KEY'
         ],
         'env': [
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),
             ('IA_collection', 'kspckanmods'),
-            ('MIRROR_SQS_QUEUE', GetAtt(mirrorqueue, 'QueueName')),
+            ('SQS_QUEUE', GetAtt(mirrorqueue, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'volumes': [
