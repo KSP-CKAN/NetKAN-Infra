@@ -105,8 +105,8 @@ class Mirrorer:
             **({'licenseurl': lic_urls} if lic_urls else {}),
         }, {
             'Content-Type':           ckan.download_content_type,
-            'Content-Length':         ckan.download_size,
-            'x-amz-auto-make-bucket': 1,
+            'Content-Length':         str(ckan.download_size),
+            'x-amz-auto-make-bucket': str(1),
         })
 
     @staticmethod
