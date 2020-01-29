@@ -10,7 +10,9 @@ spacedock_inflate = Blueprint('spacedock_inflate', __name__)  # pylint: disable=
 
 # For after-upload hook on SpaceDock
 # Handles: https://netkan.ksp-ckan.space/sd/inflate
-# POST form parameters: mod_id=1234&event_type=update
+# POST form parameters:
+#     mod_id:     The mod's ID number on SpaceDock
+#     event_type: update
 @spacedock_inflate.route('/inflate', methods=['POST'])
 def inflate_hook():
     # Make sure our NetKAN and CKAN-meta repos are up to date
