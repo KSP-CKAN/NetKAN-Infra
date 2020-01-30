@@ -11,7 +11,7 @@ class TestNetKANCounter(unittest.TestCase):
 class TestNetKANGitHubCounts(TestNetKANCounter):
 
     def setUp(self):
-        self.netkan = NetkanDownloads(Path(self.test_data, 'NetKAN/DogeCoinFlag.netkan'), 'token')
+        self.netkan = NetkanDownloads(Path(self.test_data, 'DogeCoinFlag.netkan'), 'token')
 
     def test_github_repo_api(self):
         self.assertEqual(
@@ -23,7 +23,7 @@ class TestNetKANGitHubCounts(TestNetKANCounter):
 class TestNetKANSpaceDockCounts(TestNetKANCounter):
 
     def setUp(self):
-        self.netkan = NetkanDownloads(Path(self.test_data, 'NetKAN/DockCoinFlag.netkan'), 'token')
+        self.netkan = NetkanDownloads(Path(self.test_data, 'DockCoinFlag.netkan'), 'token')
 
     def test_spacedock_api(self):
         self.assertEqual(
@@ -35,7 +35,7 @@ class TestNetKANSpaceDockCounts(TestNetKANCounter):
 class TestNetKANCurseCounts(TestNetKANCounter):
 
     def setUp(self):
-        self.netkan = NetkanDownloads(Path(self.test_data, 'NetKAN/CurseCoinFlag.netkan'), 'token')
+        self.netkan = NetkanDownloads(Path(self.test_data, 'CurseCoinFlag.netkan'), 'token')
 
     def test_curse_api_numeric(self):
         self.assertEqual(
@@ -54,7 +54,7 @@ class TestNetKANCurseCounts(TestNetKANCounter):
 class TestNetKANNetkanCounts(TestNetKANCounter):
 
     def setUp(self):
-        self.netkan = NetkanDownloads(Path(self.test_data, 'NetKAN/NetkanCoinFlag.netkan'), 'token')
+        self.netkan = NetkanDownloads(Path(self.test_data, 'NetkanCoinFlag.netkan'), 'token')
 
     def test_remote_netkan(self):
         self.assertEqual(
@@ -66,7 +66,7 @@ class TestNetKANNetkanCounts(TestNetKANCounter):
 class TestNetKANUnknownCounts(TestNetKANCounter):
 
     def setUp(self):
-        self.netkan = NetkanDownloads(Path(self.test_data, 'NetKAN/UnknownCoinFlag.netkan'), 'token')
+        self.netkan = NetkanDownloads(Path(self.test_data, 'UnknownCoinFlag.netkan'), 'token')
 
     def test_github_repo_api(self):
         self.assertEqual(self.netkan.get_count(), 0)

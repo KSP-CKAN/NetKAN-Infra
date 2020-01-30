@@ -1,6 +1,6 @@
 import unittest
 
-from netkan.mirrorer import Mirrorer, CkanMirror
+from netkan.mirrorer import CkanMirror
 
 
 # I don't know how to test Mirrorer, it needs a queue and archive.org access

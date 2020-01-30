@@ -7,11 +7,22 @@ from pathlib import Path, PurePath
 class TestNetKAN(unittest.TestCase):
     test_data = Path(PurePath(__file__).parent, 'testdata/NetKAN')
 
+    def test_netkan_message(self):
+        dogecoinflag = Path(self.test_data, 'DogeCoinFlag.netkan')
+        netkan = Netkan(dogecoinflag)
+        message = netkan.sqs_message()
+        self.assertEqual(message['Id'], 'DogeCoinFlag')
+        self.assertEqual(
+            message['MessageBody'],
+            dogecoinflag.read_text()
+        )
+        self.assertEqual(message['MessageGroupId'], '1')
+
 
 class TestNetKANGitHub(TestNetKAN):
 
     def setUp(self):
-        self.netkan = Netkan(Path(self.test_data, 'NetKAN/DogeCoinFlag.netkan'))
+        self.netkan = Netkan(Path(self.test_data, 'DogeCoinFlag.netkan'))
 
     def test_has_github_kref(self):
         self.assertEqual(self.netkan.kref, '#/ckan/github/pjf/DogeCoinFlag')
@@ -29,7 +40,7 @@ class TestNetKANGitHub(TestNetKAN):
 class TestNetKANSpaceDock(TestNetKAN):
 
     def setUp(self):
-        self.netkan = Netkan(Path(self.test_data, 'NetKAN/DockCoinFlag.netkan'))
+        self.netkan = Netkan(Path(self.test_data, 'DockCoinFlag.netkan'))
 
     def test_has_spacedock_kref(self):
         self.assertEqual(self.netkan.kref, '#/ckan/spacedock/777')
@@ -47,7 +58,7 @@ class TestNetKANSpaceDock(TestNetKAN):
 class TestNetKANCurse(TestNetKAN):
 
     def setUp(self):
-        self.netkan = Netkan(Path(self.test_data, 'NetKAN/CurseCoinFlag.netkan'))
+        self.netkan = Netkan(Path(self.test_data, 'CurseCoinFlag.netkan'))
 
     def test_has_curse_kref(self):
         self.assertEqual(self.netkan.kref, '#/ckan/curse/666')
@@ -65,7 +76,7 @@ class TestNetKANCurse(TestNetKAN):
 class TestNetKANNetkan(TestNetKAN):
 
     def setUp(self):
-        self.netkan = Netkan(Path(self.test_data, 'NetKAN/NetkanCoinFlag.netkan'))
+        self.netkan = Netkan(Path(self.test_data, 'NetkanCoinFlag.netkan'))
 
     def test_has_netkan_kref(self):
         self.assertEqual(
@@ -110,7 +121,7 @@ class TestNetKANNoKref(TestNetKAN):
 class TestNetKANVref(TestNetKAN):
 
     def setUp(self):
-        self.netkan = Netkan(Path(self.test_data, 'NetKAN/VrefCoinFlag.netkan'))
+        self.netkan = Netkan(Path(self.test_data, 'VrefCoinFlag.netkan'))
 
     def test_on_spacedock(self):
         self.assertTrue(self.netkan.on_spacedock)
