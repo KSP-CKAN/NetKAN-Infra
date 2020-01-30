@@ -117,7 +117,7 @@ def redeploy_service(cluster, service_name):
         )
         raise click.UsageError(
             "Service '{}' not found. Available services:\n    - {}".format(
-                service, available)
+                service_name, available)
         )
     client.update_service(
         cluster=cluster,
