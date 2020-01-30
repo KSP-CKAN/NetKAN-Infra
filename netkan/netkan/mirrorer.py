@@ -50,7 +50,7 @@ class Mirrorer:
                 to_delete = []
                 for msg in messages:
                     path = Path(self.ckan_meta_repo.working_dir, msg.body)
-                    if self.try_mirror(CkanMirror(path, self.ia_collection)):
+                    if self.try_mirror(CkanMirror(self.ia_collection, path)):
                         # Successfully handled -> OK to delete
                         to_delete.append(self.deletion_msg(msg))
                 queue.delete_messages(Entries=to_delete)
@@ -247,8 +247,8 @@ class CkanMirror(Ckan):
 
     EPOCH_VERSION_REGEXP = re.compile('^[0-9]+:')
 
-    def __init__(self, filename, collection):
-        Ckan.__init__(self, filename)
+    def __init__(self, collection, filename=None, contents=None):
+        Ckan.__init__(self, filename, contents)
         self.collection = collection
 
     @property

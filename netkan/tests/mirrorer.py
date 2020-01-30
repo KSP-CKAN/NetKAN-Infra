@@ -9,7 +9,7 @@ from netkan.mirrorer import CkanMirror
 class TestCkanMirrorRedistributable(unittest.TestCase):
 
     def setUp(self):
-        self.ckan_mirror = CkanMirror(contents="""{
+        self.ckan_mirror = CkanMirror("kspckanmods", contents="""{
             "spec_version": "v1.4",
             "identifier":   "AwesomeMod",
             "name":         "Awesome Mod",
@@ -46,7 +46,7 @@ class TestCkanMirrorRedistributable(unittest.TestCase):
 class TestCkanMirrorRestricted(unittest.TestCase):
 
     def setUp(self):
-        self.ckan_mirror = CkanMirror(contents="""{
+        self.ckan_mirror = CkanMirror("kspckanmods", contents="""{
             "spec_version": "v1.4",
             "identifier":   "AwesomeMod",
             "version":      "1.0.0",
