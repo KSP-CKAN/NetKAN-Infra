@@ -1,8 +1,10 @@
+import os
 import re
 import tempfile
 import urllib.request
 import hashlib
 import logging
+import shutil
 from pathlib import Path
 import requests
 import boto3
@@ -13,7 +15,6 @@ from .metadata import Ckan
 
 class Mirrorer:
 
-    CACHE_PATH = Path.home().joinpath('ckan_cache')
     EPOCH_ID_REGEXP = re.compile('-[0-9]+-')
     EPOCH_TITLE_REGEXP = re.compile(' - [0-9]+:')
 
@@ -49,7 +50,7 @@ class Mirrorer:
                 to_delete = []
                 for msg in messages:
                     path = Path(self.ckan_meta_repo.working_dir, msg.body)
-                    if self.try_mirror(CkanMirror(path)):
+                    if self.try_mirror(CkanMirror(path, self.ia_collection)):
                         # Successfully handled -> OK to delete
                         to_delete.append(self.deletion_msg(msg))
                 queue.delete_messages(Entries=to_delete)
@@ -65,48 +66,25 @@ class Mirrorer:
             # If it's already mirrored, then we're done with this message
             logging.info('Ckan %s is already mirrored', ckan.mirror_item())
             return True
-        cached_file = self.cache_find_file(ckan)
-        if cached_file:
-            # If the download is in the cache, use it
-            with cached_file.open(mode='rb') as file:
-                logging.info('Found matching cache entry at %s', cached_file)
-                return self.try_upload(ckan, file)
-        else:
-            # Download the file as needed
-            with tempfile.NamedTemporaryFile() as tmp:
-                logging.info('Downloading %s', ckan.download)
-                urllib.request.urlretrieve(ckan.download, tmp.name)
-                logging.info('Downloaded %s to %s', ckan.mirror_item(), tmp.name)
-                return self.try_upload(ckan, tmp.file)
-        return True
-
-    def cache_find_file(self, ckan):
-        found = list(self.CACHE_PATH.glob(f'**/{ckan.cache_prefix}*'))
-        if found:
-            return found[0]
-        return None
-
-    def try_upload(self, ckan, file):
-        if ckan.download_hash.get('sha256') != self.large_file_sha256(file):
+        download_file = ckan.open_download()
+        if ckan.download_hash.get('sha256') != self.large_file_sha256(download_file):
             # Bad download, try again later
             logging.info('Hash mismatch')
             return False
         logging.info('Uploading %s', ckan.mirror_item())
-        lic_urls = ckan.license_urls()
         item = internetarchive.Item(self.ia_session, ckan.mirror_item())
-        return item.upload_file(file.name, ckan.mirror_filename(), {
-            'title':       ckan.mirror_title(),
-            'description': ckan.mirror_description,
-            'creator':     ckan.authors(),
-            'collection':  self.ia_collection,
-            'subject':     'ksp; kerbal space program; mod',
-            'mediatype':   'software',
-            **({'licenseurl': lic_urls} if lic_urls else {}),
-        }, {
-            'Content-Type':           ckan.download_content_type,
-            'Content-Length':         str(ckan.download_size),
-            'x-amz-auto-make-bucket': str(1),
-        })
+        item.upload_file(download_file.name, ckan.mirror_filename(),
+                         ckan.item_metadata(self.ia_collection),
+                         ckan.download_headers)
+        source_url = ckan.source_download
+        if source_url:
+            with tempfile.NamedTemporaryFile() as tmp:
+                logging.info('Attempting to archive source from %s', source_url)
+                urllib.request.urlretrieve(source_url, tmp.name)
+                item.upload_file(tmp.name, ckan.mirror_source_filename(),
+                                 ckan.item_metadata(self.ia_collection),
+                                 ckan.source_download_headers(tmp.name))
+        return True
 
     @staticmethod
     def large_file_sha256(file, block_size=8192):
@@ -269,6 +247,10 @@ class CkanMirror(Ckan):
 
     EPOCH_VERSION_REGEXP = re.compile('^[0-9]+:')
 
+    def __init__(self, filename, collection):
+        Ckan.__init__(self, filename)
+        self.collection = collection
+
     @property
     def can_mirror(self):
         return (
@@ -313,11 +295,61 @@ class CkanMirror(Ckan):
             Ckan.MIME_TO_EXTENSION[self.download_content_type],
         )
 
+    def mirror_source_filename(self, with_epoch=True):
+        return '{}-{}.source.zip'.format(
+            self.identifier,
+            self._format_version(with_epoch)
+        )
+
     def mirror_title(self, with_epoch=True):
         return '{} - {}'.format(
             self.name,
             self._format_version(with_epoch),
         )
+
+    @property
+    def item_metadata(self):
+        lic_urls = self.license_urls()
+        return {
+            'title':       self.mirror_title(),
+            'description': self.mirror_description,
+            'creator':     self.authors(),
+            'collection':  self.collection,
+            'subject':     'ksp; kerbal space program; mod',
+            'mediatype':   'software',
+            **({'licenseurl': lic_urls} if lic_urls else {}),
+        }
+
+    def open_download(self):
+        cached_file = self.cache_find_file
+        if cached_file:
+            # If the download is in the cache, use it
+            logging.info('Found matching cache entry at %s', cached_file)
+            return cached_file.open(mode='rb')
+        # Download the file as needed
+        with tempfile.NamedTemporaryFile() as tmp:
+            logging.info('Downloading %s', self.download)
+            urllib.request.urlretrieve(self.download, tmp.name)
+            # Copy to cache so the temp file can be deleted
+            shutil.copyfile(tmp.name, self.CACHE_PATH.joinpath(self.cache_filename))
+            logging.info('Downloaded %s to %s', self.mirror_item(), self.cache_filename)
+        return self.cache_find_file.open(mode='rb')
+
+    @property
+    def download_headers(self):
+        return {
+            'Content-Type':           self.download_content_type,
+            'Content-Length':         str(self.download_size),
+            'x-amz-auto-make-bucket': str(1),
+        }
+
+    @staticmethod
+    def source_download_headers(file_path):
+        return {
+            'Content-Type':           "application/zip",
+            'Content-Length':         str(os.path.getsize(file_path)),
+            'x-amz-auto-make-bucket': str(1),
+        }
 
     def _format_version(self, with_epoch):
         if with_epoch:
