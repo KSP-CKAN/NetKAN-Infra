@@ -13,7 +13,7 @@ from click.testing import CliRunner
 class TestCleanCache(unittest.TestCase):
 
     cache_path = TemporaryDirectory()
-    testdata_path = Path(PurePath(__file__).parent, 'testdata/NetKAN/NetKAN/')
+    testdata_path = Path(PurePath(__file__).parent, 'testdata/NetKAN/')
 
     source_file_1 = Path(testdata_path, 'DogeCoinFlag.netkan')
     source_file_2 = Path(testdata_path, 'FlagCoinDoge.netkan')
