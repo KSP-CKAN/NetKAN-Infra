@@ -88,6 +88,13 @@ class SpaceDockAdder:
         )
         return True
 
+    @staticmethod
+    def deletion_msg(msg):
+        return {
+            'Id':            msg.message_id,
+            'ReceiptHandle': msg.receipt_handle,
+        }
+
     def make_netkan(self, info):
         return {
             'spec_version': 'v1.4',
