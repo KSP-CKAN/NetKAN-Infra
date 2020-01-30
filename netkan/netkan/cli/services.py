@@ -8,6 +8,7 @@ from .common import common_options, pass_state
 from ..indexer import MessageHandler
 from ..scheduler import NetkanScheduler
 from ..spacedock_adder import SpaceDockAdder
+from ..mirrorer import Mirrorer
 
 
 @click.command()
@@ -59,6 +60,16 @@ def scheduler(common, max_queued, group, min_credits):
     if sched.can_schedule(max_queued, common.dev, min_credits):
         sched.schedule_all_netkans()
         logging.info("NetKANs submitted to %s", common.queue)
+
+
+@click.command()
+@common_options
+@pass_state
+def mirrorer(common):
+    Mirrorer(
+        common.ckanmeta_remote, common.ia_access, common.ia_secret,
+        common.ia_collection
+    ).process_queue(common.queue, common.timeout)
 
 
 @click.command()

@@ -14,6 +14,7 @@ from ..status import ModStatus
 from ..download_counter import DownloadCounter
 from ..ticket_closer import TicketCloser
 from ..auto_freezer import AutoFreezer
+from ..mirrorer import Mirrorer
 
 
 @click.command()
@@ -163,3 +164,18 @@ def clean_cache(days, cache):
                 item.name
             ))
             item.unlink()
+
+
+@click.command()
+@click.option(
+    '--dry-run',
+    help='',
+    default=False,
+)
+@common_options
+@pass_state
+def mirror_purge_epochs(common, dry_run):
+    Mirrorer(
+        common.ckanmeta_remote, common.ia_access,
+        common.ia_secret, common.ia_collection
+    ).purge_epochs(dry_run)

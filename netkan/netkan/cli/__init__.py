@@ -3,7 +3,8 @@ import click
 from .services import (
     indexer,
     scheduler,
-    spacedock_adder
+    spacedock_adder,
+    mirrorer,
 )
 from .utilities import (
     auto_freezer,
@@ -15,6 +16,7 @@ from .utilities import (
     clean_cache,
     download_counter,
     ticket_closer,
+    mirror_purge_epochs,
 )
 
 
@@ -35,3 +37,5 @@ netkan.add_command(download_counter)
 netkan.add_command(ticket_closer)
 netkan.add_command(auto_freezer)
 netkan.add_command(spacedock_adder)
+netkan.add_command(mirrorer)
+netkan.add_command(mirror_purge_epochs)

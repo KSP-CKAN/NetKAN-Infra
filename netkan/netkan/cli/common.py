@@ -39,6 +39,13 @@ _COMMON_OPTIONS = [
                  help='Reduce message visibility timeout for testing', callback=ctx_callback),
     click.option('--dev', is_flag=True, default=False, expose_value=False,
                  help='Disable Production Checks', callback=ctx_callback),
+    click.option('--ia-access', envvar='IA_access', expose_value=False,
+                 help='Credentials for Internet Archive', callback=ctx_callback),
+    click.option('--ia-secret', envvar='IA_secret', expose_value=False,
+                 help='Credentials for Internet Archive', callback=ctx_callback),
+    click.option('--ia-collection', envvar='IA_collection', expose_value=False,
+                 help='Collection to put mirrored mods in on Internet Archive',
+                 callback=ctx_callback),
 ]
 
 
