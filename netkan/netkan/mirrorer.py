@@ -278,8 +278,13 @@ class CkanMirror(Ckan):
         )
 
     def mirrored(self, iarchive):
-        results = iarchive.search_items(self.mirror_item())
-        return True if results else False
+        item = iarchive.get_item(self.mirror_item())
+        if not item:
+            return False
+        if not item.exists:
+            return False
+        sha1 = self.download_hash['sha1'].lower()
+        return any(file['sha1'].lower() == sha1 for file in item.files if 'sha1' in file)
 
     def license_urls(self):
         return [self.LICENSE_URLS[lic]
