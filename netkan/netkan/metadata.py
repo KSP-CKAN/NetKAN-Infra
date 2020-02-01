@@ -4,6 +4,7 @@ from functools import total_ordering
 from pathlib import Path
 from hashlib import sha1
 import uuid
+import urllib.parse
 
 
 class Netkan:
@@ -85,6 +86,7 @@ class Netkan:
 
 class Ckan:
 
+    CACHE_PATH = Path.home().joinpath('ckan_cache')
     MIME_TO_EXTENSION = {
         'application/x-gzip':           'gz',
         'application/x-tar':            'tar',
@@ -111,12 +113,20 @@ class Ckan:
     def version(self):
         if self._raw.get('version'):
             return self.Version(self._raw.get('version'))
+        return None
 
     @property
     def cache_prefix(self):
         if 'download' not in self._raw:
             return None
         return sha1(self.download.encode()).hexdigest().upper()[0:8]
+
+    @property
+    def cache_find_file(self):
+        found = list(self.CACHE_PATH.glob(f'**/{self.cache_prefix}*'))
+        if found:
+            return found[0]
+        return None
 
     @property
     def cache_filename(self):
@@ -128,6 +138,30 @@ class Ckan:
             self.version.string.replace(':', '-'),
             self.MIME_TO_EXTENSION[self.download_content_type],
         )
+
+    @property
+    def source_download(self):
+        # self?.resources?.repository
+        repository = getattr(self, 'resources', {}).get('repository', None)
+        if repository:
+            parsed = urllib.parse.urlparse(repository)
+            # Strip extra trailing pieces from URL
+            prefix = '/'.join(repository.split('/')[0:5])
+            if parsed.netloc == 'github.com':
+                # https://github.com/HebaruSan/Astrogator/archive/master.zip
+                return f'{prefix}/archive/master.zip'
+            if parsed.netloc == 'bitbucket.org':
+                # https://bitbucket.org/Taverius/b9-aerospace/get/master.zip
+                return f'{prefix}/get/master.zip'
+            if parsed.netloc == 'gitlab.com':
+                # https://gitlab.com/N70/Kerbalism/-/archive/master/Kerbalism-master.zip
+                name = parsed.path.split('/')[2]
+                return f'{prefix}/-/archive/master/{name}-master.zip'
+            if parsed.netloc == 'git.srv.hoerberg.de':
+                # https://git.srv.hoerberg.de/tom300z/4ksp/-/archive/master/4ksp-master.zip
+                name = parsed.path.split('/')[2]
+                return f'{prefix}/-/archive/master/{name}-master.zip'
+        return None
 
     def authors(self):
         auth = self.author
