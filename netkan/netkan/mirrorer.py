@@ -74,7 +74,7 @@ class Mirrorer:
         logging.info('Uploading %s', ckan.mirror_item())
         item = internetarchive.Item(self.ia_session, ckan.mirror_item())
         item.upload_file(download_file.name, ckan.mirror_filename(),
-                         ckan.item_metadata(self.ia_collection),
+                         ckan.item_metadata,
                          ckan.download_headers)
         source_url = ckan.source_download
         if source_url:
@@ -82,7 +82,7 @@ class Mirrorer:
                 logging.info('Attempting to archive source from %s', source_url)
                 urllib.request.urlretrieve(source_url, tmp.name)
                 item.upload_file(tmp.name, ckan.mirror_source_filename(),
-                                 ckan.item_metadata(self.ia_collection),
+                                 ckan.item_metadata,
                                  ckan.source_download_headers(tmp.name))
         return True
 
