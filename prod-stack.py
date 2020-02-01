@@ -597,8 +597,8 @@ services = [
         ],
         'env': [
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),
-            ('CKANMETA_USER', CKANMETA_USER),
-            ('CKANMETA_REPO', CKANMETA_REPO),
+            ('CKAN_USER', CKANMETA_USER),
+            ('CKAN_REPO', CKANMETA_REPO),
             ('SQS_QUEUE', GetAtt(outbound, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
@@ -727,8 +727,8 @@ services = [
         'command': 'auto-freezer',
         'env': [
             ('NETKAN_REMOTE', NETKAN_REMOTE),
-            ('NETKAN_USER', NETKAN_USER),
-            ('NETKAN_REPO', NETKAN_REPO),
+            ('CKAN_USER', NETKAN_USER),
+            ('CKAN_REPO', NETKAN_REPO),
         ],
         'secrets': [
             'SSH_KEY', 'GH_Token',
@@ -777,8 +777,8 @@ services = [
             ('SQS_QUEUE', GetAtt(addqueue, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
-            ('NETKAN_USER', NETKAN_USER),
-            ('NETKAN_REPO', NETKAN_REPO),
+            ('CKAN_USER', NETKAN_USER),
+            ('CKAN_REPO', NETKAN_REPO),
         ],
     },
     {
