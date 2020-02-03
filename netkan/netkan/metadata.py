@@ -119,7 +119,7 @@ class Ckan:
     def cache_prefix(self):
         if 'download' not in self._raw:
             return None
-        return sha1(self.download.encode()).hexdigest().upper()[0:8]
+        return sha1(urllib.parse.unquote(self.download).encode()).hexdigest().upper()[0:8]
 
     @property
     def cache_find_file(self):
