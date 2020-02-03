@@ -164,6 +164,24 @@ class TestCkanSimple(unittest.TestCase):
         self.assertEqual(self.ckan.cache_filename, "3C69B375-AwesomeMod-1.0.0.zip")
 
 
+class TestCkanSpacesInDownload(unittest.TestCase):
+
+    def setUp(self):
+        self.ckan = Ckan(contents="""{
+            "spec_version": "v1.4",
+            "identifier":   "NASA-CountDown",
+            "version":      "1.3.9.1",
+            "ksp_version":  "1.8",
+            "author":       "linuxgurugamer",
+            "license":      "CC-BY-NC-SA",
+            "download":     "https://spacedock.info/mod/1462/NASA%20CountDown%20Clock%20Updated/download/1.3.9.1",
+            "download_content_type": "application/zip"
+        }""")
+
+    def test_cache(self):
+        self.assertEqual(self.ckan.cache_prefix,   "25B8A610")
+        self.assertEqual(self.ckan.cache_filename, "25B8A610-NASA-CountDown-1.3.9.1.zip")
+
 class TestCkanComplex(unittest.TestCase):
 
     def setUp(self):
