@@ -206,7 +206,9 @@ class MessageHandler:
     # we can ensure we call close on it and run our handler inside
     # a context manager
     def __enter__(self):
-        self._update_master()
+        if str(self.repo.active_branch) != 'master':
+            self.repo.heads.master.checkout()
+        self.repo.remotes.origin.pull('master', strategy_option='ours')
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -232,19 +234,12 @@ class MessageHandler:
     def sqs_delete_entries(self):
         return [c.delete_attrs for c in self.processed]
 
-    def _update_master(self, push=False):
-        if str(self.repo.active_branch) != 'master':
-            self.repo.heads.master.checkout()
-        self.repo.remotes.origin.pull(
-            'master', strategy_option='ours'
-        )
-        if push:
-            self.repo.remotes.origin.push('master')
-
     # Currently we intermingle Staged/Master commits
     # separating them out will be a little more efficient
     # with our push/pull traffic.
     def process_ckans(self):
         self._process_queue(self.master)
-        self._update_master(push=True)
+        if any(ckan.indexed for ckan in self.processed):
+            self.repo.remotes.origin.pull('master', strategy_option='ours')
+            self.repo.remotes.origin.push('master')
         self._process_queue(self.staged)
