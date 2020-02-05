@@ -16,6 +16,11 @@ github_mirror = Blueprint('github_mirror', __name__)  # pylint: disable=invalid-
 @signature_required
 def mirror_hook():
     raw = request.get_json(silent=True)
+    branch = raw.get('ref')
+    if branch != 'ref/heads/master':
+        current_app.logger.info(
+            "Wrong branch. Expected '%s', got '%s'", 'ref/heads/master', branch)
+        return jsonify({'message': 'Wrong branch'}), 200
     commits = raw.get('commits')
     if not commits:
         current_app.logger.info('No commits received')
