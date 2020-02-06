@@ -115,11 +115,11 @@ class NetkanScheduler:
             # Volume Burst balance measured in a percentage of 5.4million credits. Credits are
             # accrued at a rate of 3 per GB, per second. If we are are down to 70 percent of
             # our max, something has likely gone wrong and we should not queue any more
-            # inflations. A regular run seems to cosume between 10-15%
+            # inflations. A regular run seems to consume between 10-15%
             vol_credits_percent = self.volume_credits_percent(cloudwatch, instance_id, start, end)
             if vol_credits_percent < 70:
                 logging.error(
-                    "Run skipped, below volume credit target pertcentage (Current Avg: %s)",
+                    "Run skipped, below volume credit target percentage (Current Avg: %s)",
                     vol_credits_percent
                 )
                 return False
