@@ -7,7 +7,7 @@ from troposphere.dynamodb import Table, KeySchema, AttributeDefinition, \
     ProvisionedThroughput
 from troposphere.ecs import Cluster, TaskDefinition, ContainerDefinition, \
     Service, Secret, Environment, DeploymentConfiguration, Volume, \
-    Host, MountPoint, PortMapping, ContainerDependency
+    Host, MountPoint, PortMapping, ContainerDependency, LinuxParameters
 from troposphere.ec2 import Instance, CreditSpecification, Tag, \
     BlockDeviceMapping, EBSBlockDevice
 from troposphere.cloudformation import Init, InitFile, InitFiles, \
@@ -605,6 +605,7 @@ services = [
         'volumes': [
             ('ckan_cache', '/home/netkan/ckan_cache')
         ],
+        'linux_parameters': LinuxParameters(InitProcessEnabled=True),
     },
     {
         'name': 'Scheduler',
@@ -823,6 +824,7 @@ for service in services:
         volumes = container.get('volumes', [])
         ports = container.get('ports', [])
         depends = container.get('depends', [])
+        linux_parameters = container.get('linux_parameters')
         definition = ContainerDefinition(
             Image=container.get('image', 'kspckan/netkan'),
             Memory=container.get('memory', '96'),
@@ -851,6 +853,8 @@ for service in services:
         if command:
             command = command if isinstance(command, list) else [command]
             definition.Command = command
+        if linux_parameters:
+            definition.LinuxParameters = linux_parameters
         for volume in volumes:
             volume_name = '{}{}'.format(
                 name,
