@@ -602,9 +602,6 @@ services = [
             ('SQS_QUEUE', GetAtt(outbound, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
-        'volumes': [
-            ('ckan_cache', '/home/netkan/ckan_cache')
-        ],
         'linux_parameters': LinuxParameters(InitProcessEnabled=True),
     },
     {
