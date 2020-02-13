@@ -23,6 +23,8 @@ _COMMON_OPTIONS = [
                  help='SQS Queue to poll for metadata', callback=ctx_callback),
     click.option('--ssh-key', envvar='SSH_KEY', expose_value=False,
                  help='SSH key for accessing repositories', callback=ctx_callback),
+    click.option('--deep-clone', is_flag=True, default=False, expose_value=False,
+                 help='Perform a deep clone of the git repos', callback=ctx_callback),
     click.option('--ckanmeta-remote', envvar='CKANMETA_REMOTE', expose_value=False,
                  help='Path/URL/SSH to Metadata Repo', callback=ctx_callback),
     click.option('--netkan-remote', envvar='NETKAN_REMOTE', expose_value=False,
@@ -92,7 +94,8 @@ class SharedArgs(object):
     @property
     def ckanmeta_remote(self):
         if not self._ckanmeta_remote_repo:
-            self._ckanmeta_remote_repo = init_repo(self._ckanmeta_remote, '/tmp/CKAN-meta')
+            self._ckanmeta_remote_repo = init_repo(self._ckanmeta_remote, '/tmp/CKAN-meta',
+                                                   self.deep_clone)
         return self._ckanmeta_remote_repo
 
     @ckanmeta_remote.setter
@@ -102,7 +105,8 @@ class SharedArgs(object):
     @property
     def netkan_remote(self):
         if not self._netkan_remote_repo:
-            self._netkan_remote_repo = init_repo(self._netkan_remote, '/tmp/NetKAN')
+            self._netkan_remote_repo = init_repo(self._netkan_remote, '/tmp/NetKAN',
+                                                 self.deep_clone)
         return self._netkan_remote_repo
 
     @netkan_remote.setter

@@ -1,14 +1,17 @@
 import logging
 import subprocess
-from git import Repo
 from pathlib import Path
+from git import Repo
 
 
-def init_repo(metadata, path):
+def init_repo(metadata, path, deep_clone):
     clone_path = Path(path)
     if not clone_path.exists():
-        logging.info('Cloning {}'.format(metadata))
-        repo = Repo.clone_from(metadata, clone_path)
+        logging.info('Cloning %s', metadata)
+        extra_kwargs = {}
+        if not deep_clone:
+            extra_kwargs['depth'] = 1
+        repo = Repo.clone_from(metadata, clone_path, **extra_kwargs)
     else:
         repo = Repo(clone_path)
     return repo
