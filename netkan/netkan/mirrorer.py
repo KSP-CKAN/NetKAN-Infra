@@ -255,7 +255,7 @@ class CkanMirror(Ckan):
     def can_mirror(self):
         return (
             self.kind == 'package'
-            and self.download_content_type in Ckan.MIME_TO_EXTENSION
+            and getattr(self, 'download_content_type', '') in Ckan.MIME_TO_EXTENSION
             and self.redistributable
         )
 
