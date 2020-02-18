@@ -75,11 +75,12 @@ class Netkan:
         return attribs
 
     def sqs_message(self, ckan_group=None):
+        id = uuid.uuid4().hex
         return {
-            'Id': self.identifier[0:80],
+            'Id': id,
             'MessageBody': self.contents,
             'MessageGroupId': '1',
-            'MessageDeduplicationId': uuid.uuid4().hex,
+            'MessageDeduplicationId': id,
             'MessageAttributes': self.sqs_message_attribs(ckan_group),
         }
 

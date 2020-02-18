@@ -11,7 +11,6 @@ class TestNetKAN(unittest.TestCase):
         dogecoinflag = Path(self.test_data, 'DogeCoinFlag.netkan')
         netkan = Netkan(dogecoinflag)
         message = netkan.sqs_message()
-        self.assertEqual(message['Id'], 'DogeCoinFlag')
         self.assertEqual(
             message['MessageBody'],
             dogecoinflag.read_text()
