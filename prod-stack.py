@@ -714,6 +714,42 @@ services = [
         'schedule': 'cron(30 0 ? * MON *)',
     },
     {
+        'name': 'RestartIndexer',
+        'command': [
+            'redeploy-service',
+            '--cluster', 'NetKANCluster',
+            '--service-name', 'Indexer',
+        ],
+        'env': [
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+        ],
+        'schedule': 'rate(3 days)',
+    },
+    {
+        'name': 'RestartAdder',
+        'command': [
+            'redeploy-service',
+            '--cluster', 'NetKANCluster',
+            '--service-name', 'Adder',
+        ],
+        'env': [
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+        ],
+        'schedule': 'rate(3 days)',
+    },
+    {
+        'name': 'RestartMirrorer',
+        'command': [
+            'redeploy-service',
+            '--cluster', 'NetKANCluster',
+            '--service-name', 'Mirrorer',
+        ],
+        'env': [
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+        ],
+        'schedule': 'rate(3 days)',
+    },
+    {
         'name': 'TicketCloser',
         'command': 'ticket-closer',
         'env': [],
