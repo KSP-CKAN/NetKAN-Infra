@@ -706,7 +706,7 @@ services = [
         'command': [
             'redeploy-service',
             '--cluster', 'NetKANCluster',
-            '--service-name', 'WebhooksService',
+            '--service-name', 'Webhooks',
         ],
         'env': [
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
