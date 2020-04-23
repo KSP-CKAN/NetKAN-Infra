@@ -346,7 +346,8 @@ netkan_ecs_role = t.add_resource(Role(
 scheduler_resources = []
 for task in [
         'Scheduler', 'SchedulerWebhooksPass', 'CertBot', 'StatusDumper',
-        'DownloadCounter', 'TicketCloser', 'AutoFreezer', 'RestartWebhooks']:
+        'DownloadCounter', 'TicketCloser', 'AutoFreezer', 'RestartWebhooks',
+        'RestartAdder', 'RestartIndexer', 'RestartMirrorer']:
     scheduler_resources.append(Sub(
         'arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBot${Task}:*',
         Task=task
