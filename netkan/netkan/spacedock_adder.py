@@ -51,7 +51,7 @@ class SpaceDockAdder:
             # Already exists, we are done
             return True
         # Otherwise create
-        netkan_path.write_text(json.dumps(netkan))
+        netkan_path.write_text(json.dumps(netkan, indent=4))
 
         # Create branch
         branch_name = f"add-{netkan.get('identifier')}"
