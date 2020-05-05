@@ -55,7 +55,11 @@ class SpaceDockAdder:
 
         # Create branch
         branch_name = f"add-{netkan.get('identifier')}"
-        self.netkan_repo.remotes.origin.fetch(branch_name)
+        try:
+            self.netkan_repo.remotes.origin.fetch(branch_name)
+        except GitCommandError:
+            # *Shrug*
+            pass
         if branch_name not in self.netkan_repo.heads:
             self.netkan_repo.create_head(
                 branch_name,
