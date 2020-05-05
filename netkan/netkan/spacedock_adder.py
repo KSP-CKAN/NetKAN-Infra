@@ -72,8 +72,10 @@ class SpaceDockAdder:
 
         # Commit
         self.netkan_repo.index.commit(
-            f'Add {info.get('name')} from {info.get('site_name')}'
-            + f'\n\nThis is an automated commit on behalf of {info.get('username')}',
+            (
+                f"Add {info.get('name')} from {info.get('site_name')}"
+                f"\n\nThis is an automated commit on behalf of {info.get('username')}"
+            ),
             author=git.Actor(info.get('username'), info.get('email'))
         )
 
@@ -82,7 +84,7 @@ class SpaceDockAdder:
 
         # Create pull request
         self.github_pr.create_pull_request(
-            title=f'Add {info.get('name')} from {info.get('site_name')}',
+            title=f"Add {info.get('name')} from {info.get('site_name')}",
             branch=branch_name,
             body=self.PR_BODY_TEMPLATE.substitute(info)
         )
@@ -98,8 +100,8 @@ class SpaceDockAdder:
     def make_netkan(self, info):
         return {
             'spec_version': 'v1.4',
-            'identifier':   re.sub(r'\W+', '', info.get('name'),
-            '$kref':        f'#/ckan/spacedock/{info.get('id')}',
-            'license':      info.get('license').replace(' ', '-'),
-            'x_via':        f'Automated {info.get('site_name')} CKAN submission'
+            'identifier': re.sub(r'\W+', '', info.get('name')),
+            '$kref': f"#/ckan/spacedock/{info.get('id')}",
+            'license': info.get('license').replace(' ', '-'),
+            'x_via': f"Automated {info.get('site_name')} CKAN submission"
         }
