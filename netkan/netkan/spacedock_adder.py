@@ -66,7 +66,7 @@ class SpaceDockAdder:
                 getattr(
                     self.netkan_repo.remotes.origin.refs,
                     branch_name,
-                    None
+                    self.netkan_repo.remotes.origin.refs.master
                 )
             )
         # Checkout branch
