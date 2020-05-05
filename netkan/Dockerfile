@@ -2,6 +2,7 @@ FROM python:3.7 as base
 RUN useradd -ms /bin/bash netkan
 ADD . /netkan
 WORKDIR /netkan
+RUN chown -R netkan:netkan /netkan
 USER netkan
 RUN pip install --user . --no-warn-script-location
 RUN python -m unittest -v
