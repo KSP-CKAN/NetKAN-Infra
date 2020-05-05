@@ -46,7 +46,7 @@ class SpaceDockAdder:
 
         # Create .netkan file or quit if already there
         netkan_path = Path(self.netkan_repo.working_dir,
-                           'NetKAN', f'{netkan.identifier}.netkan')
+                           'NetKAN', f"{netkan.get('identifier')}.netkan")
         if netkan_path.exists():
             # Already exists, we are done
             return True
@@ -54,7 +54,7 @@ class SpaceDockAdder:
         netkan_path.write_text(json.dumps(netkan))
 
         # Create branch
-        branch_name = f'add-{netkan.identifier}'
+        branch_name = f"add-{netkan.get('identifier')}"
         self.netkan_repo.remotes.origin.fetch(branch_name)
         if branch_name not in self.netkan_repo.heads:
             self.netkan_repo.create_head(
