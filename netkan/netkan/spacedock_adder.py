@@ -91,7 +91,7 @@ class SpaceDockAdder:
         self.github_pr.create_pull_request(
             title=f"Add {info.get('name')} from {info.get('site_name')}",
             branch=branch_name,
-            body=self.PR_BODY_TEMPLATE.substitute(info)
+            body=self.PR_BODY_TEMPLATE.safe_substitute(info)
         )
         return True
 
