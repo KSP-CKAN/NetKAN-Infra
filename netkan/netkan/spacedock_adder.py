@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 from importlib.resources import read_text
 from string import Template
+from collections import defaultdict
 import git
 import boto3
 
@@ -91,7 +92,7 @@ class SpaceDockAdder:
         self.github_pr.create_pull_request(
             title=f"Add {info.get('name')} from {info.get('site_name')}",
             branch=branch_name,
-            body=self.PR_BODY_TEMPLATE.safe_substitute(info)
+            body=self.PR_BODY_TEMPLATE.safe_substitute(defaultdict(lambda: '', info))
         )
         return True
 
