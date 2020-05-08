@@ -17,6 +17,7 @@ class CkanMessage:
         self.body = msg.body
         self.ckan = Ckan(contents=self.body)
         self.ErrorMessage = None
+        self.WarningMessages = None
         self.indexed = False
         for item in msg.message_attributes.items():
             attr_type = '{}Value'.format(item[1]['DataType'])
@@ -119,6 +120,7 @@ class CkanMessage:
         attrs = {
             'success': self.Success,
             'last_error': self.ErrorMessage,
+            'last_warnings': self.WarningMessages,
             # We may wish to change the name in the inflator
             # as the index will set 'last_checked'
             'last_inflated': inflation_time,
@@ -147,6 +149,9 @@ class CkanMessage:
             if not self.Success and getattr(status, 'last_error', None) != self.ErrorMessage:
                 logging.error('New inflation error for %s: %s',
                               self.ModIdentifier, self.ErrorMessage)
+            elif getattr(status, 'last_warnings', None) != self.WarningMessages:
+                logging.error('New inflation warnings for %s: %s',
+                              self.ModIdentifier, self.WarningMessages)
             actions = [
                 getattr(ModStatus, key).set(
                     attrs[key]

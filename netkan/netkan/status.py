@@ -31,6 +31,7 @@ class ModStatus(Model):
 
     ModIdentifier = UnicodeAttribute(hash_key=True)
     last_error = UnicodeAttribute(null=True)
+    last_warnings = UnicodeAttribute(null=True)
     last_checked = UTCDateTimeAttribute(null=True)
     last_indexed = UTCDateTimeAttribute(null=True)
     last_inflated = UTCDateTimeAttribute(null=True)
