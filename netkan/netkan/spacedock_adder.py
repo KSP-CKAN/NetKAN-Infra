@@ -51,8 +51,6 @@ class SpaceDockAdder:
         if netkan_path.exists():
             # Already exists, we are done
             return True
-        # Otherwise create
-        netkan_path.write_text(json.dumps(netkan, indent=4))
 
         # Create branch
         branch_name = f"add-{netkan.get('identifier')}"
@@ -72,6 +70,9 @@ class SpaceDockAdder:
             )
         # Checkout branch
         self.netkan_repo.heads[branch_name].checkout()
+
+        # Create file
+        netkan_path.write_text(json.dumps(netkan, indent=4))
 
         # Add netkan to branch
         self.netkan_repo.index.add([netkan_path.as_posix()])
