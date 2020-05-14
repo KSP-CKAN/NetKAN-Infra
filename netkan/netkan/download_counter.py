@@ -1,16 +1,16 @@
 import json
 import logging
 import re
-import requests
 from pathlib import Path
 from json.decoder import JSONDecodeError
+import requests
 from .metadata import Netkan
 from .utils import repo_file_add_or_changed
 
 
 class NetkanDownloads(Netkan):
-    github_pattern = re.compile('^([^/]+)/([^/]+)')
-    github_api = 'https://api.github.com/repos/'
+    GITHUB_PATTERN = re.compile('^([^/]+)/([^/]+)')
+    GITHUB_API = 'https://api.github.com/repos/'
 
     def __init__(self, filename=None, github_token=None, contents=None):
         super().__init__(filename, contents)
@@ -23,8 +23,8 @@ class NetkanDownloads(Netkan):
 
     @property
     def github_repo_api(self):
-        (user, repo) = self.github_pattern.match(self.kref_id).groups()
-        return f'{self.github_api}{user}/{repo}'
+        (user, repo) = self.GITHUB_PATTERN.match(self.kref_id).groups()
+        return f'{self.GITHUB_API}{user}/{repo}'
 
     @property
     def curse_api(self):
@@ -56,7 +56,7 @@ class NetkanDownloads(Netkan):
             url, headers=self.github_headers
         ).json()
         if 'parent' in repo:
-            url = f"{self.github_api}{repo['parent']['full_name']}"
+            url = f"{self.GITHUB_API}{repo['parent']['full_name']}"
             total += self.count_from_github(url)
         return total
 
@@ -65,23 +65,30 @@ class NetkanDownloads(Netkan):
 
     def count_from_netkan(self):
         return NetkanDownloads(
-                github_token=self.github_token,
-                contents=requests.get(self.remote_netkan).text
-            ).get_count()
+            github_token=self.github_token,
+            contents=requests.get(self.remote_netkan).text
+        ).get_count()
 
     def get_count(self):
         count = 0
         if self.has_kref:
             try:
                 count = getattr(self, f'count_from_{self.kref_src}')()
-            except JSONDecodeError as e:
-                logging.error(f'Failed decoding count for {self.identifier}: {e}')
-            except KeyError as e:
-                logging.error(f'Download count key \'{e}\' missing from api for {self.identifier}')
+            except JSONDecodeError as exc:
+                logging.error(
+                    'Failed decoding count for %s: %s',
+                    self.identifier, exc)
+            except KeyError as exc:
+                logging.error(
+                    'Download count key \'%s\' missing from api for %s',
+                    exc, self.identifier)
+            except requests.exceptions.RequestException as exc:
+                logging.error('Count retrieval failed for %s: %s',
+                              self.identifier, exc)
             except AttributeError:
                 # If the kref_src isn't defined, we haven't created a counter
                 # for it and likely doesn't have one.
-                pass
+                logging.info('Can\'t get count for %s via %s', self.identifier, self.kref_src)
         return count
 
 
@@ -97,10 +104,12 @@ class DownloadCounter:
         )
 
     def get_counts(self):
-        for netkan in self.netkan_path.glob('NetKAN/*.netkan'):
+        for netkan in sorted(self.netkan_path.glob('NetKAN/*.netkan'),
+                             key=lambda p: p.stem.casefold()):
             netkan = NetkanDownloads(netkan, self.github_token)
             count = netkan.get_count()
             if count > 0:
+                logging.info('Count for %s is %s', netkan.identifier, count)
                 self.counts[netkan.identifier] = count
 
     def write_json(self):
