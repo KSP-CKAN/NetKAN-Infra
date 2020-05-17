@@ -149,7 +149,7 @@ class CkanMessage:
             if not self.Success and getattr(status, 'last_error', None) != self.ErrorMessage:
                 logging.error('New inflation error for %s: %s',
                               self.ModIdentifier, self.ErrorMessage)
-            elif getattr(status, 'last_warnings', None) != self.WarningMessages:
+            elif getattr(status, 'last_warnings', None) != self.WarningMessages and self.WarningMessages is not None:
                 logging.error('New inflation warnings for %s: %s',
                               self.ModIdentifier, self.WarningMessages)
             actions = [
