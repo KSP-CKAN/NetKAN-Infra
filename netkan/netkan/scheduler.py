@@ -93,7 +93,7 @@ class NetkanScheduler:
             logging.error("Couldn't acquire Volume Credit Stats")
         return int(creds)
 
-    def can_schedule(self, max_queued, dev=False, min_credits=50):
+    def can_schedule(self, max_queued, dev=False, min_cpu=50, min_io=70):
         if not dev:
             end = datetime.datetime.utcnow()
             start = end - datetime.timedelta(minutes=10)
@@ -103,19 +103,21 @@ class NetkanScheduler:
             instance_id = response.text
             cloudwatch = boto3.client('cloudwatch')
 
+            # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances-monitoring-cpu-credits.html
             cpu_credits = self.cpu_credits(cloudwatch, instance_id, start, end)
-            if cpu_credits < min_credits:
+            if cpu_credits < min_cpu:
                 logging.info(
                     "Run skipped, below cpu credit target (Current Avg: %s)", cpu_credits
                 )
                 return False
 
+            # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html
             # Volume Burst balance measured in a percentage of 5.4million credits. Credits are
-            # accrued at a rate of 3 per GB, per second. If we are are down to 70 percent of
+            # accrued at a rate of 3 per GB, per second. If we are are down to min_io percent of
             # our max, something has likely gone wrong and we should not queue any more
             # inflations. A regular run seems to consume between 10-15%
             vol_credits_percent = self.volume_credits_percent(cloudwatch, instance_id, start, end)
-            if vol_credits_percent < 70:
+            if vol_credits_percent < min_io:
                 logging.error(
                     "Run skipped, below volume credit target percentage (Current Avg: %s)",
                     vol_credits_percent
