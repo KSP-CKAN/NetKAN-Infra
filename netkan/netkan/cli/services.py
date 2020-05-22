@@ -46,18 +46,22 @@ def indexer(common):
     help='Which mods to schedule',
 )
 @click.option(
-    '--min-credits', default=200,
-    help='Only schedule if we have at least this many credits remaining',
+    '--min-cpu', default=200,
+    help='Only schedule if we have at least this many CPU credits remaining',
+)
+@click.option(
+    '--min-io', default=70,
+    help='Only schedule if we have at least this many IO credits remaining',
 )
 @common_options
 @pass_state
-def scheduler(common, max_queued, group, min_credits):
+def scheduler(common, max_queued, group, min_cpu, min_io):
     sched = NetkanScheduler(
         common.netkan_remote.working_dir, common.ckanmeta_remote.working_dir, common.queue,
         nonhooks_group=(group == 'all' or group == 'nonhooks'),
         webhooks_group=(group == 'all' or group == 'webhooks'),
     )
-    if sched.can_schedule(max_queued, common.dev, min_credits):
+    if sched.can_schedule(max_queued, common.dev, min_cpu, min_io):
         sched.schedule_all_netkans()
         logging.info("NetKANs submitted to %s", common.queue)
 
