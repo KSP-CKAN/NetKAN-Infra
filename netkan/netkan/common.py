@@ -1,8 +1,12 @@
+from git import Repo
+
 from .metadata import Netkan
+from .repos import NetkanRepo
 
 
 def netkans(path, ids):
-    return (Netkan(f'{path}/NetKAN/{id}.netkan') for id in ids)
+    repo = NetkanRepo(Repo(path))
+    return (Netkan(p) for p in repo.nk_paths(ids))
 
 
 def sqs_batch_entries(messages, batch_size=10):

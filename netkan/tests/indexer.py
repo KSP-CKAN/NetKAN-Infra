@@ -1,5 +1,3 @@
-from netkan.indexer import CkanMessage
-
 import unittest
 import tempfile
 import shutil
@@ -8,6 +6,9 @@ from pathlib import Path, PurePath
 from git import Repo
 from datetime import datetime
 from gitdb.exc import BadName
+
+from netkan.indexer import CkanMessage
+from netkan.repos import CkanMetaRepo
 
 
 class TestCkan(unittest.TestCase):
@@ -47,7 +48,8 @@ class TestCkan(unittest.TestCase):
         cls.ckan_meta.index.commit('Test Data')
         cls.ckan_meta.create_remote('origin', upstream.as_posix())
         cls.ckan_meta.remotes.origin.push('master:master')
-        cls.message = CkanMessage(cls.msg, cls.ckan_meta)
+        cls.ckm_repo = CkanMetaRepo(cls.ckan_meta)
+        cls.message = CkanMessage(cls.msg, cls.ckm_repo)
 
     @classmethod
     def tearDownClass(cls):
@@ -55,7 +57,7 @@ class TestCkan(unittest.TestCase):
         cls.tmpdir.cleanup()
 
     def tearDown(self):
-        meta = self.message.ckan_meta
+        meta = self.ckan_meta
         meta.git.clean('-df')
         try:
             cleanup = meta.create_head('cleanup', 'HEAD~1')
@@ -93,11 +95,11 @@ class TestCkan(unittest.TestCase):
 
     def test_ckan_message_repo_untracked(self):
         self.message.write_metadata()
-        self.assertEqual(0, len(self.message.ckan_meta.untracked_files))
+        self.assertEqual(0, len(self.ckan_meta.untracked_files))
 
     def test_ckan_message_repo_dirty(self):
         self.message.write_metadata()
-        self.assertFalse(self.message.ckan_meta.is_dirty())
+        self.assertFalse(self.ckan_meta.is_dirty())
 
     def test_ckan_message_write_md5_matches(self):
         self.message.write_metadata()
@@ -122,12 +124,12 @@ class TestUpdateCkan(TestCkan):
 
     def test_ckan_message_repo_dirty(self):
         self.message.write_metadata()
-        self.assertTrue(self.message.ckan_meta.is_dirty())
+        self.assertTrue(self.ckan_meta.is_dirty())
 
     def test_ckan_message_commit(self):
         self.message.write_metadata()
         c = self.message.commit_metadata()
-        self.assertEqual(0, len(self.message.ckan_meta.untracked_files))
+        self.assertEqual(0, len(self.ckan_meta.untracked_files))
         self.assertEqual(
             c.message, 'NetKAN generated mods - DogeCoinFlag-v1.02'
         )
@@ -149,7 +151,7 @@ class TestStagedCkan(TestUpdateCkan):
         self.msg.message_attributes['Staged'] = {
             'StringValue': 'True', 'DataType': 'String'
         }
-        self.message = CkanMessage(self.msg, self.ckan_meta)
+        self.message = CkanMessage(self.msg, self.ckm_repo)
 
     def test_ckan_message_changed(self):
         with self.message.change_branch():
@@ -159,12 +161,12 @@ class TestStagedCkan(TestUpdateCkan):
         with self.message.change_branch():
             self.message.write_metadata()
             c = self.message.commit_metadata()
-            self.assertEqual(0, len(self.message.ckan_meta.untracked_files))
+            self.assertEqual(0, len(self.ckan_meta.untracked_files))
             self.assertEqual(
                 c.message, 'NetKAN generated mods - DogeCoinFlag-v1.02'
             )
         self.assertEqual(
-            self.message.ckan_meta.head.commit.message,
+            self.ckan_meta.head.commit.message,
             'Test Data'
         )
 
@@ -172,12 +174,12 @@ class TestStagedCkan(TestUpdateCkan):
         self.assertTrue(self.message.Staged)
 
     def test_ckan_message_change_branch(self):
-        self.assertEqual(str(self.message.ckan_meta.active_branch), 'master')
+        self.assertEqual(str(self.ckan_meta.active_branch), 'master')
         with self.message.change_branch():
             self.assertEqual(
-                str(self.message.ckan_meta.active_branch), 'DogeCoinFlag-v1.02'
+                str(self.ckan_meta.active_branch), 'DogeCoinFlag-v1.02'
             )
-        self.assertEqual(str(self.message.ckan_meta.active_branch), 'master')
+        self.assertEqual(str(self.ckan_meta.active_branch), 'master')
 
     def test_ckan_message_status_attrs(self):
         attrs = self.message.status_attrs(new=True)
@@ -194,11 +196,11 @@ class TestNewCkan(TestUpdateCkan):
 
     def test_ckan_message_repo_untracked(self):
         self.message.write_metadata()
-        self.assertEqual(1, len(self.message.ckan_meta.untracked_files))
+        self.assertEqual(1, len(self.ckan_meta.untracked_files))
 
     def test_ckan_message_repo_dirty(self):
         self.message.write_metadata()
-        self.assertFalse(self.message.ckan_meta.is_dirty())
+        self.assertFalse(self.ckan_meta.is_dirty())
 
 
 class TestFailedCkan(TestCkan):
@@ -213,7 +215,7 @@ class TestFailedCkan(TestCkan):
             'StringValue': 'Curl download failed with error CouldntConnect',
             'DataType': 'String'
         }
-        self.message = CkanMessage(self.msg, self.ckan_meta)
+        self.message = CkanMessage(self.msg, self.ckm_repo)
 
     def test_ckan_message_success(self):
         self.assertFalse(self.message.Success)

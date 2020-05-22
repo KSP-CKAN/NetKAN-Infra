@@ -26,7 +26,7 @@ def indexer(common):
         )
         if not messages:
             continue
-        with MessageHandler(common.ckanmeta_remote, common.github_pr) as handler:
+        with MessageHandler(common.ckanmeta_repo, common.github_pr) as handler:
             for message in messages:
                 handler.append(message)
             handler.process_ckans()
@@ -57,7 +57,7 @@ def indexer(common):
 @pass_state
 def scheduler(common, max_queued, group, min_cpu, min_io):
     sched = NetkanScheduler(
-        common.netkan_remote.working_dir, common.ckanmeta_remote.working_dir, common.queue,
+        common.netkan_repo, common.ckanmeta_repo, common.queue,
         nonhooks_group=(group == 'all' or group == 'nonhooks'),
         webhooks_group=(group == 'all' or group == 'webhooks'),
     )
@@ -71,7 +71,7 @@ def scheduler(common, max_queued, group, min_cpu, min_io):
 @pass_state
 def mirrorer(common):
     Mirrorer(
-        common.ckanmeta_remote, common.ia_access, common.ia_secret,
+        common.ckanmeta_repo, common.ia_access, common.ia_secret,
         common.ia_collection
     ).process_queue(common.queue, common.timeout)
 
@@ -83,7 +83,7 @@ def spacedock_adder(common):
     sd_adder = SpaceDockAdder(
         common.queue,
         common.timeout,
-        common.netkan_remote,
+        common.netkan_repo,
         common.github_pr,
     )
     sd_adder.run()

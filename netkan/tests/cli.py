@@ -1,5 +1,3 @@
-from netkan.cli import clean_cache
-
 import unittest
 from time import time
 from os import utime
@@ -7,6 +5,10 @@ from pathlib import Path, PurePath
 from shutil import copy2
 from tempfile import TemporaryDirectory
 from click.testing import CliRunner
+from git import Repo
+
+from netkan.cli import clean_cache
+from netkan.repos import NetkanRepo
 
 
 # This file is intended to test the commands in cli.py, running them directly via click.testing.CliRunner().invoke().
@@ -14,9 +16,10 @@ class TestCleanCache(unittest.TestCase):
 
     cache_path = TemporaryDirectory()
     testdata_path = Path(PurePath(__file__).parent, 'testdata/NetKAN/')
+    repo = NetkanRepo(Repo.init(testdata_path))
 
-    source_file_1 = Path(testdata_path, 'DogeCoinFlag.netkan')
-    source_file_2 = Path(testdata_path, 'FlagCoinDoge.netkan')
+    source_file_1 = repo.nk_path('DogeCoinFlag')
+    source_file_2 = repo.nk_path('FlagCoinDoge')
     # Pretend they are zip files.
     target_file_1 = Path(cache_path.name, 'DogeCoinFlag.zip')
     target_file_2 = Path(cache_path.name, 'FlagCoinDoge.zip')

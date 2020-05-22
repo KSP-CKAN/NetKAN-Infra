@@ -2,7 +2,6 @@ from pathlib import Path
 from flask import Blueprint, current_app, request
 
 from ..common import sqs_batch_entries, pull_all
-from ..metadata import Netkan, CkanGroup
 
 
 spacedock_inflate = Blueprint('spacedock_inflate', __name__)  # pylint: disable=invalid-name
@@ -30,7 +29,7 @@ def inflate_hook():
             return '', 204
         else:
             # Submit them to the queue
-            messages = (nk.sqs_message(CkanGroup(current_app.config['ckanmeta_repo'].working_dir, nk.identifier))
+            messages = (nk.sqs_message(current_app.config['ckm_repo'].group(nk.identifier))
                         for nk in nks)
             for batch in sqs_batch_entries(messages):
                 current_app.config['client'].send_message_batch(
@@ -42,6 +41,5 @@ def inflate_hook():
 
 
 def find_netkans(sd_id):
-    nk_path = Path(current_app.config['netkan_repo'].working_dir, 'NetKAN')
-    all_nk = (Netkan(nk) for nk in nk_path.glob('**/*.netkan'))
+    all_nk = current_app.config['nk_repo'].netkans()
     return (nk for nk in all_nk if nk.kref_src == 'spacedock' and nk.kref_id == sd_id)

@@ -1,10 +1,9 @@
 import sys
 import logging
-
 from pathlib import Path
-
 import click
 
+from ..repos import NetkanRepo, CkanMetaRepo
 from ..utils import init_repo, init_ssh
 from ..notifications import setup_log_handler, catch_all
 from ..github_pr import GitHubPR
@@ -92,22 +91,30 @@ class SharedArgs(object):
         self._ssh_key = value
 
     @property
+    def ckanmeta_repo(self):
+        if not self._ckanmeta_repo:
+            self._ckanmeta_repo = CkanMetaRepo(
+                init_repo(self._ckanmeta_remote, '/tmp/CKAN-meta', self.deep_clone))
+        return self._ckanmeta_repo
+
+    @property
     def ckanmeta_remote(self):
-        if not self._ckanmeta_remote_repo:
-            self._ckanmeta_remote_repo = init_repo(self._ckanmeta_remote, '/tmp/CKAN-meta',
-                                                   self.deep_clone)
-        return self._ckanmeta_remote_repo
+        return self._ckanmeta_remote
 
     @ckanmeta_remote.setter
     def ckanmeta_remote(self, value):
         self._ckanmeta_remote = value
 
     @property
+    def netkan_repo(self):
+        if not self._netkan_repo:
+            self._netkan_repo = NetkanRepo(
+                init_repo(self._netkan_remote, '/tmp/NetKAN', self.deep_clone))
+        return self._netkan_repo
+
+    @property
     def netkan_remote(self):
-        if not self._netkan_remote_repo:
-            self._netkan_remote_repo = init_repo(self._netkan_remote, '/tmp/NetKAN',
-                                                 self.deep_clone)
-        return self._netkan_remote_repo
+        return self._netkan_remote
 
     @netkan_remote.setter
     def netkan_remote(self, value):
@@ -118,6 +125,7 @@ class SharedArgs(object):
         if not self._github_pr:
             self._github_pr = GitHubPR(self.token, self.repo, self.user)
         return self._github_pr
+
 
 pass_state = click.make_pass_decorator(SharedArgs, ensure=True)  # pylint: disable=invalid-name
 

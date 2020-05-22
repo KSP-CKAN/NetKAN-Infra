@@ -117,14 +117,14 @@ class ModStatus(Model):
             return None
 
     @classmethod
-    def recover_timestamps(cls, ckanmeta_repo):
+    def recover_timestamps(cls, ckm_repo):
         with cls.batch_write() as batch:
             logging.info('Recovering timestamps...')
             for mod in cls.scan(rate_limit=5):
                 if not mod.last_indexed:
                     logging.info('Looking up timestamp for %s', mod.ModIdentifier)
                     mod.last_indexed = cls.last_indexed_from_git(
-                        ckanmeta_repo, mod.ModIdentifier)
+                        ckm_repo.git_repo, mod.ModIdentifier)
                     if mod.last_indexed:
                         logging.info('Saving %s: %s', mod.ModIdentifier, mod.last_indexed)
                         batch.save(mod)

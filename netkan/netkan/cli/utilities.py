@@ -26,7 +26,7 @@ from ..mirrorer import Mirrorer
 @pass_state
 def auto_freezer(common, days_limit):
     afr = AutoFreezer(
-        common.netkan_remote,
+        common.netkan_repo,
         common.github_pr,
     )
     afr.freeze_idle_mods(days_limit)
@@ -39,8 +39,8 @@ def auto_freezer(common, days_limit):
 def download_counter(common):
     logging.info('Starting Download Count Calculation...')
     DownloadCounter(
-        common.netkan_remote.working_dir,
-        common.ckanmeta_remote,
+        common.netkan_repo,
+        common.ckanmeta_repo,
         common.token
     ).update_counts()
     logging.info('Download Counter completed!')
@@ -91,7 +91,7 @@ def restore_status(filename):
 @common_options
 @pass_state
 def recover_status_timestamps(common):
-    ModStatus.recover_timestamps(common.ckanmeta_remote)
+    ModStatus.recover_timestamps(common.ckanmeta_repo)
 
 
 @click.command()
@@ -176,6 +176,6 @@ def clean_cache(days, cache):
 @pass_state
 def mirror_purge_epochs(common, dry_run):
     Mirrorer(
-        common.ckanmeta_remote, common.ia_access,
+        common.ckanmeta_repo, common.ia_access,
         common.ia_secret, common.ia_collection
     ).purge_epochs(dry_run)

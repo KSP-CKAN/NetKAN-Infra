@@ -1,17 +1,19 @@
-from netkan.download_counter import NetkanDownloads
-
 import unittest
 from pathlib import Path, PurePath
+from git import Repo
+
+from netkan.download_counter import NetkanDownloads
+from netkan.repos import NetkanRepo
 
 
 class TestNetKANCounter(unittest.TestCase):
-    test_data = Path(PurePath(__file__).parent, 'testdata/NetKAN')
+    repo = NetkanRepo(Repo.init(Path(PurePath(__file__).parent, 'testdata/NetKAN')))
 
 
 class TestNetKANGitHubCounts(TestNetKANCounter):
 
     def setUp(self):
-        self.netkan = NetkanDownloads(Path(self.test_data, 'DogeCoinFlag.netkan'), 'token')
+        self.netkan = NetkanDownloads(self.repo.nk_path('DogeCoinFlag'), 'token')
 
     def test_github_repo_api(self):
         self.assertEqual(
@@ -23,7 +25,7 @@ class TestNetKANGitHubCounts(TestNetKANCounter):
 class TestNetKANSpaceDockCounts(TestNetKANCounter):
 
     def setUp(self):
-        self.netkan = NetkanDownloads(Path(self.test_data, 'DockCoinFlag.netkan'), 'token')
+        self.netkan = NetkanDownloads(self.repo.nk_path('DockCoinFlag'), 'token')
 
     def test_spacedock_api(self):
         self.assertEqual(
@@ -35,7 +37,7 @@ class TestNetKANSpaceDockCounts(TestNetKANCounter):
 class TestNetKANCurseCounts(TestNetKANCounter):
 
     def setUp(self):
-        self.netkan = NetkanDownloads(Path(self.test_data, 'CurseCoinFlag.netkan'), 'token')
+        self.netkan = NetkanDownloads(self.repo.nk_path('CurseCoinFlag'), 'token')
 
     def test_curse_api_numeric(self):
         self.assertEqual(
@@ -54,7 +56,7 @@ class TestNetKANCurseCounts(TestNetKANCounter):
 class TestNetKANNetkanCounts(TestNetKANCounter):
 
     def setUp(self):
-        self.netkan = NetkanDownloads(Path(self.test_data, 'NetkanCoinFlag.netkan'), 'token')
+        self.netkan = NetkanDownloads(self.repo.nk_path('NetkanCoinFlag'), 'token')
 
     def test_remote_netkan(self):
         self.assertEqual(
@@ -66,7 +68,7 @@ class TestNetKANNetkanCounts(TestNetKANCounter):
 class TestNetKANUnknownCounts(TestNetKANCounter):
 
     def setUp(self):
-        self.netkan = NetkanDownloads(Path(self.test_data, 'UnknownCoinFlag.netkan'), 'token')
+        self.netkan = NetkanDownloads(self.repo.nk_path('UnknownCoinFlag'), 'token')
 
     def test_github_repo_api(self):
         self.assertEqual(self.netkan.get_count(), 0)
