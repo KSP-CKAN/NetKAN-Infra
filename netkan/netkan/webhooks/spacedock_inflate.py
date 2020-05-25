@@ -28,6 +28,18 @@ def inflate_hook():
             current_app.logger.error(
                 f'A SpaceDock mod has been deleted, affected netkans: {nk_msg}')
             return '', 204
+        elif request.form.get('event_type') == 'locked':
+            # Just let the team know on Discord
+            nk_msg = ', '.join(nk.identifier for nk in nks)
+            current_app.logger.error(
+                f'A SpaceDock mod has been locked, affected netkans: {nk_msg}')
+            return '', 204
+        elif request.form.get('event_type') == 'unlocked':
+            # Just let the team know on Discord
+            nk_msg = ', '.join(nk.identifier for nk in nks)
+            current_app.logger.error(
+                f'A SpaceDock mod has been unlocked again, affected netkans: {nk_msg}')
+            return '', 204
         else:
             # Submit them to the queue
             messages = (nk.sqs_message(CkanGroup(current_app.config['ckanmeta_repo'].working_dir, nk.identifier))
