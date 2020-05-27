@@ -1,22 +1,26 @@
 import unittest
 from pathlib import Path, PurePath
+from git import Repo
 
 from netkan.common import sqs_batch_entries
-from netkan.metadata import Netkan, CkanGroup
+from netkan.repos import CkanMetaRepo, NetkanRepo
 from netkan.scheduler import NetkanScheduler
 
 
 class TestScheduler(unittest.TestCase):
-    test_data = PurePath(__file__).parent.joinpath('testdata/NetKAN')
+    test_data = PurePath(__file__).parent.joinpath('testdata', 'NetKAN')
+    ckm_root = PurePath(__file__).parent.joinpath('testdata', 'CKAN-meta')
 
     def setUp(self):
-        self.scheduler = NetkanScheduler(self.test_data, 'irrelevant', 'TestyMcTestFace', base="")
-        self.messages = (nk.sqs_message(CkanGroup('./', nk.identifier))
-                         for nk in self.scheduler.netkans())
+        self.nk_repo = NetkanRepo(Repo.init(self.test_data))
+        self.ckm_repo = CkanMetaRepo(Repo(self.ckm_root))
+        self.scheduler = NetkanScheduler(self.nk_repo, self.ckm_repo, 'TestyMcTestFace')
+        self.messages = (nk.sqs_message(self.ckm_repo.group(nk.identifier))
+                         for nk in self.scheduler.nk_repo.netkans())
 
     def test_netkans(self):
         self.assertEqual(
-            len(list(self.scheduler.netkans())), 13
+            len(list(self.scheduler.nk_repo.netkans())), 13
         )
 
     def test_sqs_batching(self):
@@ -34,9 +38,10 @@ class TestScheduler(unittest.TestCase):
 
     def test_sqs_batching_ten(self):
         test_data = Path(PurePath(__file__).parent, 'testdata/NetTEN')
-        scheduler = NetkanScheduler(test_data, 'irrelevant', 'TestyMcTestFace')
-        messages = (nk.sqs_message(CkanGroup('./', nk.identifier))
-                    for nk in scheduler.netkans())
+        scheduler = NetkanScheduler(
+            NetkanRepo(Repo.init(test_data)), self.ckm_repo, 'TestyMcTestFace')
+        messages = (nk.sqs_message(self.ckm_repo.group(nk.identifier))
+                    for nk in scheduler.nk_repo.netkans())
 
         batches = []
         for batch in sqs_batch_entries(messages):

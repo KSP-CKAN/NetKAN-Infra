@@ -17,7 +17,7 @@ github_mirror = Blueprint('github_mirror', __name__)  # pylint: disable=invalid-
 def mirror_hook():
     raw = request.get_json(silent=True)
     ref = raw.get('ref')
-    expected_ref = current_app.config['ckanmeta_repo'].heads.master.path
+    expected_ref = current_app.config['ckm_repo'].git_repo.heads.master.path
     if ref != expected_ref:
         current_app.logger.info(
             "Wrong branch. Expected '%s', got '%s'", expected_ref, ref)

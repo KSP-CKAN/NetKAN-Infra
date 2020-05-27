@@ -8,12 +8,13 @@ from dateutil.parser import parse
 from git import GitCommandError
 
 from .metadata import Ckan
+from .repos import CkanMetaRepo
 from .status import ModStatus
 
 
 class CkanMessage:
 
-    def __init__(self, msg, ckan_meta, github_pr=None):
+    def __init__(self, msg, ckm_repo, github_pr=None):
         self.body = msg.body
         self.ckan = Ckan(contents=self.body)
         self.ErrorMessage = None
@@ -30,7 +31,7 @@ class CkanMessage:
         self.md5_of_body = msg.md5_of_body
         self.message_id = msg.message_id
         self.receipt_handle = msg.receipt_handle
-        self.ckan_meta = ckan_meta
+        self.ckm_repo = ckm_repo
         self.github_pr = github_pr
 
     def __str__(self):
@@ -38,11 +39,11 @@ class CkanMessage:
 
     @property
     def mod_path(self):
-        return Path(self.ckan_meta.working_dir, self.ModIdentifier)
+        return self.ckm_repo.mod_path(self.ModIdentifier)
 
     @property
     def mod_file(self):
-        return Path(self.mod_path, self.FileName)
+        return self.mod_path.joinpath(self.FileName)
 
     @property
     def mod_version(self):
@@ -65,7 +66,7 @@ class CkanMessage:
             file.write(self.body)
 
     def commit_metadata(self):
-        index = self.ckan_meta.index
+        index = self.ckm_repo.git_repo.index
         index.add([self.mod_file.as_posix()])
         commit = index.commit(
             'NetKAN generated mods - {}'.format(self.mod_version)
@@ -77,25 +78,25 @@ class CkanMessage:
     @contextmanager
     def change_branch(self):
         try:
-            self.ckan_meta.remotes.origin.fetch(self.mod_version)
-            if self.mod_version not in self.ckan_meta.heads:
-                self.ckan_meta.create_head(
+            self.ckm_repo.git_repo.remotes.origin.fetch(self.mod_version)
+            if self.mod_version not in self.ckm_repo.git_repo.heads:
+                self.ckm_repo.git_repo.create_head(
                     self.mod_version,
                     getattr(
-                        self.ckan_meta.remotes.origin.refs,
+                        self.ckm_repo.git_repo.remotes.origin.refs,
                         self.mod_version
                     )
                 )
             branch = getattr(
-                self.ckan_meta.heads, self.mod_version
+                self.ckm_repo.git_repo.heads, self.mod_version
             )
             branch.checkout()
         except GitCommandError:
-            if self.mod_version not in self.ckan_meta.heads:
-                branch = self.ckan_meta.create_head(self.mod_version)
+            if self.mod_version not in self.ckm_repo.git_repo.heads:
+                branch = self.ckm_repo.git_repo.create_head(self.mod_version)
             else:
                 branch = getattr(
-                    self.ckan_meta.heads, self.mod_version
+                    self.ckm_repo.git_repo.heads, self.mod_version
                 )
             branch.checkout()
         try:
@@ -105,15 +106,15 @@ class CkanMessage:
                 # It's unlikely will hit a scenario where the metadata has
                 # changed upstream of us, but the bot should win if it does.
                 try:
-                    self.ckan_meta.remotes.origin.pull(
+                    self.ckm_repo.git_repo.remotes.origin.pull(
                         self.mod_version, strategy_option='ours'
                     )
                 except GitCommandError:
                     pass
-                self.ckan_meta.remotes.origin.push(
+                self.ckm_repo.git_repo.remotes.origin.push(
                     '{mod}:{mod}'.format(mod=self.mod_version)
                 )
-            self.ckan_meta.heads.master.checkout()
+            self.ckm_repo.git_repo.heads.master.checkout()
 
     def status_attrs(self, new=False):
         inflation_time = parse(self.CheckTime)
@@ -195,7 +196,7 @@ class CkanMessage:
 class MessageHandler:
 
     def __init__(self, repo, github_pr=None):
-        self.repo = repo
+        self.ckm_repo = repo
         self.github_pr = github_pr
         self.master = deque()
         self.staged = deque()
@@ -211,18 +212,18 @@ class MessageHandler:
     # we can ensure we call close on it and run our handler inside
     # a context manager
     def __enter__(self):
-        if str(self.repo.active_branch) != 'master':
-            self.repo.heads.master.checkout()
-        self.repo.remotes.origin.pull('master', strategy_option='ours')
+        if str(self.ckm_repo.git_repo.active_branch) != 'master':
+            self.ckm_repo.git_repo.heads.master.checkout()
+        self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='ours')
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.repo.close()
+        self.ckm_repo.git_repo.close()
 
     def append(self, message):
         ckan = CkanMessage(
             message,
-            self.repo,
+            self.ckm_repo,
             self.github_pr
         )
         if not ckan.Staged:
@@ -245,6 +246,6 @@ class MessageHandler:
     def process_ckans(self):
         self._process_queue(self.master)
         if any(ckan.indexed for ckan in self.processed):
-            self.repo.remotes.origin.pull('master', strategy_option='ours')
-            self.repo.remotes.origin.push('master')
+            self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='ours')
+            self.ckm_repo.git_repo.remotes.origin.push('master')
         self._process_queue(self.staged)

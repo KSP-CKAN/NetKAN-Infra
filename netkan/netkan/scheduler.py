@@ -4,18 +4,18 @@ from pathlib import Path
 import boto3
 import requests
 
-from .metadata import Netkan, CkanGroup
+from .repos import NetkanRepo, CkanMetaRepo
 from .common import sqs_batch_entries
 
 
 class NetkanScheduler:
 
-    def __init__(self, path, ckan_meta_path, queue,
-                 base='NetKAN/', nonhooks_group=False, webhooks_group=False):
-        self.path = Path(path, base)
+    def __init__(self, nk_repo, ckm_repo, queue,
+                 nonhooks_group=False, webhooks_group=False):
+        self.nk_repo = nk_repo
+        self.ckm_repo = ckm_repo
         self.nonhooks_group = nonhooks_group
         self.webhooks_group = webhooks_group
-        self.ckan_meta_path = ckan_meta_path
 
         # TODO: This isn't super neat, do something better.
         self.queue_url = 'test_url'
@@ -24,10 +24,6 @@ class NetkanScheduler:
             sqs = boto3.resource('sqs')
             self.queue = sqs.get_queue_by_name(QueueName=queue)
             self.queue_url = self.queue.url
-
-    def netkans(self):
-        return (Netkan(f) for f in sorted(self.path.glob('**/*.netkan'),
-                                          key=lambda p: p.stem.casefold()))
 
     def sqs_batch_attrs(self, batch):
         return {
@@ -42,8 +38,8 @@ class NetkanScheduler:
             return self.nonhooks_group
 
     def schedule_all_netkans(self):
-        messages = (nk.sqs_message(CkanGroup(self.ckan_meta_path, nk.identifier))
-                    for nk in self.netkans() if self._in_group(nk))
+        messages = (nk.sqs_message(self.ckm_repo.group(nk.identifier))
+                    for nk in self.nk_repo.netkans() if self._in_group(nk))
         for batch in sqs_batch_entries(messages):
             self.client.send_message_batch(**self.sqs_batch_attrs(batch))
 

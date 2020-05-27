@@ -339,11 +339,12 @@ class CkanGroup:
     Allows us to calculate things about the group, such as the highest module version.
     """
 
-    def __init__(self, ckan_meta_path, identifier):
-        self.path = Path(ckan_meta_path, identifier)
+    def __init__(self, ckm_repo, identifier):
+        self.repo = ckm_repo
+        self.identifier = identifier
 
     def highest_version(self):
-        ckans = (Ckan(p) for p in self.path.glob('**/*.ckan'))
+        ckans = self.repo.ckans(self.identifier)
         highest = max(ckans, default=None, key=lambda ck: ck.version)
         if highest:
             return highest.version

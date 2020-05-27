@@ -18,8 +18,8 @@ class Mirrorer:
     EPOCH_ID_REGEXP = re.compile('-[0-9]+-')
     EPOCH_TITLE_REGEXP = re.compile(' - [0-9]+:')
 
-    def __init__(self, ckan_meta_repo, ia_access, ia_secret, ia_collection):
-        self.ckan_meta_repo = ckan_meta_repo
+    def __init__(self, ckm_repo, ia_access, ia_secret, ia_collection):
+        self.ckm_repo = ckm_repo
         self.ia_collection = ia_collection
         self.ia_access = ia_access
         self.ia_session = internetarchive.get_session(config={
@@ -44,18 +44,18 @@ class Mirrorer:
                     continue
                 # Get up to date copy of the metadata for the files we're mirroring
                 logging.info('Updating repo')
-                self.ckan_meta_repo.heads.master.checkout()
-                self.ckan_meta_repo.remotes.origin.pull('master', strategy_option='theirs')
+                self.ckm_repo.git_repo.heads.master.checkout()
+                self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs')
                 # Start processing the messages
                 to_delete = []
                 for msg in messages:
-                    path = Path(self.ckan_meta_repo.working_dir, msg.body)
+                    path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
                     if self.try_mirror(CkanMirror(self.ia_collection, path)):
                         # Successfully handled -> OK to delete
                         to_delete.append(self.deletion_msg(msg))
                 queue.delete_messages(Entries=to_delete)
                 # Clean up GitPython's lingering file handles between batches
-                self.ckan_meta_repo.close()
+                self.ckm_repo.git_repo.close()
 
     def try_mirror(self, ckan):
         if not ckan.can_mirror:

@@ -5,6 +5,8 @@ from git import Repo
 
 
 def init_repo(metadata, path, deep_clone):
+    if not metadata:
+        return None
     clone_path = Path(path)
     if not clone_path.exists():
         logging.info('Cloning %s', metadata)

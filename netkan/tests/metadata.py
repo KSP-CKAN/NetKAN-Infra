@@ -1,14 +1,16 @@
-from netkan.metadata import Netkan, Ckan, CkanGroup
-
 import unittest
 from pathlib import Path, PurePath
+from git import Repo
+
+from netkan.metadata import Netkan, Ckan
+from netkan.repos import NetkanRepo, CkanMetaRepo
 
 
 class TestNetKAN(unittest.TestCase):
-    test_data = Path(PurePath(__file__).parent, 'testdata/NetKAN')
+    nk_repo = NetkanRepo(Repo(Path(PurePath(__file__).parent, 'testdata/NetKAN')))
 
     def test_netkan_message(self):
-        dogecoinflag = Path(self.test_data, 'DogeCoinFlag.netkan')
+        dogecoinflag = self.nk_repo.nk_path('DogeCoinFlag')
         netkan = Netkan(dogecoinflag)
         message = netkan.sqs_message()
         self.assertEqual(
@@ -21,7 +23,7 @@ class TestNetKAN(unittest.TestCase):
 class TestNetKANGitHub(TestNetKAN):
 
     def setUp(self):
-        self.netkan = Netkan(Path(self.test_data, 'DogeCoinFlag.netkan'))
+        self.netkan = Netkan(self.nk_repo.nk_path('DogeCoinFlag'))
 
     def test_has_github_kref(self):
         self.assertEqual(self.netkan.kref, '#/ckan/github/pjf/DogeCoinFlag')
@@ -39,7 +41,7 @@ class TestNetKANGitHub(TestNetKAN):
 class TestNetKANSpaceDock(TestNetKAN):
 
     def setUp(self):
-        self.netkan = Netkan(Path(self.test_data, 'DockCoinFlag.netkan'))
+        self.netkan = Netkan(self.nk_repo.nk_path('DockCoinFlag'))
 
     def test_has_spacedock_kref(self):
         self.assertEqual(self.netkan.kref, '#/ckan/spacedock/777')
@@ -57,7 +59,7 @@ class TestNetKANSpaceDock(TestNetKAN):
 class TestNetKANCurse(TestNetKAN):
 
     def setUp(self):
-        self.netkan = Netkan(Path(self.test_data, 'CurseCoinFlag.netkan'))
+        self.netkan = Netkan(self.nk_repo.nk_path('CurseCoinFlag'))
 
     def test_has_curse_kref(self):
         self.assertEqual(self.netkan.kref, '#/ckan/curse/666')
@@ -75,7 +77,7 @@ class TestNetKANCurse(TestNetKAN):
 class TestNetKANNetkan(TestNetKAN):
 
     def setUp(self):
-        self.netkan = Netkan(Path(self.test_data, 'NetkanCoinFlag.netkan'))
+        self.netkan = Netkan(self.nk_repo.nk_path('NetkanCoinFlag'))
 
     def test_has_netkan_kref(self):
         self.assertEqual(
@@ -120,7 +122,7 @@ class TestNetKANNoKref(TestNetKAN):
 class TestNetKANVref(TestNetKAN):
 
     def setUp(self):
-        self.netkan = Netkan(Path(self.test_data, 'VrefCoinFlag.netkan'))
+        self.netkan = Netkan(self.nk_repo.nk_path('VrefCoinFlag'))
 
     def test_on_spacedock(self):
         self.assertTrue(self.netkan.on_spacedock)
@@ -180,6 +182,7 @@ class TestCkanSpacesInDownload(unittest.TestCase):
     def test_cache(self):
         self.assertEqual(self.ckan.cache_prefix,   "25B8A610")
         self.assertEqual(self.ckan.cache_filename, "25B8A610-NASA-CountDown-1.3.9.1.zip")
+
 
 class TestCkanComplex(unittest.TestCase):
 
@@ -317,13 +320,13 @@ class TestCkanGroup(unittest.TestCase):
     TEST_PATH = Path(PurePath(__file__).parent, 'testdata/CKAN-meta')
 
     def test_highest_version_epoch(self):
-        ckg = CkanGroup(self.TEST_PATH, 'AdequateMod')
+        ckg = CkanMetaRepo(Repo.init(self.TEST_PATH)).group('AdequateMod')
         self.assertEqual(ckg.highest_version().string, '1:0.2')
 
     def test_highest_version_v(self):
-        ckg = CkanGroup(self.TEST_PATH, 'AmazingMod')
+        ckg = CkanMetaRepo(Repo.init(self.TEST_PATH)).group('AmazingMod')
         self.assertEqual(ckg.highest_version().string, 'v1.1')
 
     def test_highest_version_numeric(self):
-        ckg = CkanGroup(self.TEST_PATH, 'AwesomeMod')
+        ckg = CkanMetaRepo(Repo.init(self.TEST_PATH)).group('AwesomeMod')
         self.assertEqual(ckg.highest_version().string, '0.11')

@@ -4,8 +4,10 @@ import re
 from pathlib import Path
 from json.decoder import JSONDecodeError
 import requests
+
 from .metadata import Netkan
 from .utils import repo_file_add_or_changed
+from .repos import NetkanRepo
 
 
 class NetkanDownloads(Netkan):
@@ -94,18 +96,17 @@ class NetkanDownloads(Netkan):
 
 class DownloadCounter:
 
-    def __init__(self, netkan_path, ckan_meta, github_token):
-        self.netkan_path = Path(netkan_path)
-        self.ckan_meta = ckan_meta
+    def __init__(self, nk_repo, ckm_repo, github_token):
+        self.nk_repo = nk_repo
+        self.ckm_repo = ckm_repo
         self.counts = {}
         self.github_token = github_token
         self.output_file = Path(
-            self.ckan_meta.working_dir, 'download_counts.json'
+            self.ckm_repo.git_repo.working_dir, 'download_counts.json'
         )
 
     def get_counts(self):
-        for netkan in sorted(self.netkan_path.glob('NetKAN/*.netkan'),
-                             key=lambda p: p.stem.casefold()):
+        for netkan in self.nk_repo.all_nk_paths():
             netkan = NetkanDownloads(netkan, self.github_token)
             count = netkan.get_count()
             if count > 0:
@@ -118,21 +119,21 @@ class DownloadCounter:
         )
 
     def commit_counts(self):
-        index = self.ckan_meta.index
+        index = self.ckm_repo.git_repo.index
         index.add([self.output_file.as_posix()])
         index.commit(
             'NetKAN Updating Download Counts'
         )
         logging.info('Download counts changed and commited')
-        self.ckan_meta.remotes.origin.push('master')
+        self.ckm_repo.git_repo.remotes.origin.push('master')
 
     def update_counts(self):
         self.get_counts()
-        self.ckan_meta.remotes.origin.pull(
+        self.ckm_repo.git_repo.remotes.origin.pull(
             'master', strategy_option='ours'
         )
         self.write_json()
-        if repo_file_add_or_changed(self.ckan_meta, self.output_file):
+        if repo_file_add_or_changed(self.ckm_repo.git_repo, self.output_file):
             self.commit_counts()
         else:
             logging.info('Download counts match existing data.')
