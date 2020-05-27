@@ -26,7 +26,6 @@ setup(
         'gunicorn>=19.9,!=20.0.0',
         'discord',
         'PyGithub',
-        'mypy',
     ],
     entry_points={
         'console_scripts': [
@@ -39,6 +38,9 @@ setup(
             'pylint',
             'autopep8',
             'troposphere',
+        ],
+        'test': [
+            'mypy',
         ]
     },
 )

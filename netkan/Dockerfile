@@ -2,10 +2,11 @@ FROM python:3.7 as base
 RUN useradd -ms /bin/bash netkan
 ADD . /netkan
 WORKDIR /netkan
+RUN pip install mypy
 RUN chown -R netkan:netkan /netkan
 USER netkan
 RUN pip install --user . --no-warn-script-location
-RUN /home/netkan/.local/bin/mypy .
+RUN mypy .
 RUN python -m unittest -v
 RUN /home/netkan/.local/bin/netkan --help
 
@@ -23,9 +24,11 @@ CMD ["--help"]
 FROM production as dev
 USER root
 ADD . /netkan
+RUN chown -R netkan:netkan /netkan
 ADD run_dev.sh /usr/local/bin/
 USER netkan
 RUN pip install --user /netkan/.[development]
+RUN pip install --user /netkan/.[test]
 ENTRYPOINT ["/usr/local/bin/run_dev.sh"]
 
 FROM production
