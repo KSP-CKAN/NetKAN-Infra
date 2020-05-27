@@ -56,8 +56,8 @@ class SharedArgs(object):
         self._environment_data = None
         self._debug = None
         self._ssh_key = None
-        self._ckanmeta_remote_repo = None
-        self._netkan_remote_repo = None
+        self._ckanmeta_repo = None
+        self._netkan_repo = None
         self._github_pr = None
 
     def __getattribute__(self, name):
