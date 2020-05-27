@@ -20,7 +20,6 @@ class SpaceDockAdder:
         self.sqs_client = boto3.client('sqs')
         self.queue = sqs.get_queue_by_name(QueueName=queue)
         self.timeout = timeout
-        self.netkan_repo = netkan_repo
         self.nk_repo = nk_repo
         self.github_pr = github_pr
 
