@@ -1,9 +1,11 @@
+import logging
 from pathlib import Path
 from flask import Blueprint, current_app, request, jsonify
 from typing import List, Tuple, Iterable, Dict, Any, Set
 
 from ..common import netkans, sqs_batch_entries, pull_all
 from ..metadata import Netkan
+from ..status import ModStatus
 from .github_utils import signature_required
 
 github_inflate = Blueprint('github_inflate', __name__)  # pylint: disable=invalid-name
@@ -24,6 +26,7 @@ def inflate_hook() -> Tuple[str, int]:
         current_app.logger.info('No commits received')
         return jsonify({'message': 'No commits received'}), 200
     inflate(ids_from_commits(commits))
+    freeze(frozen_ids_from_commits(commits))
     return '', 204
 
 
@@ -42,7 +45,7 @@ def release_hook() -> Tuple[str, int]:
 
 
 def ends_with_netkan(filename: str) -> bool:
-    return filename.endswith('.netkan')
+    return filename.endswith(f".{current_app.config['nk_repo'].UNFROZEN_SUFFIX}")
 
 
 def ids_from_commits(commits: List[Dict[str, Any]]) -> Iterable[str]:
@@ -63,3 +66,26 @@ def inflate(ids: Iterable[str]) -> None:
             QueueUrl=current_app.config['inflation_queue'].url,
             Entries=batch
         )
+
+
+def ends_with_frozen(filename: str) -> bool:
+    return filename.endswith(f".{current_app.config['nk_repo'].FROZEN_SUFFIX}")
+
+
+def frozen_ids_from_commits(commits: List[Dict[str, Any]]) -> List[str]:
+    files: Set[str] = set()
+    for commit in commits:
+        files |= set(filter(ends_with_frozen,
+                            commit.get('added', []) + commit.get('modified', [])))
+    return [Path(f).stem for f in files]
+
+
+def freeze(ids: List[str]) -> None:
+    with ModStatus.batch_write() as batch:
+        logging.info('Marking frozen mods...')
+        for mod in ModStatus.scan(rate_limit=5):
+            if not mod.frozen and mod.ModIdentifier in ids:
+                logging.info('Marking frozen: %s', mod.ModIdentifier)
+                mod.frozen = True
+                batch.save(mod)
+        logging.info('Done!')
