@@ -3,15 +3,17 @@ import logging
 from pathlib import Path
 import boto3
 import requests
+from typing import Iterable, List, Dict, Union, Any
 
 from .repos import NetkanRepo, CkanMetaRepo
+from .metadata import Netkan
 from .common import sqs_batch_entries
 
 
 class NetkanScheduler:
 
-    def __init__(self, nk_repo, ckm_repo, queue,
-                 nonhooks_group=False, webhooks_group=False):
+    def __init__(self, nk_repo: NetkanRepo, ckm_repo: CkanMetaRepo, queue: str,
+                 nonhooks_group: bool = False, webhooks_group: bool = False) -> None:
         self.nk_repo = nk_repo
         self.ckm_repo = ckm_repo
         self.nonhooks_group = nonhooks_group
@@ -25,25 +27,25 @@ class NetkanScheduler:
             self.queue = sqs.get_queue_by_name(QueueName=queue)
             self.queue_url = self.queue.url
 
-    def sqs_batch_attrs(self, batch):
+    def sqs_batch_attrs(self, batch: List[Dict[str, Any]]) -> Dict[str, Any]:
         return {
             'QueueUrl': self.queue_url,
             'Entries': batch
         }
 
-    def _in_group(self, netkan):
+    def _in_group(self, netkan: Netkan) -> bool:
         if netkan.hook_only():
             return self.webhooks_group
         else:
             return self.nonhooks_group
 
-    def schedule_all_netkans(self):
-        messages = (nk.sqs_message(self.ckm_repo.group(nk.identifier))
+    def schedule_all_netkans(self) -> None:
+        messages = (nk.sqs_message(self.ckm_repo.highest_version(nk.identifier))
                     for nk in self.nk_repo.netkans() if self._in_group(nk))
         for batch in sqs_batch_entries(messages):
             self.client.send_message_batch(**self.sqs_batch_attrs(batch))
 
-    def cpu_credits(self, cloudwatch, instance_id, start, end):
+    def cpu_credits(self, cloudwatch: 'boto3.CloudWatch.Client', instance_id: str, start: datetime.datetime, end: datetime.datetime) -> int:
         stats = cloudwatch.get_metric_statistics(
             Dimensions=[{'Name': 'InstanceId', 'Value': instance_id}],
             MetricName='CPUCreditBalance',
@@ -63,7 +65,7 @@ class NetkanScheduler:
             logging.error("Couldn't acquire CPU Credit Stats")
         return int(creds)
 
-    def volume_credits_percent(self, cloudwatch, instance_id, start, end):
+    def volume_credits_percent(self, cloudwatch: 'boto3.CloudWatch.Client', instance_id: str, start: datetime.datetime, end: datetime.datetime) -> int:
         client = boto3.client('ec2')
         response = client.describe_volumes(
             Filters=[{
@@ -89,7 +91,7 @@ class NetkanScheduler:
             logging.error("Couldn't acquire Volume Credit Stats")
         return int(creds)
 
-    def can_schedule(self, max_queued, dev=False, min_cpu=50, min_io=70):
+    def can_schedule(self, max_queued: int, dev: bool = False, min_cpu: int = 50, min_io: int = 70) -> bool:
         if not dev:
             end = datetime.datetime.utcnow()
             start = end - datetime.timedelta(minutes=10)

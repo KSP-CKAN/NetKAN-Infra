@@ -5,20 +5,29 @@ from collections import deque
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from dateutil.parser import parse
-from git import GitCommandError
+from git import GitCommandError, Repo, Commit
+import boto3
+from typing import Generator, List, Optional, Type, Dict, Any, Deque
+from types import TracebackType
 
 from .metadata import Ckan
 from .repos import CkanMetaRepo
 from .status import ModStatus
+from .github_pr import GitHubPR
 
 
 class CkanMessage:
 
-    def __init__(self, msg, ckm_repo, github_pr=None):
+    def __init__(self, msg: 'boto3.resources.factory.sqs.Message', ckm_repo: CkanMetaRepo, github_pr: GitHubPR = None) -> None:
         self.body = msg.body
         self.ckan = Ckan(contents=self.body)
+        self.ModIdentifier: str
+        self.CheckTime: str
+        self.FileName: str
+        self.Success: bool
+        self.Staged: bool
         self.ErrorMessage = None
-        self.WarningMessages = None
+        self.WarningMessages: Optional[str] = None
         self.indexed = False
         for item in msg.message_attributes.items():
             attr_type = '{}Value'.format(item[1]['DataType'])
@@ -34,38 +43,38 @@ class CkanMessage:
         self.ckm_repo = ckm_repo
         self.github_pr = github_pr
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '{}: {}'.format(self.ModIdentifier, self.CheckTime)
 
     @property
-    def mod_path(self):
+    def mod_path(self) -> Path:
         return self.ckm_repo.mod_path(self.ModIdentifier)
 
     @property
-    def mod_file(self):
+    def mod_file(self) -> Path:
         return self.mod_path.joinpath(self.FileName)
 
     @property
-    def mod_version(self):
+    def mod_version(self) -> str:
         return self.mod_file.stem
 
-    def mod_file_md5(self):
+    def mod_file_md5(self) -> str:
         with open(self.mod_file, mode='rb') as file:
             return hashlib.md5(file.read()).hexdigest()
 
-    def metadata_changed(self):
+    def metadata_changed(self) -> bool:
         if not self.mod_file.exists():
             return True
         if self.mod_file_md5() == self.md5_of_body:
             return False
         return True
 
-    def write_metadata(self):
+    def write_metadata(self) -> None:
         self.mod_path.mkdir(exist_ok=True)
         with open(self.mod_file, mode='w') as file:
             file.write(self.body)
 
-    def commit_metadata(self):
+    def commit_metadata(self) -> Commit:
         index = self.ckm_repo.git_repo.index
         index.add([self.mod_file.as_posix()])
         commit = index.commit(
@@ -76,7 +85,7 @@ class CkanMessage:
         return commit
 
     @contextmanager
-    def change_branch(self):
+    def change_branch(self) -> Generator[None, None, None]:
         try:
             self.ckm_repo.git_repo.remotes.origin.fetch(self.mod_version)
             if self.mod_version not in self.ckm_repo.git_repo.heads:
@@ -116,9 +125,9 @@ class CkanMessage:
                 )
             self.ckm_repo.git_repo.heads.master.checkout()
 
-    def status_attrs(self, new=False):
+    def status_attrs(self, new: bool = False) -> Dict[str, Any]:
         inflation_time = parse(self.CheckTime)
-        attrs = {
+        attrs: Dict[str, Any] = {
             'success': self.Success,
             'last_error': self.ErrorMessage,
             'last_warnings': self.WarningMessages,
@@ -140,7 +149,7 @@ class CkanMessage:
             attrs['last_indexed'] = datetime.now(timezone.utc)
         return attrs
 
-    def _process_ckan(self):
+    def _process_ckan(self) -> None:
         if self.Success and self.metadata_changed():
             self.write_metadata()
             self.commit_metadata()
@@ -162,7 +171,7 @@ class CkanMessage:
         except ModStatus.DoesNotExist:
             ModStatus(**self.status_attrs(True)).save()
 
-    def process_ckan(self):
+    def process_ckan(self) -> None:
         # Process regular CKAN
         if not self.Staged:
             self._process_ckan()
@@ -177,7 +186,7 @@ class CkanMessage:
         # Staging operations
         with self.change_branch():
             self._process_ckan()
-        if self.indexed:
+        if self.indexed and self.github_pr:
             self.github_pr.create_pull_request(
                 title=f'NetKAN inflated: {self.ModIdentifier}',
                 branch=self.mod_version,
@@ -186,7 +195,7 @@ class CkanMessage:
             )
 
     @property
-    def delete_attrs(self):
+    def delete_attrs(self) -> Dict[str, Any]:
         return {
             'Id': self.message_id,
             'ReceiptHandle': self.receipt_handle
@@ -195,32 +204,32 @@ class CkanMessage:
 
 class MessageHandler:
 
-    def __init__(self, repo, github_pr=None):
+    def __init__(self, repo: CkanMetaRepo, github_pr: GitHubPR = None) -> None:
         self.ckm_repo = repo
         self.github_pr = github_pr
-        self.master = deque()
-        self.staged = deque()
-        self.processed = []
+        self.master: Deque[CkanMessage] = deque()
+        self.staged: Deque[CkanMessage] = deque()
+        self.processed: List[CkanMessage] = []
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.master + self.staged)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.master + self.staged)
 
     # Apparently gitpython can be leaky on long running processes
     # we can ensure we call close on it and run our handler inside
     # a context manager
-    def __enter__(self):
+    def __enter__(self) -> 'MessageHandler':
         if str(self.ckm_repo.git_repo.active_branch) != 'master':
             self.ckm_repo.git_repo.heads.master.checkout()
         self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='ours')
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type: Type[BaseException], exc_value: BaseException, traceback: TracebackType) -> None:
         self.ckm_repo.git_repo.close()
 
-    def append(self, message):
+    def append(self, message: 'boto3.resources.factory.sqs.Message') -> None:
         ckan = CkanMessage(
             message,
             self.ckm_repo,
@@ -231,19 +240,19 @@ class MessageHandler:
         else:
             self.staged.append(ckan)
 
-    def _process_queue(self, queue):
+    def _process_queue(self, queue: Deque[CkanMessage]) -> None:
         while queue:
             ckan = queue.popleft()
             ckan.process_ckan()
             self.processed.append(ckan)
 
-    def sqs_delete_entries(self):
+    def sqs_delete_entries(self) -> List[Dict[str, Any]]:
         return [c.delete_attrs for c in self.processed]
 
     # Currently we intermingle Staged/Master commits
     # separating them out will be a little more efficient
     # with our push/pull traffic.
-    def process_ckans(self):
+    def process_ckans(self) -> None:
         self._process_queue(self.master)
         if any(ckan.indexed for ckan in self.processed):
             self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='ours')

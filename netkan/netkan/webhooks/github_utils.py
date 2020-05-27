@@ -2,11 +2,12 @@ from functools import wraps
 import hashlib
 import hmac
 from flask import current_app, request
+from typing import Callable, Tuple, Any, Dict, Optional
 
 
-def signature_required(func):
+def signature_required(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
-    def decorated_function(*args, **kwargs):
+    def decorated_function(*args: Any, **kwargs: Any) -> Tuple[str, int]:
         # Make sure it's from GitHub
         if not sig_match(request.headers.get('X-Hub-Signature'), request.data):
             current_app.logger.warning('X-Hub-Signature did not match the request data')
@@ -15,7 +16,7 @@ def signature_required(func):
     return decorated_function
 
 
-def sig_match(req_sig, body):
+def sig_match(req_sig: Optional[str], body: bytes) -> bool:
     # Make sure a secret is defined in our config
     hook_secret = current_app.config['secret']
     if not hook_secret:

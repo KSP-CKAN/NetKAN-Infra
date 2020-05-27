@@ -4,3 +4,4 @@
 *.egg-info
 /pr_tester
 __pycache__
+.mypy_cache/

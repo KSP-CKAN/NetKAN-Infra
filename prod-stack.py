@@ -784,7 +784,7 @@ services = [
         'name': 'Mirrorer',
         'command': 'mirrorer',
         'secrets': [
-            'IA_access', 'IA_secret', 'SSH_KEY'
+            'IA_access', 'IA_secret', 'SSH_KEY', 'GH_Token'
         ],
         'env': [
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),

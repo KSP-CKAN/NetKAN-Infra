@@ -2,9 +2,10 @@ import logging
 import subprocess
 from pathlib import Path
 from git import Repo
+from typing import Union
 
 
-def init_repo(metadata, path, deep_clone):
+def init_repo(metadata: str, path: str, deep_clone: bool) -> Repo:
     if not metadata:
         return None
     clone_path = Path(path)
@@ -19,7 +20,7 @@ def init_repo(metadata, path, deep_clone):
     return repo
 
 
-def init_ssh(key, key_path: Path):
+def init_ssh(key: str, key_path: Path) -> None:
     if not key:
         logging.warning('Private Key required for SSH Git')
         return
@@ -35,7 +36,7 @@ def init_ssh(key, key_path: Path):
         Path(key_path, 'known_hosts').write_text(scan.stdout.decode('utf-8'))
 
 
-def repo_file_add_or_changed(repo, filename):
+def repo_file_add_or_changed(repo: Repo, filename: Union[str, Path]) -> bool:
     relative_file = Path(filename).relative_to(repo.working_dir).as_posix()
     if relative_file in repo.untracked_files:
         return True

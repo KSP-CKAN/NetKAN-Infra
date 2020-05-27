@@ -1,6 +1,9 @@
 import sys
 import logging
 from pathlib import Path
+from git import Repo
+from typing import Union, Callable, Any, Optional, Dict
+
 import click
 
 from ..repos import NetkanRepo, CkanMetaRepo
@@ -9,7 +12,7 @@ from ..notifications import setup_log_handler, catch_all
 from ..github_pr import GitHubPR
 
 
-def ctx_callback(ctx, param, value):
+def ctx_callback(ctx: click.Context, param: click.Parameter, value: Union[str, int]) -> Union[str, int]:
     shared = ctx.ensure_object(SharedArgs)
     setattr(shared, param.name, value)
     return value
@@ -52,15 +55,15 @@ _COMMON_OPTIONS = [
 
 class SharedArgs(object):
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._environment_data = None
-        self._debug = None
-        self._ssh_key = None
-        self._ckanmeta_repo = None
-        self._netkan_repo = None
-        self._github_pr = None
+        self._debug: Optional[bool] = None
+        self._ssh_key: Optional[str] = None
+        self._ckanmeta_repo: Optional[CkanMetaRepo] = None
+        self._netkan_repo: Optional[NetkanRepo] = None
+        self._github_pr: Optional[GitHubPR] = None
 
-    def __getattribute__(self, name):
+    def __getattribute__(self, name: str) -> Any:
         attr = super().__getattribute__(name)
         if not name.startswith('_') and attr is None:
             logging.fatal("Expecting attribute '%s' to be set; exiting disgracefully!", name)
@@ -68,11 +71,11 @@ class SharedArgs(object):
         return attr
 
     @property
-    def debug(self):
+    def debug(self) -> Optional[bool]:
         return self._debug
 
     @debug.setter
-    def debug(self, value):
+    def debug(self, value: bool) -> None:
         # When there isn't a flag passed we get a None instead, setting
         # it as a 'False' for consistency.
         self._debug = value or False
@@ -82,46 +85,46 @@ class SharedArgs(object):
             sys.excepthook = catch_all
 
     @property
-    def ssh_key(self):
+    def ssh_key(self) -> Optional[str]:
         return self._ssh_key
 
     @ssh_key.setter
-    def ssh_key(self, value):
+    def ssh_key(self, value: str) -> None:
         init_ssh(value, Path(Path.home(), '.ssh'))
         self._ssh_key = value
 
     @property
-    def ckanmeta_repo(self):
+    def ckanmeta_repo(self) -> CkanMetaRepo:
         if not self._ckanmeta_repo:
             self._ckanmeta_repo = CkanMetaRepo(
                 init_repo(self._ckanmeta_remote, '/tmp/CKAN-meta', self.deep_clone))
         return self._ckanmeta_repo
 
     @property
-    def ckanmeta_remote(self):
+    def ckanmeta_remote(self) -> str:
         return self._ckanmeta_remote
 
     @ckanmeta_remote.setter
-    def ckanmeta_remote(self, value):
+    def ckanmeta_remote(self, value: str) -> None:
         self._ckanmeta_remote = value
 
     @property
-    def netkan_repo(self):
+    def netkan_repo(self) -> NetkanRepo:
         if not self._netkan_repo:
             self._netkan_repo = NetkanRepo(
                 init_repo(self._netkan_remote, '/tmp/NetKAN', self.deep_clone))
         return self._netkan_repo
 
     @property
-    def netkan_remote(self):
+    def netkan_remote(self) -> str:
         return self._netkan_remote
 
     @netkan_remote.setter
-    def netkan_remote(self, value):
+    def netkan_remote(self, value: str) -> None:
         self._netkan_remote = value
 
     @property
-    def github_pr(self):
+    def github_pr(self) -> GitHubPR:
         if not self._github_pr:
             self._github_pr = GitHubPR(self.token, self.repo, self.user)
         return self._github_pr
@@ -130,7 +133,7 @@ class SharedArgs(object):
 pass_state = click.make_pass_decorator(SharedArgs, ensure=True)  # pylint: disable=invalid-name
 
 
-def common_options(func):
+def common_options(func: Callable[..., Any]) -> Callable[..., Any]:
     for option in reversed(_COMMON_OPTIONS):
         func = option(func)
     return func

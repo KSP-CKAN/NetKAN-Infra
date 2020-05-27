@@ -21,7 +21,7 @@ from .utilities import (
 
 
 @click.group()
-def netkan():
+def netkan() -> None:
     pass
 
 

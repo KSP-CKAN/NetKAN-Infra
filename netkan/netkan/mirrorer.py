@@ -9,132 +9,19 @@ from pathlib import Path
 import requests
 import boto3
 import internetarchive
+from git import Repo
+import github
+from importlib.resources import read_text
+from jinja2 import Template
+from typing import Optional, List, Union, Iterable, BinaryIO, Dict, Any
 
 from .metadata import Ckan
-
-
-class Mirrorer:
-
-    EPOCH_ID_REGEXP = re.compile('-[0-9]+-')
-    EPOCH_TITLE_REGEXP = re.compile(' - [0-9]+:')
-
-    def __init__(self, ckm_repo, ia_access, ia_secret, ia_collection):
-        self.ckm_repo = ckm_repo
-        self.ia_collection = ia_collection
-        self.ia_access = ia_access
-        self.ia_session = internetarchive.get_session(config={
-            's3': {
-                'access': ia_access,
-                'secret': ia_secret,
-            }
-        })
-
-    def process_queue(self, queue_name, timeout):
-        queue = boto3.resource('sqs').get_queue_by_name(QueueName=queue_name)
-        while True:
-            messages = queue.receive_messages(
-                MaxNumberOfMessages=10,
-                MessageAttributeNames=['All'],
-                VisibilityTimeout=timeout,
-            )
-            if messages:
-                # Check if archive.org is overloaded
-                if self.ia_overloaded():
-                    logging.info('The Internet Archive is overloaded, try again later')
-                    continue
-                # Get up to date copy of the metadata for the files we're mirroring
-                logging.info('Updating repo')
-                self.ckm_repo.git_repo.heads.master.checkout()
-                self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs')
-                # Start processing the messages
-                to_delete = []
-                for msg in messages:
-                    path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
-                    if self.try_mirror(CkanMirror(self.ia_collection, path)):
-                        # Successfully handled -> OK to delete
-                        to_delete.append(self.deletion_msg(msg))
-                queue.delete_messages(Entries=to_delete)
-                # Clean up GitPython's lingering file handles between batches
-                self.ckm_repo.git_repo.close()
-
-    def try_mirror(self, ckan):
-        if not ckan.can_mirror:
-            # If we can't mirror, then we're done with this message
-            logging.info('Ckan %s cannot be mirrored', ckan.mirror_item())
-            return True
-        if ckan.mirrored(self.ia_session):
-            # If it's already mirrored, then we're done with this message
-            logging.info('Ckan %s is already mirrored', ckan.mirror_item())
-            return True
-        download_file = ckan.open_download()
-        if ckan.download_hash.get('sha256') != self.large_file_sha256(download_file):
-            # Bad download, try again later
-            logging.info('Hash mismatch')
-            return False
-        logging.info('Uploading %s', ckan.mirror_item())
-        item = internetarchive.Item(self.ia_session, ckan.mirror_item())
-        item.upload_file(download_file.name, ckan.mirror_filename(),
-                         ckan.item_metadata,
-                         ckan.download_headers)
-        source_url = ckan.source_download
-        if source_url:
-            with tempfile.NamedTemporaryFile() as tmp:
-                logging.info('Attempting to archive source from %s', source_url)
-                urllib.request.urlretrieve(source_url, tmp.name)
-                item.upload_file(tmp.name, ckan.mirror_source_filename(),
-                                 ckan.item_metadata,
-                                 ckan.source_download_headers(tmp.name))
-        return True
-
-    @staticmethod
-    def large_file_sha256(file, block_size=8192):
-        sha = hashlib.sha256()
-        for block in iter(lambda: file.read(block_size), b''):
-            sha.update(block)
-        return sha.hexdigest().upper()
-
-    @staticmethod
-    def deletion_msg(msg):
-        return {
-            'Id':            msg.message_id,
-            'ReceiptHandle': msg.receipt_handle,
-        }
-
-    def ia_overloaded(self):
-        return requests.get(
-            'https://s3.us.archive.org/?check_limit=1&accesskey={}'.format(
-                self.ia_access
-            )
-        ).status_code == 503
-
-    def purge_epochs(self, dry_run):
-        if dry_run:
-            logging.info('Dry run mode enabled, no changes will be made')
-        for result in self._epoch_search():
-            ident = result.get('identifier')
-            if ident:
-                item = self.ia_session.get_item(ident)
-                logging.info('Found epoch to purge: %s (%s)', ident, item.metadata.get('title'))
-                if not dry_run:
-                    item.modify_metadata({
-                        'identifier': self.EPOCH_ID_REGEXP.sub('-', ident),
-                        'title': self.EPOCH_TITLE_REGEXP.sub(' - ', item.metadata.get('title')),
-                    })
-
-    def _epoch_search(self):
-        return filter(
-            self._result_has_epoch,
-            self.ia_session.search_items(
-                f'collection:({self.ia_collection})',
-                fields=['identifier', 'title']
-            )
-        )
-
-    def _result_has_epoch(self, result):
-        return self.EPOCH_TITLE_REGEXP.search(result.get('title'))
+from .repos import CkanMetaRepo
 
 
 class CkanMirror(Ckan):
+
+    DESCRIPTION_TEMPLATE = Template(read_text('netkan', 'mirror_description_template.jinja2'))
 
     REDISTRIBUTABLE_LICENSES = {
         "public-domain",
@@ -247,19 +134,19 @@ class CkanMirror(Ckan):
 
     EPOCH_VERSION_REGEXP = re.compile('^[0-9]+:')
 
-    def __init__(self, collection, filename=None, contents=None):
+    def __init__(self, collection: str, filename: Union[str, Path] = None, contents: str = None) -> None:
         Ckan.__init__(self, filename, contents)
         self.collection = collection
 
     @property
-    def can_mirror(self):
+    def can_mirror(self) -> bool:
         return (
             self.kind == 'package'
             and getattr(self, 'download_content_type', '') in Ckan.MIME_TO_EXTENSION
             and self.redistributable
         )
 
-    def mirrored(self, iarchive):
+    def mirrored(self, iarchive: internetarchive.session.ArchiveSession) -> bool:
         item = iarchive.get_item(self.mirror_item())
         if not item:
             return False
@@ -268,24 +155,24 @@ class CkanMirror(Ckan):
         sha1 = self.download_hash['sha1'].lower()
         return any(file['sha1'].lower() == sha1 for file in item.files if 'sha1' in file)
 
-    def license_urls(self):
+    def license_urls(self) -> List[str]:
         return [self.LICENSE_URLS[lic]
                 for lic in self.licenses() if lic in self.LICENSE_URLS]
 
     @property
-    def redistributable(self):
+    def redistributable(self) -> bool:
         for lic in self.licenses():
             if lic in self.REDISTRIBUTABLE_LICENSES:
                 return True
         return False
 
-    def mirror_item(self, with_epoch=True):
+    def mirror_item(self, with_epoch: bool = True) -> str:
         return '{}-{}'.format(
             self.identifier,
             self._format_version(with_epoch)
         )
 
-    def mirror_filename(self, with_epoch=True):
+    def mirror_filename(self, with_epoch: bool = True) -> Optional[str]:
         if not 'download_hash' in self._raw:
             return None
         return '{}-{}-{}.{}'.format(
@@ -295,20 +182,20 @@ class CkanMirror(Ckan):
             Ckan.MIME_TO_EXTENSION[self.download_content_type],
         )
 
-    def mirror_source_filename(self, with_epoch=True):
+    def mirror_source_filename(self, with_epoch: bool = True) -> str:
         return '{}-{}.source.zip'.format(
             self.identifier,
             self._format_version(with_epoch)
         )
 
-    def mirror_title(self, with_epoch=True):
+    def mirror_title(self, with_epoch: bool = True) -> str:
         return '{} - {}'.format(
             self.name,
             self._format_version(with_epoch),
         )
 
     @property
-    def item_metadata(self):
+    def item_metadata(self) -> Dict[str, Any]:
         lic_urls = self.license_urls()
         return {
             'title':       self.mirror_title(),
@@ -320,23 +207,26 @@ class CkanMirror(Ckan):
             **({'licenseurl': lic_urls} if lic_urls else {}),
         }
 
-    def open_download(self):
+    def open_download(self) -> Optional[BinaryIO]:
         cached_file = self.cache_find_file
         if cached_file:
             # If the download is in the cache, use it
             logging.info('Found matching cache entry at %s', cached_file)
             return cached_file.open(mode='rb')
         # Download the file as needed
-        with tempfile.NamedTemporaryFile() as tmp:
-            logging.info('Downloading %s', self.download)
-            urllib.request.urlretrieve(self.download, tmp.name)
-            # Copy to cache so the temp file can be deleted
-            shutil.copyfile(tmp.name, self.CACHE_PATH.joinpath(self.cache_filename))
-            logging.info('Downloaded %s to %s', self.mirror_item(), self.cache_filename)
-        return self.cache_find_file.open(mode='rb')
+        if self.cache_filename:
+            with tempfile.NamedTemporaryFile() as tmp:
+                logging.info('Downloading %s', self.download)
+                urllib.request.urlretrieve(self.download, tmp.name)
+                # Copy to cache so the temp file can be deleted
+                shutil.copyfile(tmp.name, self.CACHE_PATH.joinpath(self.cache_filename))
+                logging.info('Downloaded %s to %s', self.mirror_item(), self.cache_filename)
+        if self.cache_find_file:
+            return self.cache_find_file.open(mode='rb')
+        return None
 
     @property
-    def download_headers(self):
+    def download_headers(self) -> Dict[str, Any]:
         return {
             'Content-Type':           self.download_content_type,
             'Content-Length':         str(self.download_size),
@@ -344,30 +234,157 @@ class CkanMirror(Ckan):
         }
 
     @staticmethod
-    def source_download_headers(file_path):
+    def source_download_headers(file_path: str) -> Dict[str, Any]:
         return {
             'Content-Type':           "application/zip",
             'Content-Length':         str(os.path.getsize(file_path)),
             'x-amz-auto-make-bucket': str(1),
         }
 
-    def _format_version(self, with_epoch):
-        if with_epoch:
-            return self.version.string.replace(':', '-')
-        return self.EPOCH_VERSION_REGEXP.sub('', self.version.string)
+    def _format_version(self, with_epoch: bool) -> Optional[str]:
+        if self.version:
+            if with_epoch:
+                return self.version.string.replace(':', '-')
+            return self.EPOCH_VERSION_REGEXP.sub('', self.version.string)
+        return None
 
     @property
-    def mirror_description(self):
-        descr = self.abstract + '<br>'
-        resources = self._raw.get('resources')
-        if resources:
-            homepage = resources.get('homepage')
-            if homepage:
-                descr += f'<br>Homepage: <a href="{homepage}">{homepage}</a>'
-            repository = resources.get('repository')
-            if repository:
-                descr += f'<br>Repository: <a href="{repository}">{repository}</a>'
-        lic = self.licenses()
-        if lic:
-            descr += '<br>License(s): {}'.format(' '.join(lic))
-        return descr
+    def mirror_description(self) -> str:
+        return self.DESCRIPTION_TEMPLATE.render(mod=self)
+
+
+class Mirrorer:
+
+    EPOCH_ID_REGEXP = re.compile('-[0-9]+-')
+    EPOCH_TITLE_REGEXP = re.compile(' - [0-9]+:')
+
+    def __init__(self, ckm_repo: CkanMetaRepo, ia_access: str, ia_secret: str, ia_collection: str, token: str = None) -> None:
+        self.ckm_repo = ckm_repo
+        self.ia_collection = ia_collection
+        self.ia_access = ia_access
+        self.ia_session = internetarchive.get_session(config={
+            's3': {
+                'access': ia_access,
+                'secret': ia_secret,
+            }
+        })
+        self._gh = github.Github(token) if token else github.Github()
+
+    def process_queue(self, queue_name: str, timeout: int) -> None:
+        queue = boto3.resource('sqs').get_queue_by_name(QueueName=queue_name)
+        while True:
+            messages = queue.receive_messages(
+                MaxNumberOfMessages=10,
+                MessageAttributeNames=['All'],
+                VisibilityTimeout=timeout,
+            )
+            if messages:
+                # Check if archive.org is overloaded
+                if self.ia_overloaded():
+                    logging.info('The Internet Archive is overloaded, try again later')
+                    continue
+                # Get up to date copy of the metadata for the files we're mirroring
+                logging.info('Updating repo')
+                self.ckm_repo.git_repo.heads.master.checkout()
+                self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs')
+                # Start processing the messages
+                to_delete = []
+                for msg in messages:
+                    path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
+                    if self.try_mirror(CkanMirror(self.ia_collection, path)):
+                        # Successfully handled -> OK to delete
+                        to_delete.append(self.deletion_msg(msg))
+                queue.delete_messages(Entries=to_delete)
+                # Clean up GitPython's lingering file handles between batches
+                self.ckm_repo.git_repo.close()
+
+    def try_mirror(self, ckan: CkanMirror) -> bool:
+        if not ckan.can_mirror:
+            # If we can't mirror, then we're done with this message
+            logging.info('Ckan %s cannot be mirrored', ckan.mirror_item())
+            return True
+        if ckan.mirrored(self.ia_session):
+            # If it's already mirrored, then we're done with this message
+            logging.info('Ckan %s is already mirrored', ckan.mirror_item())
+            return True
+        download_file = ckan.open_download()
+        if download_file:
+            if ckan.download_hash.get('sha256') != self.large_file_sha256(download_file):
+                # Bad download, try again later
+                logging.info('Hash mismatch')
+                return False
+            logging.info('Uploading %s', ckan.mirror_item())
+            item = internetarchive.Item(self.ia_session, ckan.mirror_item())
+            item.upload_file(download_file.name, ckan.mirror_filename(),
+                             ckan.item_metadata,
+                             ckan.download_headers)
+            source_url = ckan.source_download(self._default_branch(ckan))
+            if source_url:
+                with tempfile.NamedTemporaryFile() as tmp:
+                    logging.info('Attempting to archive source from %s', source_url)
+                    urllib.request.urlretrieve(source_url, tmp.name)
+                    item.upload_file(tmp.name, ckan.mirror_source_filename(),
+                                     ckan.item_metadata,
+                                     ckan.source_download_headers(tmp.name))
+            return True
+        return False
+
+    def _default_branch(self, ckan: Ckan) -> str:
+        repository = getattr(ckan, 'resources', {}).get('repository', None)
+        if repository:
+            parsed = urllib.parse.urlparse(repository)
+            if parsed.netloc == 'github.com':
+                # /HebaruSan/Astrogator/releases -> HebaruSan/Astrogator
+                full_name = '/'.join(parsed.path.split('/')[1:3])
+                return self._gh.get_repo(full_name).default_branch
+        return 'master'
+
+    @staticmethod
+    def large_file_sha256(file: BinaryIO, block_size: int = 8192) -> str:
+        sha = hashlib.sha256()
+        for block in iter(lambda: file.read(block_size), b''):
+            sha.update(block)
+        return sha.hexdigest().upper()
+
+    @staticmethod
+    def deletion_msg(msg: 'boto3.resources.factory.sqs.Message') -> Dict[str, Any]:
+        return {
+            'Id':            msg.message_id,
+            'ReceiptHandle': msg.receipt_handle,
+        }
+
+    def ia_overloaded(self) -> bool:
+        return requests.get(
+            'https://s3.us.archive.org/?check_limit=1&accesskey={}'.format(
+                self.ia_access
+            )
+        ).status_code == 503
+
+    def purge_epochs(self, dry_run: bool) -> None:
+        if dry_run:
+            logging.info('Dry run mode enabled, no changes will be made')
+        for result in self._epoch_search():
+            ident = result.get('identifier')
+            if ident:
+                item = self.ia_session.get_item(ident)
+                logging.info('Found epoch to purge: %s (%s)', ident, item.metadata.get('title'))
+                if not dry_run:
+                    item.modify_metadata({
+                        'identifier': self.EPOCH_ID_REGEXP.sub('-', ident),
+                        'title': self.EPOCH_TITLE_REGEXP.sub(' - ', item.metadata.get('title')),
+                    })
+
+    def _epoch_search(self) -> Iterable[internetarchive.Search]:
+        return filter(
+            self._result_has_epoch,
+            self.ia_session.search_items(
+                f'collection:({self.ia_collection})',
+                fields=['identifier', 'title']
+            )
+        )
+
+    def _result_has_epoch(self, result: Dict[str, Any]) -> bool:
+        title = result.get('title')
+        if title:
+            return self.EPOCH_TITLE_REGEXP.search(title) != None
+        return False

@@ -5,6 +5,7 @@ WORKDIR /netkan
 RUN chown -R netkan:netkan /netkan
 USER netkan
 RUN pip install --user . --no-warn-script-location
+RUN /home/netkan/.local/bin/mypy .
 RUN python -m unittest -v
 RUN /home/netkan/.local/bin/netkan --help
 

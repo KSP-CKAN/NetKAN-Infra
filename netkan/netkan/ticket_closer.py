@@ -5,10 +5,10 @@ import github
 
 class TicketCloser:
 
-    def __init__(self, token):
+    def __init__(self, token: str) -> None:
         self._gh = github.Github(token)
 
-    def close_tickets(self, days_limit=7):
+    def close_tickets(self, days_limit: int = 7) -> None:
         date_cutoff = datetime.datetime.now() - datetime.timedelta(days=days_limit)
 
         for repo_name in ['CKAN', 'NetKAN']:

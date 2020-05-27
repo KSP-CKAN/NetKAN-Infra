@@ -1,4 +1,5 @@
 from flask import Blueprint, current_app, request
+from typing import Tuple
 
 from ..common import netkans, sqs_batch_entries, pull_all
 
@@ -10,7 +11,7 @@ inflate = Blueprint('inflate', __name__)  # pylint: disable=invalid-name
 # Handles: https://netkan.ksp-ckan.space/inflate
 # Payload: { "identifiers": [ "Id1", "Id2", ... ] }
 @inflate.route('/inflate', methods=['POST'])
-def inflate_hook():
+def inflate_hook() -> Tuple[str, int]:
     # SpaceDock doesn't set the `Content-Type: application/json` header
     ids = request.get_json(force=True).get('identifiers')
     if not ids:

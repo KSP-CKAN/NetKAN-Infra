@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 from hashlib import md5
 from flask import Blueprint, current_app, request, jsonify
+from typing import Tuple, List, Iterable, Dict, Any, Set
 
 from .github_utils import signature_required
 from ..common import sqs_batch_entries
@@ -14,7 +15,7 @@ github_mirror = Blueprint('github_mirror', __name__)  # pylint: disable=invalid-
 # Handles: https://netkan.ksp-ckan.space/gh/mirror
 @github_mirror.route('/mirror', methods=['POST'])
 @signature_required
-def mirror_hook():
+def mirror_hook() -> Tuple[str, int]:
     raw = request.get_json(silent=True)
     ref = raw.get('ref')
     expected_ref = current_app.config['ckm_repo'].git_repo.heads.master.path
@@ -48,7 +49,7 @@ def mirror_hook():
 forbidden_id_chars = re.compile('[^-_A-Za-z0-9]')  # pylint: disable=invalid-name
 
 
-def batch_message(path):
+def batch_message(path: Path) -> Dict[str, Any]:
     body = path.as_posix()
     return {
         'Id':                     forbidden_id_chars.sub('_', body)[0:80],
@@ -58,12 +59,12 @@ def batch_message(path):
     }
 
 
-def ends_with_ckan(filename):
+def ends_with_ckan(filename: str) -> bool:
     return filename.endswith('.ckan')
 
 
-def paths_from_commits(commits):
-    files = set()
+def paths_from_commits(commits: List[Dict[str, Any]]) -> Iterable[Path]:
+    files: Set[str] = set()
     for commit in commits:
         files |= set(filter(ends_with_ckan,
                             commit.get('added', []) + commit.get('modified', [])))
