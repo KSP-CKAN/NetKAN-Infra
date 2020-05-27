@@ -27,9 +27,9 @@ def create_app():
     # Set up config
     app.config['secret'] = os.environ.get('XKAN_GHSECRET')
     app.config['nk_repo'] = NetkanRepo(
-        init_repo(os.environ.get('NETKAN_REMOTE'), '/tmp/NetKAN'))
+        init_repo(os.environ.get('NETKAN_REMOTE'), '/tmp/NetKAN', False))
     app.config['ckm_repo'] = CkanMetaRepo(
-        init_repo(os.environ.get('CKANMETA_REMOTE'), '/tmp/CKAN-meta'))
+        init_repo(os.environ.get('CKANMETA_REMOTE'), '/tmp/CKAN-meta', False))
     app.config['repos'] = [app.config['nk_repo'].git_repo, app.config['ckm_repo'].git_repo]
     app.config['client'] = boto3.client('sqs')
     sqs = boto3.resource('sqs')
