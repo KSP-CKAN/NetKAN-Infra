@@ -6,6 +6,7 @@ from typing import Tuple, List, Iterable, Dict, Any, Set
 
 from .github_utils import signature_required
 from ..common import sqs_batch_entries
+from .config import current_config
 
 
 github_mirror = Blueprint('github_mirror', __name__)  # pylint: disable=invalid-name
@@ -18,7 +19,7 @@ github_mirror = Blueprint('github_mirror', __name__)  # pylint: disable=invalid-
 def mirror_hook() -> Tuple[str, int]:
     raw = request.get_json(silent=True)
     ref = raw.get('ref')
-    expected_ref = current_app.config['ckm_repo'].git_repo.heads.master.path
+    expected_ref = current_config.ckm_repo.git_repo.heads.master.path
     if ref != expected_ref:
         current_app.logger.info(
             "Wrong branch. Expected '%s', got '%s'", expected_ref, ref)
@@ -39,8 +40,8 @@ def mirror_hook() -> Tuple[str, int]:
     messages = (batch_message(p) for p in paths_from_commits(commits))
     for batch in sqs_batch_entries(messages):
         current_app.logger.info(f'Queueing mirroring request batch: {batch}')
-        current_app.config['client'].send_message_batch(
-            QueueUrl=current_app.config['mirror_queue'].url,
+        current_config.client.send_message_batch(
+            QueueUrl=current_config.mirror_queue.url,
             Entries=batch
         )
     return '', 204

@@ -4,6 +4,8 @@ import hmac
 from flask import current_app, request
 from typing import Callable, Tuple, Any, Dict, Optional
 
+from .config import current_config
+
 
 def signature_required(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
@@ -18,7 +20,7 @@ def signature_required(func: Callable[..., Any]) -> Callable[..., Any]:
 
 def sig_match(req_sig: Optional[str], body: bytes) -> bool:
     # Make sure a secret is defined in our config
-    hook_secret = current_app.config['secret']
+    hook_secret = current_config.secret
     if not hook_secret:
         current_app.logger.warning('No secret is configured')
         return False

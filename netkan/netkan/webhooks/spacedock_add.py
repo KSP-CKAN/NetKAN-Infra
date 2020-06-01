@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, request
 from typing import Tuple, Dict, Any
 
 from ..common import sqs_batch_entries
-
+from .config import current_config
 
 spacedock_add = Blueprint('spacedock_add', __name__)  # pylint: disable=invalid-name
 
@@ -29,8 +29,8 @@ def add_hook() -> Tuple[str, int]:
     messages = [batch_message(request.form)]
     for batch in sqs_batch_entries(messages):
         current_app.logger.info(f'Queueing add request batch: {batch}')
-        current_app.config['client'].send_message_batch(
-            QueueUrl=current_app.config['add_queue'].url,
+        current_config.client.send_message_batch(
+            QueueUrl=current_config.add_queue.url,
             Entries=batch
         )
     return '', 204
