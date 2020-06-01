@@ -5,11 +5,10 @@ from collections import deque
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from dateutil.parser import parse
-from git import GitCommandError, Repo, Commit
-import boto3
 from typing import Generator, List, Optional, Type, Dict, Any, Deque
 from types import TracebackType
 
+from git import GitCommandError, Commit
 from .metadata import Ckan
 from .repos import CkanMetaRepo
 from .status import ModStatus
@@ -75,10 +74,9 @@ class CkanMessage:
             file.write(self.body)
 
     def commit_metadata(self) -> Commit:
-        index = self.ckm_repo.git_repo.index
-        index.add([self.mod_file.as_posix()])
-        commit = index.commit(
-            'NetKAN generated mods - {}'.format(self.mod_version)
+        commit = self.ckm_repo.commit(
+            [self.mod_file.as_posix()],
+            f'NetKAN generated mods - {self.mod_version}'
         )
         logging.info('Committing %s', self.mod_version)
         self.indexed = True

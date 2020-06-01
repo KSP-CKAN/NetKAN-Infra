@@ -129,9 +129,8 @@ class DownloadCounter:
         )
 
     def commit_counts(self) -> None:
-        index = self.ckm_repo.git_repo.index
-        index.add([self.output_file.as_posix()])
-        index.commit(
+        self.ckm_repo.commit(
+            [self.output_file.as_posix()],
             'NetKAN Updating Download Counts'
         )
         logging.info('Download counts changed and commited')
