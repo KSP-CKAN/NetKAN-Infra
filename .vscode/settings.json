@@ -8,6 +8,7 @@
     "--rcfile",
     "/home/netkan/workspace/.pylintrc"
   ],
+  "python.linting.mypyEnabled": true,
   "python.linting.pylintUseMinimalCheckers": false,
   "files.exclude": {
     "**/__pycache__": true
