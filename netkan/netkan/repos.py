@@ -71,7 +71,7 @@ class CkanMetaRepo(XkanRepo):
         return self.ckm_dir.joinpath(identifier)
 
     def ckans(self, identifier: str) -> Iterable[Ckan]:
-        return (Ckan(p) for p in self.mod_path(identifier).glob(self.CKANMETA_GLOB))
+        return (Ckan(f) for f in self.mod_path(identifier).glob(self.CKANMETA_GLOB))
 
     def highest_version(self, identifier: str) -> Optional[Ckan.Version]:
         highest = max(self.ckans(identifier), default=None, key=lambda ck: ck.version)
