@@ -1,12 +1,26 @@
 import logging
 from pathlib import Path
-from git import Repo
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional
 
+from git import Repo, Commit
 from .metadata import Netkan, Ckan
 
+class XkanRepo:
 
-class NetkanRepo:
+    """
+    Concantenates all common repo operations in one place
+    """
+
+    def __init__(self, git_repo: Repo) -> None:
+        self.git_repo = git_repo
+
+    def commit(self, files: List[str], commit_message: str) -> Commit:
+        index = self.git_repo.index
+        index.add(files)
+        return index.commit(commit_message)
+
+
+class NetkanRepo(XkanRepo):
 
     """
     Encapsulates all assumptions we make about the structure of NetKAN
@@ -17,9 +31,9 @@ class NetkanRepo:
     FROZEN_SUFFIX = 'frozen'
     NETKAN_GLOB = f'**/*.{UNFROZEN_SUFFIX}'
 
-    def __init__(self, git_repo: Repo) -> None:
-        self.git_repo = git_repo
-        self.nk_dir = Path(self.git_repo.working_dir, self.NETKAN_DIR)
+    @property
+    def nk_dir(self) -> Path:
+        return Path(self.git_repo.working_dir, self.NETKAN_DIR)
 
     def nk_path(self, identifier: str) -> Path:
         return self.nk_dir.joinpath(f'{identifier}.{self.UNFROZEN_SUFFIX}')
@@ -37,11 +51,11 @@ class NetkanRepo:
     def netkans(self) -> Iterable[Netkan]:
         return (Netkan(f) for f in self.all_nk_paths())
 
-    def _nk_sort(self, p: Path) -> str:
-        return p.stem.casefold()
+    def _nk_sort(self, path: Path) -> str:
+        return path.stem.casefold()
 
 
-class CkanMetaRepo:
+class CkanMetaRepo(XkanRepo):
 
     """
     Encapsulates all assumptions we make about the structure of CKAN-meta
@@ -49,9 +63,9 @@ class CkanMetaRepo:
 
     CKANMETA_GLOB = '**/*.ckan'
 
-    def __init__(self, git_repo: Repo) -> None:
-        self.git_repo = git_repo
-        self.ckm_dir = Path(self.git_repo.working_dir)
+    @property
+    def ckm_dir(self) -> Path:
+        return Path(self.git_repo.working_dir)
 
     def mod_path(self, identifier: str) -> Path:
         return self.ckm_dir.joinpath(identifier)
