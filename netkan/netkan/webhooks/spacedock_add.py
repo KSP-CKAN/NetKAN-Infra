@@ -1,6 +1,7 @@
 from hashlib import md5
 import json
 from flask import Blueprint, current_app, request
+from typing import Tuple, Dict, Any
 
 from ..common import sqs_batch_entries
 
@@ -23,7 +24,7 @@ spacedock_add = Blueprint('spacedock_add', __name__)  # pylint: disable=invalid-
 #     mod_url:           https://spacedock.info/mod/12345
 #     site_name:         SpaceDock
 @spacedock_add.route('/add', methods=['POST'])
-def add_hook():
+def add_hook() -> Tuple[str, int]:
     # Submit add requests to queue in batches of <=10
     messages = [batch_message(request.form)]
     for batch in sqs_batch_entries(messages):
@@ -35,7 +36,7 @@ def add_hook():
     return '', 204
 
 
-def batch_message(raw):
+def batch_message(raw: Dict[str, Any]) -> Dict[str, Any]:
     body = json.dumps(raw)
     return {
         'Id':                     '1',

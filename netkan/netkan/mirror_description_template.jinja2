@@ -1,0 +1,12 @@
+{{ mod.abstract }}<br>
+{%- if mod.resources -%}
+    {%- if mod.resources.homepage -%}
+        <br>Homepage: <a href="{{mod.resources.homepage}}">{{mod.resources.homepage}}</a>
+    {%- endif -%}
+    {%- if mod.resources.repository -%}
+        <br>Repository: <a href="{{mod.resources.repository}}">{{mod.resources.repository}}</a>
+    {%- endif -%}
+{%- endif -%}
+{%- if mod.licenses() -%}
+    <br>License(s): {{ ' '.join(mod.licenses()) }}
+{%- endif -%}

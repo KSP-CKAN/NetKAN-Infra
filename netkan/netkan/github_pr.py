@@ -7,12 +7,12 @@ import logging
 # and learning how it worked seemed like a waste.
 class GitHubPR:
 
-    def __init__(self, token, repo, user):
+    def __init__(self, token: str, repo: str, user: str) -> None:
         self.token = token
         self.repo = repo
         self.user = user
 
-    def create_pull_request(self, title, branch, body):
+    def create_pull_request(self, title: str, branch: str, body: str) -> None:
         headers = {
             'Authorization': 'token {}'.format(self.token),
             'Content-Type': 'application/json'

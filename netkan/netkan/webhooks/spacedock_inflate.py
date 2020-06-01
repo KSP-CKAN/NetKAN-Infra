@@ -1,7 +1,9 @@
 from pathlib import Path
 from flask import Blueprint, current_app, request
+from typing import Tuple, Iterable
 
 from ..common import sqs_batch_entries, pull_all
+from ..metadata import Netkan
 
 
 spacedock_inflate = Blueprint('spacedock_inflate', __name__)  # pylint: disable=invalid-name
@@ -15,11 +17,11 @@ spacedock_inflate = Blueprint('spacedock_inflate', __name__)  # pylint: disable=
 #                 version-update - Default version changed
 #                 delete         - Mod was deleted from SpaceDock
 @spacedock_inflate.route('/inflate', methods=['POST'])
-def inflate_hook():
+def inflate_hook() -> Tuple[str, int]:
     # Make sure our NetKAN and CKAN-meta repos are up to date
     pull_all(current_app.config['repos'])
     # Get the relevant netkans
-    nks = find_netkans(request.form.get('mod_id'))
+    nks = find_netkans(request.form.get('mod_id', ''))
     if nks:
         if request.form.get('event_type') == 'delete':
             # Just let the team know on Discord
@@ -52,6 +54,6 @@ def inflate_hook():
     return 'No such module', 404
 
 
-def find_netkans(sd_id):
+def find_netkans(sd_id: str) -> Iterable[Netkan]:
     all_nk = current_app.config['nk_repo'].netkans()
     return (nk for nk in all_nk if nk.kref_src == 'spacedock' and nk.kref_id == sd_id)

@@ -8,7 +8,7 @@ from pathlib import Path
 import boto3
 import click
 
-from .common import common_options, pass_state
+from .common import common_options, pass_state, SharedArgs
 
 from ..status import ModStatus
 from ..download_counter import DownloadCounter
@@ -24,7 +24,7 @@ from ..mirrorer import Mirrorer
 )
 @common_options
 @pass_state
-def auto_freezer(common, days_limit):
+def auto_freezer(common: SharedArgs, days_limit: int) -> None:
     afr = AutoFreezer(
         common.netkan_repo,
         common.github_pr,
@@ -36,7 +36,7 @@ def auto_freezer(common, days_limit):
 @click.command()
 @common_options
 @pass_state
-def download_counter(common):
+def download_counter(common: SharedArgs) -> None:
     logging.info('Starting Download Count Calculation...')
     DownloadCounter(
         common.netkan_repo,
@@ -59,7 +59,7 @@ def download_counter(common):
     '--interval', envvar='STATUS_INTERVAL', default=300,
     help='Dump status to S3 every `interval` seconds',
 )
-def export_status_s3(status_bucket, status_key, interval):
+def export_status_s3(status_bucket: str, status_key: str, interval: bool) -> None:
     frequency = 'every {} seconds'.format(
         interval) if interval else 'once'
     logging.info('Exporting to s3://%s/%s %s',
@@ -73,13 +73,13 @@ def export_status_s3(status_bucket, status_key, interval):
 
 
 @click.command()
-def dump_status():
+def dump_status() -> None:
     click.echo(json.dumps(ModStatus.export_all_mods()))
 
 
 @click.command()
 @click.argument('filename')
-def restore_status(filename):
+def restore_status(filename: str) -> None:
     click.echo(
         'To keep within free tier rate limits, this could take some time'
     )
@@ -90,7 +90,7 @@ def restore_status(filename):
 @click.command()
 @common_options
 @pass_state
-def recover_status_timestamps(common):
+def recover_status_timestamps(common: SharedArgs) -> None:
     ModStatus.recover_timestamps(common.ckanmeta_repo)
 
 
@@ -101,7 +101,7 @@ def recover_status_timestamps(common):
 @click.option(
     '--service-name', help='Name of ECS Service to restart',
 )
-def redeploy_service(cluster, service_name):
+def redeploy_service(cluster: str, service_name: str) -> None:
     click.secho(
         'Forcing redeployment of {}:{}'.format(cluster, service_name),
         fg='green'
@@ -140,7 +140,7 @@ def redeploy_service(cluster, service_name):
 )
 @common_options
 @pass_state
-def ticket_closer(common, days_limit):
+def ticket_closer(common: SharedArgs, days_limit: int) -> None:
     TicketCloser(common.token).close_tickets(days_limit)
 
 
@@ -153,7 +153,7 @@ def ticket_closer(common, days_limit):
     type=click.Path(exists=True, writable=True),
     help='Absolute path to the mod download cache'
 )
-def clean_cache(days, cache):
+def clean_cache(days: int, cache: str) -> None:
     older_than = (
         datetime.datetime.now() - datetime.timedelta(days=int(days))
     ).timestamp()
@@ -174,7 +174,7 @@ def clean_cache(days, cache):
 )
 @common_options
 @pass_state
-def mirror_purge_epochs(common, dry_run):
+def mirror_purge_epochs(common: SharedArgs, dry_run: bool) -> None:
     Mirrorer(
         common.ckanmeta_repo, common.ia_access,
         common.ia_secret, common.ia_collection

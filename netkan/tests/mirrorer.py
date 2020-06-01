@@ -68,6 +68,7 @@ class TestCkanMirrorRedistributable(unittest.TestCase):
                              'x-amz-auto-make-bucket': "1",
                          })
 
+
 class TestCkanMirrorRestricted(unittest.TestCase):
 
     def setUp(self):
@@ -85,6 +86,7 @@ class TestCkanMirrorRestricted(unittest.TestCase):
         self.assertFalse(self.ckan_mirror.redistributable)
         self.assertFalse(self.ckan_mirror.can_mirror)
 
+
 class TestCkanMirrorGitHub(unittest.TestCase):
 
     def setUp(self):
@@ -96,8 +98,13 @@ class TestCkanMirrorGitHub(unittest.TestCase):
         }""")
 
     def test_source_download(self):
-        self.assertEqual(self.ckan_mirror.source_download,
+        self.assertEqual(self.ckan_mirror.source_download(),
                          "https://github.com/HebaruSan/Astrogator/archive/master.zip")
+
+    def test_source_download_alt_branch(self):
+        self.assertEqual(self.ckan_mirror.source_download('primary'),
+                         "https://github.com/HebaruSan/Astrogator/archive/primary.zip")
+
 
 class TestCkanMirrorGitLab(unittest.TestCase):
 
@@ -110,8 +117,9 @@ class TestCkanMirrorGitLab(unittest.TestCase):
         }""")
 
     def test_source_download(self):
-        self.assertEqual(self.ckan_mirror.source_download,
+        self.assertEqual(self.ckan_mirror.source_download(),
                          "https://gitlab.com/N70/Kerbalism/-/archive/master/Kerbalism-master.zip")
+
 
 class TestCkanMirrorButBucket(unittest.TestCase):
 
@@ -124,5 +132,5 @@ class TestCkanMirrorButBucket(unittest.TestCase):
         }""")
 
     def test_source_download(self):
-        self.assertEqual(self.ckan_mirror.source_download,
+        self.assertEqual(self.ckan_mirror.source_download(),
                          "https://bitbucket.org/blowfishpro/b9-aerospace/get/master.zip")

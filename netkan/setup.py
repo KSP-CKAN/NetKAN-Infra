@@ -10,7 +10,7 @@ setup(
     author_email='techman83@gmail.com',
     packages=find_packages(),
     package_data={
-        "": [ "*.txt" ],
+        "": ["*.txt", "*.jinja2"],
     },
     install_requires=[
         'boto3',
@@ -21,6 +21,7 @@ setup(
         'python-dateutil>=2.1,<2.8.1',
         'requests',
         'flask',
+        'jinja2',
         'internetarchive',
         'gunicorn>=19.9,!=20.0.0',
         'discord',
@@ -37,6 +38,9 @@ setup(
             'pylint',
             'autopep8',
             'troposphere',
+        ],
+        'test': [
+            'mypy',
         ]
     },
 )

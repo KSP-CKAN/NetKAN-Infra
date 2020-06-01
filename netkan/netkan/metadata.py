@@ -5,27 +5,33 @@ from pathlib import Path
 from hashlib import sha1
 import uuid
 import urllib.parse
+import github
+from typing import Optional, List, Tuple, Union, Any, Dict
 
 
 class Netkan:
 
     KREF_PATTERN = re.compile('^#/ckan/([^/]+)/(.+)$')
 
-    def __init__(self, filename=None, contents=None):
+    def __init__(self, filename: Union[str, Path] = None, contents: str = None) -> None:
         if filename:
             self.filename = Path(filename)
             self.contents = self.filename.read_text()
-        else:
+        elif contents:
             self.contents = contents
         self._raw = json.loads(self.contents)
         # Extract kref_src + kref_id from the kref
+        self.kref_src: Optional[str]
+        self.kref_id: Optional[str]
         if self.has_kref:
-            self.kref_src, self.kref_id = self.KREF_PATTERN.match(self.kref).groups()
+            match = self.KREF_PATTERN.match(self.kref)
+            if match:
+                self.kref_src, self.kref_id = match.groups()
         else:
             self.kref_src = None
             self.kref_id = None
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         # Return kref host, ie `self.on_spacedock`. Current krefs include
         # github, spacedock, curse and netkan.
         if name.startswith('on_'):
@@ -42,148 +48,55 @@ class Netkan:
 
         raise AttributeError
 
-    def _on_kref_src(self, kref_src):
+    def _on_kref_src(self, kref_src: str) -> bool:
         if getattr(self, 'kref', False):
             return kref_src == self.kref_src
         return False
 
     @property
-    def has_kref(self):
+    def has_kref(self) -> bool:
         return hasattr(self, 'kref')
 
     @property
-    def has_vref(self):
+    def has_vref(self) -> bool:
         return hasattr(self, 'vref')
 
-    def hook_only(self):
+    def hook_only(self) -> bool:
         if self.has_vref:
             return False
         return self.on_spacedock
 
-    def string_attrib(self, val):
+    def string_attrib(self, val: str) -> Dict[str, str]:
         return {
             'DataType': 'String',
             'StringValue': val,
         }
 
-    def sqs_message_attribs(self, ckan_group=None):
+    def sqs_message_attribs(self, high_ver: 'Ckan.Version' = None) -> Dict[str, Any]:
         attribs = {}
-        if ckan_group and not getattr(self, 'x_netkan_allow_out_of_order', False):
-            high_ver = ckan_group.highest_version()
-            if high_ver:
-                attribs['HighestVersion'] = self.string_attrib(high_ver.string)
+        if high_ver and not getattr(self, 'x_netkan_allow_out_of_order', False):
+            attribs['HighestVersion'] = self.string_attrib(high_ver.string)
         return attribs
 
-    def sqs_message(self, ckan_group=None):
+    def sqs_message(self, high_ver: 'Ckan.Version' = None) -> Dict[str, Any]:
         id = uuid.uuid4().hex
         return {
             'Id': id,
             'MessageBody': self.contents,
             'MessageGroupId': '1',
             'MessageDeduplicationId': id,
-            'MessageAttributes': self.sqs_message_attribs(ckan_group),
+            'MessageAttributes': self.sqs_message_attribs(high_ver),
         }
 
 
 class Ckan:
-
-    CACHE_PATH = Path.home().joinpath('ckan_cache')
-    MIME_TO_EXTENSION = {
-        'application/x-gzip':           'gz',
-        'application/x-tar':            'tar',
-        'application/x-compressed-tar': 'tar.gz',
-        'application/zip':              'zip',
-    }
-
-    def __init__(self, filename=None, contents=None):
-        if filename:
-            self.filename = Path(filename)
-            self.contents = self.filename.read_text()
-        else:
-            self.contents = contents
-        self._raw = json.loads(self.contents)
-
-    def __getattr__(self, name):
-        if name in self._raw:
-            return self._raw[name]
-        if name == 'kind':
-            return self._raw.get('kind', 'package')
-        raise AttributeError
-
-    @property
-    def version(self):
-        if self._raw.get('version'):
-            return self.Version(self._raw.get('version'))
-        return None
-
-    @property
-    def cache_prefix(self):
-        if 'download' not in self._raw:
-            return None
-        return sha1(urllib.parse.unquote(self.download).encode()).hexdigest().upper()[0:8]
-
-    @property
-    def cache_find_file(self):
-        found = list(self.CACHE_PATH.glob(f'**/{self.cache_prefix}*'))
-        if found:
-            return found[0]
-        return None
-
-    @property
-    def cache_filename(self):
-        if not {'download', 'identifier', 'version', 'download_content_type'} <= self._raw.keys():
-            return None
-        return '{}-{}-{}.{}'.format(
-            self.cache_prefix,
-            self.identifier,
-            self.version.string.replace(':', '-'),
-            self.MIME_TO_EXTENSION[self.download_content_type],
-        )
-
-    @property
-    def source_download(self):
-        # self?.resources?.repository
-        repository = getattr(self, 'resources', {}).get('repository', None)
-        if repository:
-            parsed = urllib.parse.urlparse(repository)
-            # Strip extra trailing pieces from URL
-            prefix = '/'.join(repository.split('/')[0:5])
-            if parsed.netloc == 'github.com':
-                # https://github.com/HebaruSan/Astrogator/archive/master.zip
-                return f'{prefix}/archive/master.zip'
-            if parsed.netloc == 'bitbucket.org':
-                # https://bitbucket.org/Taverius/b9-aerospace/get/master.zip
-                return f'{prefix}/get/master.zip'
-            if parsed.netloc == 'gitlab.com':
-                # https://gitlab.com/N70/Kerbalism/-/archive/master/Kerbalism-master.zip
-                name = parsed.path.split('/')[2]
-                return f'{prefix}/-/archive/master/{name}-master.zip'
-            if parsed.netloc == 'git.srv.hoerberg.de':
-                # https://git.srv.hoerberg.de/tom300z/4ksp/-/archive/master/4ksp-master.zip
-                name = parsed.path.split('/')[2]
-                return f'{prefix}/-/archive/master/{name}-master.zip'
-        return None
-
-    def authors(self):
-        auth = self.author
-        if isinstance(auth, list):
-            return auth
-        else:
-            return [auth]
-
-    def licenses(self):
-        lic = self.license
-        if isinstance(lic, list):
-            return lic
-        else:
-            return [lic]
 
     @total_ordering
     class Version:
 
         PATTERN = re.compile("^(?:(?P<epoch>[0-9]+):)?(?P<version>.*)$")
 
-        def __init__(self, version_string):
+        def __init__(self, version_string: str) -> None:
             self.string = version_string
             match = self.PATTERN.fullmatch(self.string)
             if not match:
@@ -199,15 +112,17 @@ class Ckan:
                 raise Exception
 
         # @total_ordering doesn't generate this one right. Maybe it compares the strings?
-        def __eq__(self, other):
-            return not self > other and not other > self
+        def __eq__(self, other: object) -> bool:
+            if isinstance(other, self.__class__):
+                return not self > other and not other > self
+            return False
 
         # The CKAN-Core implementation relies on a __cmp__-like concept. __cmp__ has been deprecated in Python3.
         # The logic has been adjusted a bit to be run as __gt__. All the other possible relation comparisons
         # (except __eq__) are deduced from it by @total_ordering.
-        def __gt__(self, other):
+        def __gt__(self, other: 'Ckan.Version') -> bool:
 
-            def _string_compare(v1, v2) -> (int, str, str):
+            def _string_compare(v1: str, v2: str) -> Tuple[int, str, str]:
                 _result: int
                 _first_remainder = ''
                 _second_remainder = ''
@@ -254,7 +169,7 @@ class Ckan:
 
                 return _result, _first_remainder, _second_remainder
 
-            def _number_compare(v1, v2) -> (int, str, str):
+            def _number_compare(v1: str, v2: str) -> Tuple[int, str, str]:
                 _result: int
                 _first_remainder = ''
                 _second_remainder = ''
@@ -328,24 +243,97 @@ class Ckan:
                 return False
             return True
 
-        def __str__(self):
+        def __str__(self) -> str:
             return self.string
 
+    CACHE_PATH = Path.home().joinpath('ckan_cache')
+    MIME_TO_EXTENSION = {
+        'application/x-gzip':           'gz',
+        'application/x-tar':            'tar',
+        'application/x-compressed-tar': 'tar.gz',
+        'application/zip':              'zip',
+    }
 
-class CkanGroup:
+    def __init__(self, filename: Union[str, Path] = None, contents: str = None) -> None:
+        if filename:
+            self.filename = Path(filename)
+            self.contents = self.filename.read_text()
+        elif contents:
+            self.contents = contents
+        self._raw = json.loads(self.contents)
 
-    """
-    Represents all Ckans from CKAN-meta associated with a particular identifier.
-    Allows us to calculate things about the group, such as the highest module version.
-    """
+    def __getattr__(self, name: str) -> Any:
+        if name in self._raw:
+            return self._raw[name]
+        if name == 'kind':
+            return self._raw.get('kind', 'package')
+        raise AttributeError
 
-    def __init__(self, ckm_repo, identifier):
-        self.repo = ckm_repo
-        self.identifier = identifier
-
-    def highest_version(self):
-        ckans = self.repo.ckans(self.identifier)
-        highest = max(ckans, default=None, key=lambda ck: ck.version)
-        if highest:
-            return highest.version
+    @property
+    def version(self) -> Optional[Version]:
+        if self._raw.get('version'):
+            return self.Version(self._raw.get('version'))
         return None
+
+    @property
+    def cache_prefix(self) -> Optional[str]:
+        if 'download' not in self._raw:
+            return None
+        return sha1(urllib.parse.unquote(self.download).encode()).hexdigest().upper()[0:8]
+
+    @property
+    def cache_find_file(self) -> Optional[Path]:
+        found = list(self.CACHE_PATH.glob(f'**/{self.cache_prefix}*'))
+        if found:
+            return found[0]
+        return None
+
+    @property
+    def cache_filename(self) -> Optional[str]:
+        if not {'download', 'identifier', 'download_content_type'} <= self._raw.keys():
+            return None
+        if not self.version:
+            return None
+        return '{}-{}-{}.{}'.format(
+            self.cache_prefix,
+            self.identifier,
+            self.version.string.replace(':', '-'),
+            self.MIME_TO_EXTENSION[self.download_content_type],
+        )
+
+    def source_download(self, branch: str = 'master') -> Optional[str]:
+        # self?.resources?.repository
+        repository = getattr(self, 'resources', {}).get('repository', None)
+        if repository:
+            parsed = urllib.parse.urlparse(repository)
+            # Strip extra trailing pieces from URL
+            prefix = '/'.join(repository.split('/')[0:5])
+            if parsed.netloc == 'github.com':
+                # https://github.com/HebaruSan/Astrogator/archive/master.zip
+                return f'{prefix}/archive/{branch}.zip'
+            if parsed.netloc == 'bitbucket.org':
+                # https://bitbucket.org/Taverius/b9-aerospace/get/master.zip
+                return f'{prefix}/get/{branch}.zip'
+            if parsed.netloc == 'gitlab.com':
+                # https://gitlab.com/N70/Kerbalism/-/archive/master/Kerbalism-master.zip
+                name = parsed.path.split('/')[2]
+                return f'{prefix}/-/archive/{branch}/{name}-{branch}.zip'
+            if parsed.netloc == 'git.srv.hoerberg.de':
+                # https://git.srv.hoerberg.de/tom300z/4ksp/-/archive/master/4ksp-master.zip
+                name = parsed.path.split('/')[2]
+                return f'{prefix}/-/archive/{branch}/{name}-{branch}.zip'
+        return None
+
+    def authors(self) -> List[str]:
+        auth = self.author
+        if isinstance(auth, list):
+            return auth
+        else:
+            return [auth]
+
+    def licenses(self) -> List[str]:
+        lic = self.license
+        if isinstance(lic, list):
+            return lic
+        else:
+            return [lic]

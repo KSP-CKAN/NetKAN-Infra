@@ -15,21 +15,21 @@ from .github_inflate import github_inflate
 from .github_mirror import github_mirror
 
 
-def create_app():
+def create_app() -> Flask:
     # Set up Discord logger so we can see errors
     if setup_log_handler():
         sys.excepthook = catch_all
 
     app = Flask(__name__)
 
-    init_ssh(os.environ.get('SSH_KEY'), Path(Path.home(), '.ssh'))
+    init_ssh(os.environ.get('SSH_KEY', ''), Path(Path.home(), '.ssh'))
 
     # Set up config
     app.config['secret'] = os.environ.get('XKAN_GHSECRET')
     app.config['nk_repo'] = NetkanRepo(
-        init_repo(os.environ.get('NETKAN_REMOTE'), '/tmp/NetKAN', False))
+        init_repo(os.environ.get('NETKAN_REMOTE', ''), '/tmp/NetKAN', False))
     app.config['ckm_repo'] = CkanMetaRepo(
-        init_repo(os.environ.get('CKANMETA_REMOTE'), '/tmp/CKAN-meta', False))
+        init_repo(os.environ.get('CKANMETA_REMOTE', ''), '/tmp/CKAN-meta', False))
     app.config['repos'] = [app.config['nk_repo'].git_repo, app.config['ckm_repo'].git_repo]
     app.config['client'] = boto3.client('sqs')
     sqs = boto3.resource('sqs')

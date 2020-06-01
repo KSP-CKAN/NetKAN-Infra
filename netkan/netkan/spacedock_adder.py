@@ -6,6 +6,9 @@ from string import Template
 from collections import defaultdict
 import git
 import boto3
+from typing import Dict, Any
+
+from .github_pr import GitHubPR
 
 from .repos import NetkanRepo
 
@@ -15,7 +18,7 @@ class SpaceDockAdder:
 
     PR_BODY_TEMPLATE = Template(read_text('netkan', 'pr_body_template.txt'))
 
-    def __init__(self, queue, timeout, nk_repo, github_pr):
+    def __init__(self, queue: str, timeout: int, nk_repo: NetkanRepo, github_pr: GitHubPR = None) -> None:
         sqs = boto3.resource('sqs')
         self.sqs_client = boto3.client('sqs')
         self.queue = sqs.get_queue_by_name(QueueName=queue)
@@ -23,7 +26,7 @@ class SpaceDockAdder:
         self.nk_repo = nk_repo
         self.github_pr = github_pr
 
-    def run(self):
+    def run(self) -> None:
         while True:
             messages = self.queue.receive_messages(
                 MaxNumberOfMessages=10,
@@ -44,11 +47,11 @@ class SpaceDockAdder:
                 # Clean up GitPython's lingering file handles between batches
                 self.nk_repo.git_repo.close()
 
-    def try_add(self, info):
+    def try_add(self, info: Dict[str, Any]) -> bool:
         netkan = self.make_netkan(info)
 
         # Create .netkan file or quit if already there
-        netkan_path = self.nk_repo.nk_path(netkan.get('identifier'))
+        netkan_path = self.nk_repo.nk_path(netkan.get('identifier', ''))
         if netkan_path.exists():
             # Already exists, we are done
             return True
@@ -91,25 +94,26 @@ class SpaceDockAdder:
         self.nk_repo.git_repo.remotes.origin.push('{mod}:{mod}'.format(mod=branch_name))
 
         # Create pull request
-        self.github_pr.create_pull_request(
-            title=f"Add {info.get('name')} from {info.get('site_name')}",
-            branch=branch_name,
-            body=self.PR_BODY_TEMPLATE.safe_substitute(defaultdict(lambda: '', info))
-        )
+        if self.github_pr:
+            self.github_pr.create_pull_request(
+                title=f"Add {info.get('name')} from {info.get('site_name')}",
+                branch=branch_name,
+                body=self.PR_BODY_TEMPLATE.safe_substitute(defaultdict(lambda: '', info))
+            )
         return True
 
     @staticmethod
-    def deletion_msg(msg):
+    def deletion_msg(msg: 'boto3.resources.factory.sqs.Message') -> Dict[str, Any]:
         return {
             'Id':            msg.message_id,
             'ReceiptHandle': msg.receipt_handle,
         }
 
-    def make_netkan(self, info):
+    def make_netkan(self, info: Dict[str, Any]) -> Dict[str, Any]:
         return {
             'spec_version': 'v1.4',
-            'identifier': re.sub(r'\W+', '', info.get('name')),
-            '$kref': f"#/ckan/spacedock/{info.get('id')}",
-            'license': info.get('license').replace(' ', '-'),
+            'identifier': re.sub(r'\W+', '', info.get('name', '')),
+            '$kref': f"#/ckan/spacedock/{info.get('id', '')}",
+            'license': info.get('license', '').replace(' ', '-'),
             'x_via': f"Automated {info.get('site_name')} CKAN submission"
         }

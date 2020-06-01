@@ -3,7 +3,7 @@ import logging
 import boto3
 import click
 
-from .common import common_options, pass_state
+from .common import common_options, pass_state, SharedArgs
 
 from ..indexer import MessageHandler
 from ..scheduler import NetkanScheduler
@@ -14,7 +14,7 @@ from ..mirrorer import Mirrorer
 @click.command()
 @common_options
 @pass_state
-def indexer(common):
+def indexer(common: SharedArgs) -> None:
     sqs = boto3.resource('sqs')
     queue = sqs.get_queue_by_name(QueueName=common.queue)
 
@@ -55,7 +55,7 @@ def indexer(common):
 )
 @common_options
 @pass_state
-def scheduler(common, max_queued, group, min_cpu, min_io):
+def scheduler(common: SharedArgs, max_queued: int, group: str, min_cpu: int, min_io: int) -> None:
     sched = NetkanScheduler(
         common.netkan_repo, common.ckanmeta_repo, common.queue,
         nonhooks_group=(group == 'all' or group == 'nonhooks'),
@@ -69,17 +69,17 @@ def scheduler(common, max_queued, group, min_cpu, min_io):
 @click.command()
 @common_options
 @pass_state
-def mirrorer(common):
+def mirrorer(common: SharedArgs) -> None:
     Mirrorer(
         common.ckanmeta_repo, common.ia_access, common.ia_secret,
-        common.ia_collection
+        common.ia_collection, common.token
     ).process_queue(common.queue, common.timeout)
 
 
 @click.command()
 @common_options
 @pass_state
-def spacedock_adder(common):
+def spacedock_adder(common: SharedArgs) -> None:
     sd_adder = SpaceDockAdder(
         common.queue,
         common.timeout,

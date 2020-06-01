@@ -313,20 +313,3 @@ class TestVersionComparison(unittest.TestCase):
         v2 = Ckan.Version('2.0')
 
         self.assertTrue(v1 < v2)
-
-
-class TestCkanGroup(unittest.TestCase):
-
-    TEST_PATH = Path(PurePath(__file__).parent, 'testdata/CKAN-meta')
-
-    def test_highest_version_epoch(self):
-        ckg = CkanMetaRepo(Repo.init(self.TEST_PATH)).group('AdequateMod')
-        self.assertEqual(ckg.highest_version().string, '1:0.2')
-
-    def test_highest_version_v(self):
-        ckg = CkanMetaRepo(Repo.init(self.TEST_PATH)).group('AmazingMod')
-        self.assertEqual(ckg.highest_version().string, 'v1.1')
-
-    def test_highest_version_numeric(self):
-        ckg = CkanMetaRepo(Repo.init(self.TEST_PATH)).group('AwesomeMod')
-        self.assertEqual(ckg.highest_version().string, '0.11')
