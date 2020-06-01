@@ -59,7 +59,7 @@ def ids_from_commits(commits: List[Dict[str, Any]]) -> Iterable[str]:
 def inflate(ids: Iterable[str]) -> None:
     # Make sure our NetKAN and CKAN-meta repos are up to date
     pull_all(current_app.config['repos'])
-    messages = (nk.sqs_message(current_app.config['ckm_repo'].group(nk.identifier))
+    messages = (nk.sqs_message(current_app.config['ckm_repo'].highest_version(nk.identifier))
                 for nk in netkans(current_app.config['nk_repo'].git_repo.working_dir, ids))
     for batch in sqs_batch_entries(messages):
         current_app.config['client'].send_message_batch(

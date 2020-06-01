@@ -43,7 +43,7 @@ def inflate_hook() -> Tuple[str, int]:
             return '', 204
         else:
             # Submit them to the queue
-            messages = (nk.sqs_message(current_app.config['ckm_repo'].group(nk.identifier))
+            messages = (nk.sqs_message(current_app.config['ckm_repo'].highest_version(nk.identifier))
                         for nk in nks)
             for batch in sqs_batch_entries(messages):
                 current_app.config['client'].send_message_batch(
