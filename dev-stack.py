@@ -57,7 +57,9 @@ t.add_resource(PolicyType(
                 ],
                 "Resource": [
                     GetAtt(inbound, "Arn"),
-                    GetAtt(outbound, "Arn")
+                    GetAtt(outbound, "Arn"),
+                    GetAtt(addqueue, "Arn"),
+                    GetAtt(mirrorqueue, "Arn"),
                 ]
             },
             {
