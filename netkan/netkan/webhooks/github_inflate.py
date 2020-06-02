@@ -88,8 +88,8 @@ def freeze(ids: List[str]) -> None:
                 status = ModStatus.get(ident)
                 if not status.frozen:
                     logging.info('Marking frozen: %s', ident)
-                    status.frozen = True
-                    status.save()
+                    # https://readthedocs.org/projects/pynamodb/downloads/pdf/stable/
+                    status.update(actions=[ModStatus.frozen.set(True)])
             except ModStatus.DoesNotExist:
                 # No status, don't need to freeze
                 pass
