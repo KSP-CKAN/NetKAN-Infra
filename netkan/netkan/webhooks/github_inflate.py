@@ -26,6 +26,7 @@ def inflate_hook() -> Tuple[str, int]:
         current_app.logger.info('No commits received')
         return jsonify({'message': 'No commits received'}), 200
     inflate(ids_from_commits(commits))
+    freeze(frozen_ids_from_commits(commits))
     return '', 204
 
 
@@ -80,11 +81,16 @@ def frozen_ids_from_commits(commits: List[Dict[str, Any]]) -> List[str]:
 
 
 def freeze(ids: List[str]) -> None:
-    with ModStatus.batch_write() as batch:
+    if ids:
         logging.info('Marking frozen mods...')
-        for mod in ModStatus.scan(rate_limit=5):
-            if not mod.frozen and mod.ModIdentifier in ids:
-                logging.info('Marking frozen: %s', mod.ModIdentifier)
-                mod.frozen = True
-                batch.save(mod)
+        for ident in ids:
+            try:
+                status = ModStatus.get(ident)
+                if not status.frozen:
+                    logging.info('Marking frozen: %s', ident)
+                    status.frozen = True
+                    status.save()
+            except ModStatus.DoesNotExist:
+                # No status, don't need to freeze
+                pass
         logging.info('Done!')
