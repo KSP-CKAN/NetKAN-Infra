@@ -26,7 +26,6 @@ def inflate_hook() -> Tuple[str, int]:
         current_app.logger.info('No commits received')
         return jsonify({'message': 'No commits received'}), 200
     inflate(ids_from_commits(commits))
-    freeze(frozen_ids_from_commits(commits))
     return '', 204
 
 
