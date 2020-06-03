@@ -4,6 +4,7 @@ from typing import Tuple, Iterable
 
 from ..common import sqs_batch_entries, pull_all
 from ..metadata import Netkan
+from .config import current_config
 
 
 spacedock_inflate = Blueprint('spacedock_inflate', __name__)  # pylint: disable=invalid-name
@@ -19,7 +20,7 @@ spacedock_inflate = Blueprint('spacedock_inflate', __name__)  # pylint: disable=
 @spacedock_inflate.route('/inflate', methods=['POST'])
 def inflate_hook() -> Tuple[str, int]:
     # Make sure our NetKAN and CKAN-meta repos are up to date
-    pull_all(current_app.config['repos'])
+    pull_all(current_config.repos)
     # Get the relevant netkans
     nks = find_netkans(request.form.get('mod_id', ''))
     if nks:
@@ -43,11 +44,11 @@ def inflate_hook() -> Tuple[str, int]:
             return '', 204
         else:
             # Submit them to the queue
-            messages = (nk.sqs_message(current_app.config['ckm_repo'].highest_version(nk.identifier))
+            messages = (nk.sqs_message(current_config.ckm_repo.highest_version(nk.identifier))
                         for nk in nks)
             for batch in sqs_batch_entries(messages):
-                current_app.config['client'].send_message_batch(
-                    QueueUrl=current_app.config['inflation_queue'].url,
+                current_config.client.send_message_batch(
+                    QueueUrl=current_config.inflation_queue.url,
                     Entries=batch
                 )
             return '', 204
@@ -55,5 +56,5 @@ def inflate_hook() -> Tuple[str, int]:
 
 
 def find_netkans(sd_id: str) -> Iterable[Netkan]:
-    all_nk = current_app.config['nk_repo'].netkans()
+    all_nk = current_config.nk_repo.netkans()
     return (nk for nk in all_nk if nk.kref_src == 'spacedock' and nk.kref_id == sd_id)

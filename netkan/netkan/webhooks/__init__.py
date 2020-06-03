@@ -4,9 +4,9 @@ import boto3
 from flask import Flask
 from pathlib import Path
 
-from ..utils import init_repo, init_ssh
+from ..utils import init_ssh
 from ..notifications import setup_log_handler, catch_all
-from ..repos import NetkanRepo, CkanMetaRepo
+from .config import current_config
 from .errors import errors
 from .inflate import inflate
 from .spacedock_inflate import spacedock_inflate
@@ -15,35 +15,34 @@ from .github_inflate import github_inflate
 from .github_mirror import github_mirror
 
 
-def create_app() -> Flask:
-    # Set up Discord logger so we can see errors
-    if setup_log_handler():
-        sys.excepthook = catch_all
+class NetkanWebhooks(Flask):
 
-    app = Flask(__name__)
+    def __init__(self, ssh_key: str) -> None:
+        super().__init__(__name__)
 
-    init_ssh(os.environ.get('SSH_KEY', ''), Path(Path.home(), '.ssh'))
+        # Set up Discord logger so we can see errors
+        if setup_log_handler():
+            sys.excepthook = catch_all
 
-    # Set up config
-    app.config['secret'] = os.environ.get('XKAN_GHSECRET')
-    app.config['nk_repo'] = NetkanRepo(
-        init_repo(os.environ.get('NETKAN_REMOTE', ''), '/tmp/NetKAN', False))
-    app.config['ckm_repo'] = CkanMetaRepo(
-        init_repo(os.environ.get('CKANMETA_REMOTE', ''), '/tmp/CKAN-meta', False))
-    app.config['repos'] = [app.config['nk_repo'].git_repo, app.config['ckm_repo'].git_repo]
-    app.config['client'] = boto3.client('sqs')
-    sqs = boto3.resource('sqs')
-    app.config['inflation_queue'] = sqs.get_queue_by_name(
-        QueueName=os.environ.get('INFLATION_SQS_QUEUE'))
-    app.config['add_queue'] = sqs.get_queue_by_name(QueueName=os.environ.get('ADD_SQS_QUEUE'))
-    app.config['mirror_queue'] = sqs.get_queue_by_name(QueueName=os.environ.get('MIRROR_SQS_QUEUE'))
+        init_ssh(ssh_key, Path(Path.home(), '.ssh'))
 
-    # Add the hook handlers
-    app.register_blueprint(errors)
-    app.register_blueprint(inflate)
-    app.register_blueprint(spacedock_inflate, url_prefix='/sd')
-    app.register_blueprint(spacedock_add, url_prefix='/sd')
-    app.register_blueprint(github_inflate, url_prefix='/gh')
-    app.register_blueprint(github_mirror, url_prefix='/gh')
+        # Add the hook handlers
+        self.register_blueprint(errors)
+        self.register_blueprint(inflate)
+        self.register_blueprint(spacedock_inflate, url_prefix='/sd')
+        self.register_blueprint(spacedock_add, url_prefix='/sd')
+        self.register_blueprint(github_inflate, url_prefix='/gh')
+        self.register_blueprint(github_mirror, url_prefix='/gh')
 
-    return app
+
+def create_app() -> NetkanWebhooks:
+    # Set config values for other modules to retrieve
+    current_config.setup(
+        os.environ.get('XKAN_GHSECRET', ''),
+        os.environ.get('NETKAN_REMOTE', ''), '/tmp/NetKAN',
+        os.environ.get('CKANMETA_REMOTE', ''), '/tmp/CKAN-meta',
+        os.environ.get('INFLATION_SQS_QUEUE', ''),
+        os.environ.get('ADD_SQS_QUEUE', ''),
+        os.environ.get('MIRROR_SQS_QUEUE', '')
+    )
+    return NetkanWebhooks(os.environ.get('SSH_KEY', ''))
