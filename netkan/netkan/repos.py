@@ -1,8 +1,8 @@
-import logging
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Generator
 
-from git import Repo, Commit
+from git import Repo, Commit, GitCommandError
 from .metadata import Netkan, Ckan
 
 class XkanRepo:
@@ -18,6 +18,76 @@ class XkanRepo:
         index = self.git_repo.index
         index.add(files)
         return index.commit(commit_message)
+
+    @property
+    def active_branch(self) -> str:
+        return str(self.git_repo.active_branch)
+
+    def is_active_branch(self, branch_name: str) -> bool:
+        return branch_name == self.active_branch
+
+    def checkout_branch(self, branch_name: str) -> None:
+        getattr(self.git_repo.heads, branch_name).checkout()
+
+    def pull_remote_branch(self, branch_name: str, strategy_option: str = 'ours') -> None:
+        self.git_repo.remotes.origin.pull(branch_name, strategy_option=strategy_option)
+
+    def push_remote_branch(self, branch_name: str) -> None:
+        self.git_repo.remotes.origin.push(branch_name)
+
+    def close_repo(self) -> None:
+        self.git_repo.close()
+
+    @contextmanager
+    def change_branch(self, branch_name: str) -> Generator[None, None, None]:
+        """Change branch and return on exit of context
+
+        For example:
+        with ckm.change_branch('test'):
+            ckm.commit('/path/to/new_file.ckan', 'commit in branch test')
+
+        Commit will occur in the 'test' branch, which is first created locally, on exit
+        of the context it will then push the branch to the remote and change back to
+        the previous active branch.
+        """
+        active_branch = self.active_branch
+        try:
+            self.git_repo.remotes.origin.fetch(branch_name)
+            if branch_name not in self.git_repo.heads:
+                self.git_repo.create_head(
+                    branch_name,
+                    getattr(
+                        self.git_repo.remotes.origin.refs,
+                        branch_name
+                    )
+                )
+            branch = getattr(
+                self.git_repo.heads, branch_name
+            )
+            branch.checkout()
+        except GitCommandError:
+            if branch_name not in self.git_repo.heads:
+                branch = self.git_repo.create_head(branch_name)
+            else:
+                branch = getattr(
+                    self.git_repo.heads, branch_name
+                )
+            branch.checkout()
+        try:
+            yield
+        finally:
+            # It's unlikely will hit a scenario where the metadata has
+            # changed upstream of us, but the bot should win if it does.
+            try:
+                self.git_repo.remotes.origin.pull(
+                    branch_name, strategy_option='ours'
+                )
+            except GitCommandError:
+                pass
+            self.git_repo.remotes.origin.push(
+                f'{branch_name}:{branch_name}'
+            )
+            self.checkout_branch(active_branch)
 
 
 class NetkanRepo(XkanRepo):
