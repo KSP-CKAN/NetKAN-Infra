@@ -26,7 +26,15 @@ class XkanRepo:
     def is_active_branch(self, branch_name: str) -> bool:
         return branch_name == self.active_branch
 
-    def checkout_existing_branch(self, branch_name: str) -> None:
+    def checkout_branch(self, branch_name: str) -> None:
+        """Checkout Existing Branch
+
+        We utilise this function to checkout a existing branches, though
+        it doesn't quite mirror what Git will do directly. If the branch
+        doesn't exist an 'AttributeError' will be thown.
+
+        repo.checkout_branch('master')
+        """
         branch = getattr(self.git_repo.heads, branch_name)
         branch.checkout()
 
