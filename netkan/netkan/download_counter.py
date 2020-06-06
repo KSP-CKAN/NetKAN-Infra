@@ -5,6 +5,8 @@ from pathlib import Path
 from json.decoder import JSONDecodeError
 import requests
 import git
+from importlib.resources import read_text
+from string import Template
 from typing import Optional, Dict, Any
 
 from .metadata import Netkan
@@ -104,6 +106,99 @@ class NetkanDownloads(Netkan):
         return count
 
 
+class GraphQLQuery:
+
+    # The URL that handles GitHub GraphQL requests
+    GITHUB_API = 'https://api.github.com/graphql'
+
+    # Get this many modules per request
+    MODULES_PER_GRAPHQL = 50
+
+    # The request we send to GitHub, with a parameter for the module specific section
+    GRAPHQL_TEMPLATE = Template(read_text('netkan', 'downloads_query.graphql'))
+
+    # The request string per module, depends on getDownloads fragment existing in
+    # the main template
+    MODULE_TEMPLATE = Template(
+        '${ident}: repository(owner: "${user}", name: "${repo}") { ...getDownloads }')
+
+    def __init__(self, github_token: str) -> None:
+        self.netkanDls: Dict[str, NetkanDownloads] = {}
+        self.github_token = github_token
+        logging.info('Starting new GraphQL query')
+
+    def empty(self) -> bool:
+        return len(self.netkanDls) == 0
+
+    def full(self) -> bool:
+        return len(self.netkanDls) >= self.MODULES_PER_GRAPHQL
+
+    def add(self, nk: NetkanDownloads) -> None:
+        logging.info('Adding %s to GraphQL query', nk.identifier)
+        self.netkanDls[nk.identifier] = nk
+
+    def get_query(self) -> str:
+        return self.GRAPHQL_TEMPLATE.safe_substitute(module_queries="\n".join(
+            filter(None, [self.get_module_query(nk)
+                          for nk in self.netkanDls.values()])))
+
+    def get_module_query(self, nk: NetkanDownloads) -> Optional[str]:
+        if nk.kref_id:
+            match = NetkanDownloads.GITHUB_PATTERN.match(nk.kref_id)
+            if match:
+                (user, repo) = match.groups()
+                return self.MODULE_TEMPLATE.safe_substitute(
+                    ident=self.graphql_safe_identifier(nk),
+                    user=user, repo=repo)
+        return None
+
+    def graphql_safe_identifier(self, nk: NetkanDownloads) -> str:
+        """
+        Identifiers can start with numbers and include hyphens.
+        GraphQL doesn't like that, so we put an 'x' on the front
+        and replace dashes with underscores (which luckily CAN'T
+        appear in identifiers, so this is reversible).
+        """
+        return f'x{nk.identifier.replace("-", "_")}'
+
+    def from_graphql_safe_identifier(self, fake_ident: str) -> str:
+        """
+        Inverse of the above. Strip off the first character and
+        replace underscores with dashes, to get back to the original
+        identifier.
+        """
+        return fake_ident[1:].replace("_", "-")
+
+    def get_result(self, counts: Optional[Dict[str, int]]) -> Dict[str, int]:
+        logging.info('Running GraphQL query')
+        if not counts:
+            counts = {}
+        full_query = self.get_query()
+        result = self.graphql_to_github(full_query)
+        for fake_ident, apidata in result['data'].items():
+            if apidata:
+                real_ident = self.from_graphql_safe_identifier(fake_ident)
+                count = self.sum_graphql_result(apidata)
+                logging.info('Count for %s is %s', real_ident, count)
+                counts[real_ident] = count
+        return counts
+
+    def graphql_to_github(self, query: str) -> Dict[str, Any]:
+        logging.info('Contacting GitHub')
+        return requests.post(self.GITHUB_API, headers={
+            'Authorization': f'bearer {self.github_token}'
+        }, json={'query': query}).json()
+
+    def sum_graphql_result(self, apidata: Dict[str, Any]) -> int:
+        sum = 0
+        if apidata.get('parent', None):
+            sum += self.sum_graphql_result(apidata['parent'])
+        for release in apidata['releases']['nodes']:
+            for asset in release['releaseAssets']['nodes']:
+                sum += asset['downloadCount']
+        return sum
+
+
 class DownloadCounter:
 
     def __init__(self, nk_repo: NetkanRepo, ckm_repo: CkanMetaRepo, github_token: str) -> None:
@@ -116,12 +211,25 @@ class DownloadCounter:
         )
 
     def get_counts(self) -> None:
+        graph_query = GraphQLQuery(self.github_token)
         for netkan in self.nk_repo.all_nk_paths():
             netkanDl = NetkanDownloads(netkan, self.github_token)
-            count = netkanDl.get_count()
-            if count > 0:
-                logging.info('Count for %s is %s', netkanDl.identifier, count)
-                self.counts[netkanDl.identifier] = count
+            if netkanDl.kref_src == 'github':
+                # Process GitHub modules together in big batches
+                graph_query.add(netkanDl)
+                if graph_query.full():
+                    # Run the query
+                    graph_query.get_result(self.counts)
+                    # Start over with fresh query
+                    graph_query = GraphQLQuery(self.github_token)
+            else:
+                count = netkanDl.get_count()
+                if count > 0:
+                    logging.info('Count for %s is %s', netkanDl.identifier, count)
+                    self.counts[netkanDl.identifier] = count
+        if not graph_query.empty():
+            # Final pass doesn't overflow the bound
+            graph_query.get_result(self.counts)
 
     def write_json(self) -> None:
         self.output_file.write_text(
@@ -133,7 +241,7 @@ class DownloadCounter:
             [self.output_file.as_posix()],
             'NetKAN Updating Download Counts'
         )
-        logging.info('Download counts changed and commited')
+        logging.info('Download counts changed and committed')
         self.ckm_repo.git_repo.remotes.origin.push('master')
 
     def update_counts(self) -> None:
