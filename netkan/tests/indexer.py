@@ -154,11 +154,11 @@ class TestStagedCkan(TestUpdateCkan):
         self.message = CkanMessage(self.msg, self.ckm_repo)
 
     def test_ckan_message_changed(self):
-        with self.message.change_branch():
+        with self.message.ckm_repo.change_branch(self.message.mod_version):
             self.assertTrue(self.message.metadata_changed())
 
     def test_ckan_message_commit(self):
-        with self.message.change_branch():
+        with self.message.ckm_repo.change_branch(self.message.mod_version):
             self.message.write_metadata()
             c = self.message.commit_metadata()
             self.assertEqual(0, len(self.ckan_meta.untracked_files))
@@ -175,7 +175,7 @@ class TestStagedCkan(TestUpdateCkan):
 
     def test_ckan_message_change_branch(self):
         self.assertEqual(str(self.ckan_meta.active_branch), 'master')
-        with self.message.change_branch():
+        with self.message.ckm_repo.change_branch(self.message.mod_version):
             self.assertEqual(
                 str(self.ckan_meta.active_branch), 'DogeCoinFlag-v1.02'
             )
