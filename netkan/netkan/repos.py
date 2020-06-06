@@ -26,8 +26,9 @@ class XkanRepo:
     def is_active_branch(self, branch_name: str) -> bool:
         return branch_name == self.active_branch
 
-    def checkout_branch(self, branch_name: str) -> None:
-        getattr(self.git_repo.heads, branch_name).checkout()
+    def checkout_existing_branch(self, branch_name: str) -> None:
+        branch = getattr(self.git_repo.heads, branch_name)
+        branch.checkout()
 
     def pull_remote_branch(self, branch_name: str, strategy_option: str = 'ours') -> None:
         self.git_repo.remotes.origin.pull(branch_name, strategy_option=strategy_option)
