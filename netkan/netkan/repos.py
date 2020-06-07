@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable, List, Optional, Generator
+from typing import Iterable, List, Optional, Generator, Union
 
 from git import Repo, Commit, GitCommandError
 from .metadata import Netkan, Ckan
@@ -14,9 +14,9 @@ class XkanRepo:
     def __init__(self, git_repo: Repo) -> None:
         self.git_repo = git_repo
 
-    def commit(self, files: List[str], commit_message: str) -> Commit:
+    def commit(self, files: List[Union[str, Path]], commit_message: str) -> Commit:
         index = self.git_repo.index
-        index.add(files)
+        index.add([x.as_posix() if isinstance(x, Path) else x for x in files])
         return index.commit(commit_message)
 
     @property
@@ -27,7 +27,16 @@ class XkanRepo:
         return branch_name == self.active_branch
 
     def checkout_branch(self, branch_name: str) -> None:
-        getattr(self.git_repo.heads, branch_name).checkout()
+        """Checkout Existing Branch
+
+        We utilise this function to checkout a existing branches, though
+        it doesn't quite mirror what Git will do directly. If the branch
+        doesn't exist an 'AttributeError' will be thown.
+
+        repo.checkout_branch('master')
+        """
+        branch = getattr(self.git_repo.heads, branch_name)
+        branch.checkout()
 
     def pull_remote_branch(self, branch_name: str, strategy_option: str = 'ours') -> None:
         self.git_repo.remotes.origin.pull(branch_name, strategy_option=strategy_option)
