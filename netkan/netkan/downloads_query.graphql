@@ -1,0 +1,23 @@
+query {
+$module_queries
+}
+fragment getDownloads on Repository {
+    # Check 3 parent repos, GraphQL purposely discourages unbounded recursion
+    parent {
+        parent {
+            parent {
+                ...downloadsFromRelease
+            }
+            ...downloadsFromRelease
+        }
+        ...downloadsFromRelease
+    }
+    ...downloadsFromRelease
+}
+fragment downloadsFromRelease on Repository {
+    releases(last: 100) { nodes {
+        releaseAssets(first: 10) { nodes {
+            downloadCount
+        } }
+    } }
+}
