@@ -14,7 +14,7 @@ class TestScheduler(unittest.TestCase):
     def setUp(self):
         self.nk_repo = NetkanRepo(Repo.init(self.test_data))
         self.ckm_repo = CkanMetaRepo(Repo.init(self.ckm_root))
-        self.scheduler = NetkanScheduler(self.nk_repo, self.ckm_repo, 'TestyMcTestFace')
+        self.scheduler = NetkanScheduler(self.nk_repo, self.ckm_repo, 'TestyMcTestFace', 'token')
         self.messages = (nk.sqs_message(self.ckm_repo.highest_version(nk.identifier))
                          for nk in self.scheduler.nk_repo.netkans())
 
@@ -39,7 +39,7 @@ class TestScheduler(unittest.TestCase):
     def test_sqs_batching_ten(self):
         test_data = Path(PurePath(__file__).parent, 'testdata/NetTEN')
         scheduler = NetkanScheduler(
-            NetkanRepo(Repo.init(test_data)), self.ckm_repo, 'TestyMcTestFace')
+            NetkanRepo(Repo.init(test_data)), self.ckm_repo, 'TestyMcTestFace', 'token')
         messages = (nk.sqs_message(self.ckm_repo.highest_version(nk.identifier))
                     for nk in scheduler.nk_repo.netkans())
 

@@ -1,5 +1,7 @@
-from git import Repo
 from typing import List, Iterable, Dict
+
+from git import Repo
+import requests
 
 from .metadata import Netkan
 from .repos import NetkanRepo
@@ -24,3 +26,15 @@ def sqs_batch_entries(messages: Iterable[Dict[str, str]], batch_size: int = 10) 
 def pull_all(repos: Iterable[Repo]) -> None:
     for repo in repos:
         repo.remotes.origin.pull('master', strategy_option='theirs')
+
+
+def github_limit_remaining(token: str) -> int:
+    headers = {
+        'Authorization': f'token {token}',
+        'Content-Type': 'application/json'
+    }
+    response = requests.get(
+        'https://api.github.com/rate_limit',
+        headers=headers,
+    )
+    return response.json()['rate']['remaining']

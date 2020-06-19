@@ -1,23 +1,24 @@
 import datetime
 import logging
-from pathlib import Path
+from typing import List, Dict, Any
+
 import boto3
 import requests
-from typing import Iterable, List, Dict, Union, Any
 
 from .repos import NetkanRepo, CkanMetaRepo
 from .metadata import Netkan
-from .common import sqs_batch_entries
+from .common import sqs_batch_entries, github_limit_remaining
 
 
 class NetkanScheduler:
 
-    def __init__(self, nk_repo: NetkanRepo, ckm_repo: CkanMetaRepo, queue: str,
+    def __init__(self, nk_repo: NetkanRepo, ckm_repo: CkanMetaRepo, queue: str, github_token: str,
                  nonhooks_group: bool = False, webhooks_group: bool = False) -> None:
         self.nk_repo = nk_repo
         self.ckm_repo = ckm_repo
         self.nonhooks_group = nonhooks_group
         self.webhooks_group = webhooks_group
+        self.github_token = github_token
 
         # TODO: This isn't super neat, do something better.
         self.queue_url = 'test_url'
@@ -91,8 +92,17 @@ class NetkanScheduler:
             logging.error("Couldn't acquire Volume Credit Stats")
         return int(creds)
 
-    def can_schedule(self, max_queued: int, dev: bool = False, min_cpu: int = 50, min_io: int = 70) -> bool:
+    def can_schedule(self, max_queued: int, dev: bool = False,
+                     min_cpu: int = 50, min_io: int = 70, min_gh: int = 1500) -> bool:
         if not dev:
+            github_remaining = github_limit_remaining(self.github_token)
+            if github_remaining < min_gh:
+                logging.error(
+                    "Run skipped, GitHub API limit nearing exhaustion (Current: %s)",
+                    github_remaining
+                )
+                return False
+
             end = datetime.datetime.utcnow()
             start = end - datetime.timedelta(minutes=10)
             response = requests.get(
