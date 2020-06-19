@@ -12,7 +12,8 @@ def netkans(path: str, ids: Iterable[str]) -> Iterable[Netkan]:
     return (Netkan(p) for p in repo.nk_paths(ids))
 
 
-def sqs_batch_entries(messages: Iterable[Dict[str, str]], batch_size: int = 10) -> Iterable[List[Dict[str, str]]]:
+def sqs_batch_entries(messages: Iterable[Dict[str, str]],
+                      batch_size: int = 10) -> Iterable[List[Dict[str, str]]]:
     batch = []
     for msg in messages:
         batch.append(msg)

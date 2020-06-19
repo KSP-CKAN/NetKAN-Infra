@@ -46,7 +46,8 @@ class NetkanScheduler:
         for batch in sqs_batch_entries(messages):
             self.client.send_message_batch(**self.sqs_batch_attrs(batch))
 
-    def cpu_credits(self, cloudwatch: 'boto3.CloudWatch.Client', instance_id: str, start: datetime.datetime, end: datetime.datetime) -> int:
+    def cpu_credits(self, cloudwatch: 'boto3.CloudWatch.Client', instance_id: str,
+                    start: datetime.datetime, end: datetime.datetime) -> int:
         stats = cloudwatch.get_metric_statistics(
             Dimensions=[{'Name': 'InstanceId', 'Value': instance_id}],
             MetricName='CPUCreditBalance',
@@ -66,7 +67,8 @@ class NetkanScheduler:
             logging.error("Couldn't acquire CPU Credit Stats")
         return int(creds)
 
-    def volume_credits_percent(self, cloudwatch: 'boto3.CloudWatch.Client', instance_id: str, start: datetime.datetime, end: datetime.datetime) -> int:
+    def volume_credits_percent(self, cloudwatch: 'boto3.CloudWatch.Client', instance_id: str,
+                               start: datetime.datetime, end: datetime.datetime) -> int:
         client = boto3.client('ec2')
         response = client.describe_volumes(
             Filters=[{
@@ -75,7 +77,8 @@ class NetkanScheduler:
             }]
         )
         # If we add a second gp2 volume, this may break
-        volume = list(filter(lambda x: x['VolumeType'] == 'gp2', response['Volumes']))[0]
+        volume = list(
+            filter(lambda x: x['VolumeType'] == 'gp2', response['Volumes']))[0]
         volume_id = volume['Attachments'][0]['VolumeId']
         stats = cloudwatch.get_metric_statistics(
             Dimensions=[{'Name': 'VolumeId', 'Value': volume_id}],
@@ -124,7 +127,8 @@ class NetkanScheduler:
             # accrued at a rate of 3 per GB, per second. If we are are down to min_io percent of
             # our max, something has likely gone wrong and we should not queue any more
             # inflations. A regular run seems to consume between 10-15%
-            vol_credits_percent = self.volume_credits_percent(cloudwatch, instance_id, start, end)
+            vol_credits_percent = self.volume_credits_percent(
+                cloudwatch, instance_id, start, end)
             if vol_credits_percent < min_io:
                 logging.error(
                     "Run skipped, below volume credit target percentage (Current Avg: %s)",
