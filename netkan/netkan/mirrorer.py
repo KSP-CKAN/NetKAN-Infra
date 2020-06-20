@@ -294,7 +294,8 @@ class Mirrorer:
                     if self.try_mirror(CkanMirror(self.ia_collection, path)):
                         # Successfully handled -> OK to delete
                         to_delete.append(self.deletion_msg(msg))
-                queue.delete_messages(Entries=to_delete)
+                if to_delete:
+                    queue.delete_messages(Entries=to_delete)
                 # Clean up GitPython's lingering file handles between batches
                 self.ckm_repo.git_repo.close()
 
@@ -309,9 +310,12 @@ class Mirrorer:
             return True
         download_file = ckan.open_download()
         if download_file:
-            if ckan.download_hash.get('sha256') != self.large_file_sha256(download_file):
+            file_hash = self.large_file_sha256(download_file)
+            if ckan.download_hash.get('sha256') != file_hash:
                 # Bad download, try again later
-                logging.info('Hash mismatch')
+                logging.error('Hash mismatch, %s != %s',
+                              ckan.download_hash.get('sha256'),
+                              file_hash)
                 return False
             logging.info('Uploading %s', ckan.mirror_item())
             item = internetarchive.Item(self.ia_session, ckan.mirror_item())
@@ -327,6 +331,7 @@ class Mirrorer:
                                      ckan.item_metadata,
                                      ckan.source_download_headers(tmp.name))
             return True
+        logging.error("Failed to find or download %s", ckan.download)
         return False
 
     def _default_branch(self, ckan: Ckan) -> str:
