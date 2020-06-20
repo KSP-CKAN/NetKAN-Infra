@@ -313,9 +313,19 @@ class Mirrorer:
             file_hash = self.large_file_sha256(download_file)
             if ckan.download_hash.get('sha256') != file_hash:
                 # Bad download, try again later
-                logging.error('Hash mismatch, %s != %s',
-                              ckan.download_hash.get('sha256'),
-                              file_hash)
+                cache_file_path = ckan.cache_find_file
+                if cache_file_path:
+                    logging.error('Hash mismatch for %s (%s, size=%s), %s != %s',
+                                  ckan.mirror_item(),
+                                  cache_file_path,
+                                  cache_file_path.stat().st_size,
+                                  ckan.download_hash.get('sha256'),
+                                  file_hash)
+                else:
+                    logging.error('Hash mismatch for %s, %s != %s',
+                                  ckan.mirror_item(),
+                                  ckan.download_hash.get('sha256'),
+                                  file_hash)
                 return False
             logging.info('Uploading %s', ckan.mirror_item())
             item = internetarchive.Item(self.ia_session, ckan.mirror_item())
