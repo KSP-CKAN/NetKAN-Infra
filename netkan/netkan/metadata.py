@@ -283,7 +283,7 @@ class Ckan:
 
     @property
     def cache_find_file(self) -> Optional[Path]:
-        found = list(self.CACHE_PATH.glob(f'**/{self.cache_prefix}*'))
+        found = list(self.CACHE_PATH.glob(f'**/{self.cache_prefix}*.zip'))
         if found:
             return found[0]
         return None
