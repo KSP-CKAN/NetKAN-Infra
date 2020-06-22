@@ -608,14 +608,14 @@ services = [
         'name': 'Scheduler',
         'command': 'scheduler',
         'memory': '156',
-        'secrets': ['SSH_KEY'],
+        'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
-        'schedule': 'rate(2 hours)',
+        'schedule': 'rate(30 minutes)',
     },
     {
         'name': 'SchedulerWebhooksPass',
@@ -626,7 +626,7 @@ services = [
                 '--min-io', '60',
         ],
         'memory': '156',
-        'secrets': ['SSH_KEY'],
+        'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),

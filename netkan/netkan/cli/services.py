@@ -57,7 +57,7 @@ def indexer(common: SharedArgs) -> None:
 @pass_state
 def scheduler(common: SharedArgs, max_queued: int, group: str, min_cpu: int, min_io: int) -> None:
     sched = NetkanScheduler(
-        common.netkan_repo, common.ckanmeta_repo, common.queue,
+        common.netkan_repo, common.ckanmeta_repo, common.queue, common.token,
         nonhooks_group=(group == 'all' or group == 'nonhooks'),
         webhooks_group=(group == 'all' or group == 'webhooks'),
     )

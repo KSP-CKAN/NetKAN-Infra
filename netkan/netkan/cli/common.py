@@ -1,8 +1,7 @@
 import sys
 import logging
 from pathlib import Path
-from git import Repo
-from typing import Union, Callable, Any, Optional, Dict
+from typing import Union, Callable, Any, Optional
 
 import click
 
@@ -12,7 +11,8 @@ from ..notifications import setup_log_handler, catch_all
 from ..github_pr import GitHubPR
 
 
-def ctx_callback(ctx: click.Context, param: click.Parameter, value: Union[str, int]) -> Union[str, int]:
+def ctx_callback(ctx: click.Context, param: click.Parameter,
+                 value: Union[str, int]) -> Union[str, int]:
     shared = ctx.ensure_object(SharedArgs)
     setattr(shared, param.name, value)
     return value

@@ -1,5 +1,7 @@
-from git import Repo
 from typing import List, Iterable, Dict
+
+import github
+from git import Repo
 
 from .metadata import Netkan
 from .repos import NetkanRepo
@@ -10,7 +12,8 @@ def netkans(path: str, ids: Iterable[str]) -> Iterable[Netkan]:
     return (Netkan(p) for p in repo.nk_paths(ids))
 
 
-def sqs_batch_entries(messages: Iterable[Dict[str, str]], batch_size: int = 10) -> Iterable[List[Dict[str, str]]]:
+def sqs_batch_entries(messages: Iterable[Dict[str, str]],
+                      batch_size: int = 10) -> Iterable[List[Dict[str, str]]]:
     batch = []
     for msg in messages:
         batch.append(msg)
@@ -24,3 +27,7 @@ def sqs_batch_entries(messages: Iterable[Dict[str, str]], batch_size: int = 10) 
 def pull_all(repos: Iterable[Repo]) -> None:
     for repo in repos:
         repo.remotes.origin.pull('master', strategy_option='theirs')
+
+
+def github_limit_remaining(token: str) -> int:
+    return github.Github(token).get_rate_limit().core.remaining
