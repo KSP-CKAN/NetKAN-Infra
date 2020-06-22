@@ -1,7 +1,7 @@
 from typing import List, Iterable, Dict
 
+import github
 from git import Repo
-import requests
 
 from .metadata import Netkan
 from .repos import NetkanRepo
@@ -30,12 +30,4 @@ def pull_all(repos: Iterable[Repo]) -> None:
 
 
 def github_limit_remaining(token: str) -> int:
-    headers = {
-        'Authorization': f'token {token}',
-        'Content-Type': 'application/json'
-    }
-    response = requests.get(
-        'https://api.github.com/rate_limit',
-        headers=headers,
-    )
-    return response.json()['rate']['remaining']
+    return github.Github(token).get_rate_limit().core.remaining
