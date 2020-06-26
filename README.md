@@ -8,6 +8,10 @@ We use a modern microservice architecture to continuously index new mods and mod
 
 ### Microservices
 
+#### Scheduler
+
+Every once in a while, the Scheduler kicks off and submits NetKAN metadata for the Inflator to work with.
+
 #### Inflator
 
 The core of the system, it has the job to _inflate_ NetKAN metadata to CKAN metadata as described in the [Schema] and [Spec].
@@ -21,9 +25,11 @@ The Indexer takes inflated metadata and, if the metadata is different to current
 
 [metadata repository]: https://github.com/KSP-CKAN/CKAN-meta
 
-#### Scheduler
+#### Mirrorer
 
-Every once in a while, the Scheduler kicks off and submits NetKAN metadata for the Inflator to work with.
+Uploads freshly indexed mods to [the Internet Archive], if allowed by their licenses.
+
+[the Internet Archive]: https://archive.org/details/kspckanmods?sort=-publicdate)
 
 #### Webhooks
 
@@ -37,26 +43,48 @@ When started, it goes through the entire NetKAN metadata repository and collects
 
 The status page shows the current status of the inflation for each mod: Time of last inflation, time of last indexing, or errors that occurred during inflation. It accesses a DynamoDB database in the background.
 
+#### SpaceDock Adder
+
+Generates pull requests in the [NetKAN repo] when SpaceDock users request a mod to be added to CKAN.
+
+[NetKAN repo]: https://github.com/KSP-CKAN/NetKAN
+
+#### Ticket Closer
+
+Closes stale issues on GitHub.
+
+#### Auto-Freezer
+
+Submits pull requests to the [NetKAN repo] to freeze mods that haven't been indexed in a long time.
+
 ### Containers
 
 Container        | Image                  | Repo            | Code
 ---------------- | ---------------------- | --------------- | ----
-Inflator         | kspckan/inflator       | CKAN            | [Netkan/Processors/QueueHandler.cs]
 Scheduler        | kspckan/netkan         | NetKAN-Infra    | [netkan/netkan/scheduler.py]
+Inflator         | kspckan/inflator       | CKAN            | [Netkan/Processors/QueueHandler.cs]
 Indexer          | kspckan/netkan         | NetKAN-Infra    | [netkan/netkan/indexer.py]
+Mirrorer         | kspckan/netkan         | NetKAN-Infra    | [netkan/netkan/mirrorer.py]
 Download Counter | kspckan/netkan         | NetKAN-Infra    | [netkan/netkan/download_counter.py]
-Status Dumper    | kspckan/netkan         | NetKAN-Infra    | [netkan/netkan/cli.py]
+Adder            | kspckan/netkan         | NetKAN-Infra    | [netkan/netkan/spacedock_adder.py]
+TicketCloser     | kspckan/netkan         | NetKAN-Infra    | [netkan/netkan/ticket_closer.py]
+AutoFreezer      | kspckan/netkan         | NetKAN-Infra    | [netkan/netkan/auto_freezer.py]
+Status Dumper    | kspckan/netkan         | NetKAN-Infra    | [netkan/netkan/cli/utilities.py]
 [Webhooks]       | kspckan/netkan         | NetKAN-Infra    | [netkan/netkan/webhooks]
 Webhooks Proxy   | kspckan/webhooks-proxy | NetKAN-Infra    |
 Cert Bot         | certbot/dns-route53    | certbot/certbot |
 
 [Webhooks]: #Webhooks
 
-[Netkan/Processors/QueueHandler.cs]: https://github.com/KSP-CKAN/CKAN/blob/master/Netkan/Processors/QueueHandler.cs
 [netkan/netkan/scheduler.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/scheduler.py
+[Netkan/Processors/QueueHandler.cs]: https://github.com/KSP-CKAN/CKAN/blob/master/Netkan/Processors/QueueHandler.cs
 [netkan/netkan/indexer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/indexer.py
+[netkan/netkan/mirrorer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/mirrorer.py
 [netkan/netkan/download_counter.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/download_counter.py
-[netkan/netkan/cli.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/cli.py
+[netkan/netkan/spacedock_adder.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/spacedock_adder.py
+[netkan/netkan/ticket_closer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/ticket_closer.py
+[netkan/netkan/auto_freezer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/auto_freezer.py
+[netkan/netkan/cli/utilities.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/cli/utilities.py
 [netkan/netkan/webhooks]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/webhooks
 
 ### Queues
@@ -85,6 +113,22 @@ StagingReason     | Body for pull request if Staged is "true", omitted otherwise
 
 Payload: JSON contents of .ckan file to index
 
+#### Adding.fifo
+
+Message Attribute | Usage
+----------------- | -----
+_N/A_             | _N/A_
+
+Payload: JSON encoding of request received from SpaceDock to index a new mod
+
+#### Mirroring.fifo
+
+Message Attribute | Usage
+----------------- | -----
+_N/A_             | _N/A_
+
+Payload: Path of .ckan file just added to CKAN-meta
+
 ### Webhooks
 
 The webhooks run on https://netkan.ksp-ckan.space/ and are firewalled to only a few servers that we know need to access them (so they're not going to work if you try them in your browser).
@@ -92,12 +136,15 @@ The webhooks run on https://netkan.ksp-ckan.space/ and are firewalled to only a 
 Route                     | Parameters                                          | Usage
 ------------------------- | --------------------------------------------------- | -----
 /inflate                  | POST body: `{"identifiers": [ "Id1", "Id2", ... ]}` | Inflate the given modules (used by SpaceDock-Notify)
+/sd/add                   | POST form: See [Adder code comments]                | Index a new mod from SpaceDock
 /sd/inflate               | POST form: `mod_id=1234&event_type=update`          | Inflate modules with the given SpaceDock ID
 /gh/inflate               | See the [push API]                                  | Inflate modules after commits to NetKAN
 /gh/release?identifier=Id | See the [release API]                               | Inflate a module when a new release is uploaded to GitHub
+/gh/mirror                | See the [push API]                                  | Archive a mod that was just indexed
 
-[push API]: https://developer.github.com/v3/activity/events/types/#pushevent
-[release API]: https://developer.github.com/v3/activity/events/types/#releaseevent
+[push API]: https://developer.github.com/webhooks/event-payloads/#push
+[release API]: https://developer.github.com/webhooks/event-payloads/#release
+[Adder code comments]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/webhooks/spacedock_add.py#L12-L25
 
 ## Developing
 
