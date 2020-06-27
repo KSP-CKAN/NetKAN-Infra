@@ -452,6 +452,28 @@ t.add_resource(PolicyType(
                     "arn:aws:s3:::status.ksp-ckan.space/*"
                 ],
             },
+            {
+
+                "Effect": "Allow",
+                "Action": [
+                    "s3:PutObject",
+                    "s3:GetObject",
+                    "s3:DeleteObject",
+                ],
+                "Resource": [
+                    "arn:aws:s3:::ksp-ckan/*"
+                ],
+            },
+            {
+
+                "Effect": "Allow",
+                "Action": [
+                    "s3:ListBucket",
+                ],
+                "Resource": [
+                    "arn:aws:s3:::ksp-ckan"
+                ],
+            },
         ]
     }
 ))
