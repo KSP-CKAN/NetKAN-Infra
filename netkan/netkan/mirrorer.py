@@ -232,8 +232,8 @@ class CkanMirror(Ckan):
                           path_hash)
             opened.close()
             path.unlink()
-            path.joinpath('.sha1').unlink()
-            path.joinpath('.sha256').unlink()
+            path.with_suffix(f'{path.suffix}.sha1').unlink()
+            path.with_suffix(f'{path.suffix}.sha256').unlink()
             return None
         return opened
 
