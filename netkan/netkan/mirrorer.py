@@ -258,7 +258,6 @@ class CkanMirror(Ckan):
                     file.close()
                     new_path = self.CACHE_PATH.joinpath(target_path)
                     shutil.copyfile(tmp_path, new_path)
-                    tmp_path.unlink()
                     logging.info('Downloaded %s to %s', self.mirror_item(), target_path)
                     return new_path.open(mode='rb')
         return None
