@@ -207,22 +207,60 @@ class CkanMirror(Ckan):
             **({'licenseurl': lic_urls} if lic_urls else {}),
         }
 
+    @staticmethod
+    def large_file_sha256(file: BinaryIO, block_size: int = 8192) -> str:
+        sha = hashlib.sha256()
+        for block in iter(lambda: file.read(block_size), b''):
+            sha.update(block)
+        return sha.hexdigest().upper()
+
+    def open_if_hash_match(self, path: Path) -> Optional[BinaryIO]:
+        """Check whether the file located at the given path matches our sha256.
+
+        If so, return a binary file handle opened for reading.
+        Otherwise delete it and its .sha1 and .sha256 files and return None.
+        Used for files both already in cache and freshly downloaded.
+        """
+        opened = path.open(mode='rb')
+        path_hash = self.large_file_sha256(path.open(mode='rb'))
+        if self.download_hash.get('sha256') != path_hash:
+            logging.error('Hash mismatch for %s (%s, size=%s), %s != %s, purging',
+                          self.mirror_item(),
+                          path,
+                          path.stat().st_size,
+                          self.download_hash.get('sha256'),
+                          path_hash)
+            opened.close()
+            path.unlink()
+            path.joinpath('.sha1').unlink()
+            path.joinpath('.sha256').unlink()
+            return None
+        return opened
+
     def open_download(self) -> Optional[BinaryIO]:
         cached_file = self.cache_find_file
         if cached_file:
-            # If the download is in the cache, use it
-            logging.info('Found matching cache entry at %s', cached_file)
-            return cached_file.open(mode='rb')
+            # If the download is in the cache, check the hash against metadata
+            file = self.open_if_hash_match(cached_file)
+            if file:
+                logging.info('Found matching cache entry at %s', cached_file)
+                return file
         # Download the file as needed
-        if self.cache_filename:
+        target_path = self.cache_filename
+        if target_path:
             with tempfile.NamedTemporaryFile() as tmp:
                 logging.info('Downloading %s', self.download)
                 urllib.request.urlretrieve(self.download, tmp.name)
-                # Copy to cache so the temp file can be deleted
-                shutil.copyfile(tmp.name, self.CACHE_PATH.joinpath(self.cache_filename))
-                logging.info('Downloaded %s to %s', self.mirror_item(), self.cache_filename)
-        if self.cache_find_file:
-            return self.cache_find_file.open(mode='rb')
+                tmp_path = Path(tmp.name)
+                file = self.open_if_hash_match(tmp_path)
+                if file:
+                    # Copy to cache so the temp file can be deleted
+                    file.close()
+                    new_path = self.CACHE_PATH.joinpath(target_path)
+                    shutil.copyfile(tmp_path, new_path)
+                    tmp_path.unlink()
+                    logging.info('Downloaded %s to %s', self.mirror_item(), target_path)
+                    return new_path.open(mode='rb')
         return None
 
     @property
@@ -310,23 +348,6 @@ class Mirrorer:
             return True
         download_file = ckan.open_download()
         if download_file:
-            file_hash = self.large_file_sha256(download_file)
-            if ckan.download_hash.get('sha256') != file_hash:
-                # Bad download, try again later
-                cache_file_path = ckan.cache_find_file
-                if cache_file_path:
-                    logging.error('Hash mismatch for %s (%s, size=%s), %s != %s',
-                                  ckan.mirror_item(),
-                                  cache_file_path,
-                                  cache_file_path.stat().st_size,
-                                  ckan.download_hash.get('sha256'),
-                                  file_hash)
-                else:
-                    logging.error('Hash mismatch for %s, %s != %s',
-                                  ckan.mirror_item(),
-                                  ckan.download_hash.get('sha256'),
-                                  file_hash)
-                return False
             logging.info('Uploading %s', ckan.mirror_item())
             item = internetarchive.Item(self.ia_session, ckan.mirror_item())
             item.upload_file(download_file.name, ckan.mirror_filename(),
@@ -353,13 +374,6 @@ class Mirrorer:
                 full_name = '/'.join(parsed.path.split('/')[1:3])
                 return self._gh.get_repo(full_name).default_branch
         return 'master'
-
-    @staticmethod
-    def large_file_sha256(file: BinaryIO, block_size: int = 8192) -> str:
-        sha = hashlib.sha256()
-        for block in iter(lambda: file.read(block_size), b''):
-            sha.update(block)
-        return sha.hexdigest().upper()
 
     @staticmethod
     def deletion_msg(msg: 'boto3.resources.factory.sqs.Message') -> Dict[str, Any]:
