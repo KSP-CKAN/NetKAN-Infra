@@ -108,6 +108,9 @@ class CkanMessage:
             attrs['ModIdentifier'] = self.ModIdentifier
         if self.indexed:
             attrs['last_indexed'] = datetime.now(timezone.utc)
+        release_date = getattr(self.ckan, 'release_date', None)
+        if release_date:
+            attrs['release_date'] = release_date
         return attrs
 
     def _process_ckan(self) -> None:

@@ -59,13 +59,15 @@ class AutoFreezer:
 
     def _too_old(self, ident: str, update_cutoff: datetime) -> bool:
         status = ModStatus.get(ident)
+        release_date = getattr(status, 'release_date', None)
+        if release_date:
+            return release_date < update_cutoff
         last_indexed = getattr(status, 'last_indexed', None)
-        if not last_indexed:
-            # Never indexed since the start of status tracking = 4+ years old
-            # ... except for mods that were updated by the old webhooks :(
-            return False
-        else:
+        if last_indexed:
             return last_indexed < update_cutoff
+        # Never indexed since the start of status tracking = 4+ years old
+        # ... except for mods that were updated by the old webhooks :(
+        return False
 
     def _add_freezee(self, ident: str) -> None:
         self.nk_repo.git_repo.index.move([

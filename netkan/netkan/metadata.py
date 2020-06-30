@@ -6,6 +6,7 @@ from hashlib import sha1
 import uuid
 import urllib.parse
 import github
+import dateutil.parser
 from typing import Optional, List, Tuple, Union, Any, Dict
 
 
@@ -253,6 +254,9 @@ class Ckan:
         'application/x-compressed-tar': 'tar.gz',
         'application/zip':              'zip',
     }
+    ISODATETIME_PROPERTIES = [
+        'release_date'
+    ]
 
     def __init__(self, filename: Union[str, Path] = None, contents: str = None) -> None:
         if filename:
@@ -260,7 +264,17 @@ class Ckan:
             self.contents = self.filename.read_text()
         elif contents:
             self.contents = contents
-        self._raw = json.loads(self.contents)
+        self._raw = json.loads(self.contents, object_hook=self._custom_parser)
+
+    def _custom_parser(self, dct: Dict[str, Any]) -> Dict[str, Any]:
+        # Special handling for DateTime fields
+        for k in self.ISODATETIME_PROPERTIES:
+            if k in dct:
+                try:
+                    dct[k] = dateutil.parser.isoparse(dct[k])
+                except:
+                    pass
+        return dct
 
     def __getattr__(self, name: str) -> Any:
         if name in self._raw:
