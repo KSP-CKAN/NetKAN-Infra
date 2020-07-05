@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import git
-from typing import Iterable
+from typing import Iterable, Optional, List, Tuple
 
 from .status import ModStatus
 from .repos import NetkanRepo
@@ -18,18 +18,17 @@ class AutoFreezer:
         self.github_pr = github_pr
 
     def freeze_idle_mods(self, days_limit: int) -> None:
-        update_cutoff = datetime.now(timezone.utc) - timedelta(days=days_limit)
         self.nk_repo.git_repo.remotes.origin.pull('master', strategy_option='ours')
-        ids_to_freeze = [ident for ident in self._ids() if self._too_old(ident, update_cutoff)]
-        if ids_to_freeze:
+        idle_mods = self._find_idle_mods(days_limit)
+        if idle_mods:
             self._checkout_branch(self.BRANCH_NAME)
-            for ident in ids_to_freeze:
+            for ident, _ in idle_mods:
                 if self.nk_repo.nk_path(ident).exists():
                     logging.info('Freezing %s', ident)
                     self._add_freezee(ident)
                 else:
                     logging.info('Already froze %s', ident)
-            self._submit_pr(self.BRANCH_NAME, days_limit)
+            self._submit_pr(self.BRANCH_NAME, days_limit, idle_mods)
             self.nk_repo.git_repo.heads.master.checkout()
 
     def mark_frozen_mods(self) -> None:
@@ -57,17 +56,24 @@ class AutoFreezer:
     def _ids(self) -> Iterable[str]:
         return (nk.identifier for nk in self.nk_repo.netkans())
 
-    def _too_old(self, ident: str, update_cutoff: datetime) -> bool:
+    def _find_idle_mods(self, days_limit: int) -> List[Tuple[str, datetime]]:
+        update_cutoff = datetime.now(timezone.utc) - timedelta(days=days_limit)
+        # I can't get a list comprehension to do this without the datetime becoming optional
+        idle_mods = []
+        for ident in self._ids():
+            dttm = self._last_timestamp(ident)
+            if dttm and dttm < update_cutoff:
+                idle_mods.append((ident, dttm))
+        return idle_mods
+
+    def _last_timestamp(self, ident: str) -> Optional[datetime]:
         status = ModStatus.get(ident)
-        release_date = getattr(status, 'release_date', None)
-        if release_date:
-            return release_date < update_cutoff
-        last_indexed = getattr(status, 'last_indexed', None)
-        if last_indexed:
-            return last_indexed < update_cutoff
-        # Never indexed since the start of status tracking = 4+ years old
-        # ... except for mods that were updated by the old webhooks :(
-        return False
+        return getattr(status, 'release_date',
+                       getattr(status, 'last_indexed',
+                               None))
+
+    def _timestamp_before(self, dttm: Optional[datetime], update_cutoff: datetime) -> bool:
+        return dttm < update_cutoff if dttm else False
 
     def _add_freezee(self, ident: str) -> None:
         self.nk_repo.git_repo.index.move([
@@ -76,7 +82,17 @@ class AutoFreezer:
         ])
         self.nk_repo.git_repo.index.commit(f'Freeze {ident}')
 
-    def _submit_pr(self, branch_name: str, days: int) -> None:
+    @staticmethod
+    def _mod_table(idle_mods: List[Tuple[str, datetime]]) -> str:
+        idle_mods.sort(key=lambda mod: mod[1])
+        return '\n'.join([
+            'Mod | Last Update',
+            ':-- | :--',
+            *[f'{mod[0]} | {mod[1].astimezone(timezone.utc):%Y-%m-%d %H:%M %Z}'
+              for mod in idle_mods]
+        ])
+
+    def _submit_pr(self, branch_name: str, days: int, idle_mods: List[Tuple[str, datetime]]) -> None:
         if self.github_pr:
             logging.info('Submitting pull request for %s', branch_name)
             self.nk_repo.git_repo.remotes.origin.push(f'{branch_name}:{branch_name}')
@@ -84,5 +100,7 @@ class AutoFreezer:
                 branch=branch_name,
                 title='Freeze idle mods',
                 body=(f'The attached mods have not updated in {days} or more days.'
-                      ' Freeze them to save the bot some CPU cycles.'),
+                      ' Freeze them to save the bot some CPU cycles.'
+                      '\n\n'
+                      + self._mod_table(idle_mods)),
             )
