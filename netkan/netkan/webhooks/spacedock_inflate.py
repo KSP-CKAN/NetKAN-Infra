@@ -1,6 +1,6 @@
 from pathlib import Path
 from flask import Blueprint, current_app, request
-from typing import Tuple, Iterable
+from typing import Tuple, Iterable, List
 
 from ..common import sqs_batch_entries, pull_all
 from ..metadata import Netkan
@@ -55,6 +55,6 @@ def inflate_hook() -> Tuple[str, int]:
     return 'No such module', 404
 
 
-def find_netkans(sd_id: str) -> Iterable[Netkan]:
+def find_netkans(sd_id: str) -> List[Netkan]:
     all_nk = current_config.nk_repo.netkans()
-    return (nk for nk in all_nk if nk.kref_src == 'spacedock' and nk.kref_id == sd_id)
+    return [nk for nk in all_nk if nk.kref_src == 'spacedock' and nk.kref_id == sd_id]
