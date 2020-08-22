@@ -1,6 +1,6 @@
 from pathlib import Path
 from flask import Blueprint, current_app, request
-from typing import Tuple, Iterable
+from typing import Tuple, Iterable, List
 
 from ..common import sqs_batch_entries, pull_all
 from ..metadata import Netkan
