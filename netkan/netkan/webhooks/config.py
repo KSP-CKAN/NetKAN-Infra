@@ -23,11 +23,12 @@ class WebhooksConfig:
         self.ckm_repo = CkanMetaRepo(init_repo(ckanmeta_remote, ckanmeta_path, False))
         self.repos = [self.nk_repo.git_repo, self.ckm_repo.git_repo]
 
-        self.client = boto3.client('sqs')
-        sqs = boto3.resource('sqs')
-        self.inflation_queue = sqs.get_queue_by_name(QueueName=inf_queue_name)
-        self.add_queue = sqs.get_queue_by_name(QueueName=add_queue_name)
-        self.mirror_queue = sqs.get_queue_by_name(QueueName=mir_queue_name)
+        if inf_queue_name or add_queue_name or mir_queue_name:
+            self.client = boto3.client('sqs')
+            sqs = boto3.resource('sqs')
+            self.inflation_queue = sqs.get_queue_by_name(QueueName=inf_queue_name)
+            self.add_queue = sqs.get_queue_by_name(QueueName=add_queue_name)
+            self.mirror_queue = sqs.get_queue_by_name(QueueName=mir_queue_name)
 
 
 # Provide the active config to other modules

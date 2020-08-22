@@ -57,4 +57,4 @@ def inflate_hook() -> Tuple[str, int]:
 
 def find_netkans(sd_id: str) -> Iterable[Netkan]:
     all_nk = current_config.nk_repo.netkans()
-    return (nk for nk in all_nk if nk.kref_src == 'spacedock' and nk.kref_id == sd_id)
+    return [nk for nk in all_nk if nk.kref_src == 'spacedock' and nk.kref_id == sd_id]
