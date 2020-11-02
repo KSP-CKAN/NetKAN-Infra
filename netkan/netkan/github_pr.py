@@ -37,7 +37,7 @@ class GitHubPR:
                 error = response.json()['errors'][0]['message']
             except KeyError:
                 pass
-            logging.info('PR for {} failed: {} - {}'.format(
+            logging.error('PR for {} failed: {} - {}'.format(
                 branch,
                 message,
                 error
