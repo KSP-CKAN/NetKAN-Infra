@@ -17,9 +17,9 @@ class AutoFreezer:
         self.nk_repo = nk_repo
         self.github_pr = github_pr
 
-    def freeze_idle_mods(self, days_limit: int) -> None:
+    def freeze_idle_mods(self, days_limit: int, days_till_ignore: int) -> None:
         self.nk_repo.git_repo.remotes.origin.pull('master', strategy_option='ours')
-        idle_mods = self._find_idle_mods(days_limit)
+        idle_mods = self._find_idle_mods(days_limit, days_till_ignore)
         if idle_mods:
             self._checkout_branch(self.BRANCH_NAME)
             for ident, _ in idle_mods:
@@ -56,13 +56,14 @@ class AutoFreezer:
     def _ids(self) -> Iterable[str]:
         return (nk.identifier for nk in self.nk_repo.netkans())
 
-    def _find_idle_mods(self, days_limit: int) -> List[Tuple[str, datetime]]:
+    def _find_idle_mods(self, days_limit: int, days_till_ignore: int) -> List[Tuple[str, datetime]]:
         update_cutoff = datetime.now(timezone.utc) - timedelta(days=days_limit)
+        too_old_cutoff = update_cutoff - timedelta(days=days_till_ignore)
         # I can't get a list comprehension to do this without the datetime becoming optional
         idle_mods = []
         for ident in self._ids():
             dttm = self._last_timestamp(ident)
-            if dttm and dttm < update_cutoff:
+            if dttm and dttm < update_cutoff and dttm > too_old_cutoff:
                 idle_mods.append((ident, dttm))
         return idle_mods
 

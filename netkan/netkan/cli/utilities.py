@@ -22,14 +22,18 @@ from ..mirrorer import Mirrorer
     '--days-limit', default=1000,
     help='Number of days to wait before freezing a mod as idle',
 )
+@click.option(
+    '--days-till-ignore', default=21,
+    help='Mods idle this many days will be ignored',
+)
 @common_options
 @pass_state
-def auto_freezer(common: SharedArgs, days_limit: int) -> None:
+def auto_freezer(common: SharedArgs, days_limit: int, days_till_ignore: int) -> None:
     afr = AutoFreezer(
         common.netkan_repo,
         common.github_pr,
     )
-    afr.freeze_idle_mods(days_limit)
+    afr.freeze_idle_mods(days_limit, days_till_ignore)
     afr.mark_frozen_mods()
 
 
