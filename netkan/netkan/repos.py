@@ -153,5 +153,5 @@ class CkanMetaRepo(XkanRepo):
         return (Ckan(f) for f in self.mod_path(identifier).glob(self.CKANMETA_GLOB))
 
     def highest_version(self, identifier: str) -> Optional[Ckan.Version]:
-        highest = max(self.ckans(identifier), default=None, key=lambda ck: ck.version)
+        highest = max(self.ckans(identifier), default=None, key=lambda ck: ck.version)  # type: ignore[type-var]
         return highest.version if highest else None
