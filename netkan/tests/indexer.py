@@ -128,10 +128,10 @@ class TestUpdateCkan(TestCkan):
 
     def test_ckan_message_commit(self):
         self.message.write_metadata()
-        c = self.message.commit_metadata()
+        c = self.message.commit_metadata(True)
         self.assertEqual(0, len(self.ckan_meta.untracked_files))
         self.assertEqual(
-            c.message, 'NetKAN generated mods - DogeCoinFlag-v1.02'
+            c.message, 'NetKAN added mod - DogeCoinFlag-v1.02'
         )
 
     def test_ckan_message_status_attrs(self):
@@ -160,10 +160,10 @@ class TestStagedCkan(TestUpdateCkan):
     def test_ckan_message_commit(self):
         with self.message.ckm_repo.change_branch(self.message.mod_version):
             self.message.write_metadata()
-            c = self.message.commit_metadata()
+            c = self.message.commit_metadata(True)
             self.assertEqual(0, len(self.ckan_meta.untracked_files))
             self.assertEqual(
-                c.message, 'NetKAN generated mods - DogeCoinFlag-v1.02'
+                c.message, 'NetKAN added mod - DogeCoinFlag-v1.02'
             )
         self.assertEqual(
             self.ckan_meta.head.commit.message,
