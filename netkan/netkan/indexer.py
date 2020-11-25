@@ -77,10 +77,11 @@ class CkanMessage:
         with open(self.mod_file, mode='w') as file:
             file.write(self.body)
 
-    def commit_metadata(self) -> Commit:
+    def commit_metadata(self, file_created: bool) -> Commit:
+        verb = 'added' if file_created else 'updated'
         commit = self.ckm_repo.commit(
             [self.mod_file.as_posix()],
-            f'NetKAN generated mods - {self.mod_version}'
+            f'NetKAN {verb} mod - {self.mod_version}'
         )
         logging.info('Committing %s', self.mod_version)
         self.indexed = True
@@ -115,8 +116,9 @@ class CkanMessage:
 
     def _process_ckan(self) -> None:
         if self.Success and self.metadata_changed():
+            new_file = not self.mod_file.exists()
             self.write_metadata()
-            self.commit_metadata()
+            self.commit_metadata(new_file)
         try:
             status = ModStatus.get(self.ModIdentifier)
             attrs = self.status_attrs()
