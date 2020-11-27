@@ -7,13 +7,11 @@ on:
 
 jobs:
   build:
-    if: ${{ github.repository == 'KSP-CKAN/NetKAN-Infra' }}
+    if: ${{ secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_PASSWORD }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to DockerHub
@@ -30,27 +28,31 @@ jobs:
           target: production
           tags: kspckan/netkan:latest
   webhooks:
+    if: ${{ secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_PASSWORD }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push webhooks-proxy
         id: docker_build
         uses: docker/build-push-action@v2
         with:
           context: ./nginx
           file: ./nginx/Dockerfile
-          push: false
+          push: true
           tags: kspckan/webhooks-proxy:latest
 
   deploy:
-    if: ${{ github.repository == 'KSP-CKAN/NetKAN-Infra' }}
+    if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: [ 'build', 'webhooks' ]
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python 3.7
