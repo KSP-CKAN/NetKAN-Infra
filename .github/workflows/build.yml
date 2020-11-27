@@ -1,0 +1,22 @@
+name: Build NetKAN-Infra
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Build Image
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: ./netkan
+          file: ./netkan/Dockerfile
+          push: false
+          target: production
