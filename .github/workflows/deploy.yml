@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    if: ${{ secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_PASSWORD }}
+    if: ${{ github.repository == 'KSP-CKAN/NetKAN-Infra' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,7 +28,7 @@ jobs:
           target: production
           tags: kspckan/netkan:latest
   webhooks:
-    if: ${{ secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_PASSWORD }}
+    if: ${{ github.repository == 'KSP-CKAN/NetKAN-Infra' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -50,7 +50,7 @@ jobs:
           tags: kspckan/webhooks-proxy:latest
 
   deploy:
-    if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY }}
+    if: ${{ github.repository == 'KSP-CKAN/NetKAN-Infra' }}
     runs-on: ubuntu-latest
     needs: [ 'build', 'webhooks' ]
     steps:
