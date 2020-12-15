@@ -382,11 +382,9 @@ class Mirrorer:
         }
 
     def ia_overloaded(self) -> bool:
-        return requests.get(
-            'https://s3.us.archive.org/?check_limit=1&accesskey={}'.format(
-                self.ia_access
-            )
-        ).status_code == 503
+        response = requests.get(
+            f'https://s3.us.archive.org/?check_limit=1&accesskey={self.ia_access}')
+        return response.status_code == 503 or response.json().get('over_limit')
 
     def purge_epochs(self, dry_run: bool) -> None:
         if dry_run:
