@@ -762,6 +762,7 @@ services = [
             {
                 'name': 'webhooks',
                 'entrypoint': '.local/bin/gunicorn',
+                'memory': '128',
                 'command': [
                     '-b', '0.0.0.0:5000', '--access-logfile', '-',
                     '--preload', 'netkan.webhooks:create_app()'
