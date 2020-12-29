@@ -478,6 +478,36 @@ t.add_resource(PolicyType(
     }
 ))
 
+# Metadata CI Permissions
+# CI access for metadata actions
+ksp_ci_metadata_group = t.add_resource(Group("KspCkanCiMetadataGroup"))
+t.add_resource(PolicyType(
+    "KspCkanCiMetadataRole",
+    PolicyName="SQSMetadataInbound",
+    Groups=[Ref(ksp_ci_metadata_group)],
+    PolicyDocument={
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "sqs:SendMessage",
+                    "sqs:GetQueueUrl",
+                    "sqs:GetQueueAttributes",
+                ],
+                "Resource": [
+                    GetAtt(inbound, "Arn"),
+                ]
+            },
+            {
+                "Effect": "Allow",
+                "Action": "sqs:ListQueues",
+                "Resource": "*",
+            },
+        ],
+    }
+))
+
 # Indexer Compute
 # We could utilise an autoscaling group, but that is way
 # more complicated for our use case. If at some point we'd
