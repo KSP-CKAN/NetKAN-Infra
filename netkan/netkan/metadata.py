@@ -5,9 +5,8 @@ from pathlib import Path
 from hashlib import sha1
 import uuid
 import urllib.parse
-import github
-import dateutil.parser
 from typing import Optional, List, Tuple, Union, Any, Dict
+import dateutil.parser
 
 
 class Netkan:
@@ -80,12 +79,12 @@ class Netkan:
         return attribs
 
     def sqs_message(self, high_ver: 'Ckan.Version' = None) -> Dict[str, Any]:
-        id = uuid.uuid4().hex
+        hex_id = uuid.uuid4().hex
         return {
-            'Id': id,
+            'Id': hex_id,
             'MessageBody': self.contents,
             'MessageGroupId': '1',
-            'MessageDeduplicationId': id,
+            'MessageDeduplicationId': hex_id,
             'MessageAttributes': self.sqs_message_attribs(high_ver),
         }
 
@@ -272,7 +271,7 @@ class Ckan:
             if k in dct:
                 try:
                     dct[k] = dateutil.parser.isoparse(dct[k])
-                except:
+                except: # pylint: disable=bare-except
                     pass
         return dct
 

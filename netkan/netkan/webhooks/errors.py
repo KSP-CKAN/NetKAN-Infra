@@ -1,5 +1,5 @@
-from flask import Blueprint, current_app
 from typing import Tuple
+from flask import Blueprint, current_app
 
 
 errors = Blueprint('errors', __name__)  # pylint: disable=invalid-name

@@ -1,8 +1,8 @@
 import re
 from pathlib import Path
 from hashlib import md5
-from flask import Blueprint, current_app, request, jsonify
 from typing import Tuple, List, Iterable, Dict, Any, Set
+from flask import Blueprint, current_app, request, jsonify
 
 from .github_utils import signature_required
 from ..common import sqs_batch_entries

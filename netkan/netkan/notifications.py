@@ -1,9 +1,9 @@
 import os
 import sys
 import logging
-import discord
 from typing import Iterable, Type
 from types import TracebackType
+import discord
 
 
 def catch_all(type_: Type[BaseException], value: BaseException, traceback: TracebackType) -> None:

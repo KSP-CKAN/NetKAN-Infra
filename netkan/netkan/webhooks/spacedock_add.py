@@ -1,7 +1,7 @@
 from hashlib import md5
 import json
-from flask import Blueprint, current_app, request
 from typing import Tuple, Dict, Any
+from flask import Blueprint, current_app, request
 
 from ..common import sqs_batch_entries
 from .config import current_config

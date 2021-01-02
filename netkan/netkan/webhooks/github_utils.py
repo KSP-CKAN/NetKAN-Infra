@@ -1,8 +1,8 @@
 from functools import wraps
 import hashlib
 import hmac
+from typing import Callable, Tuple, Any, Optional
 from flask import current_app, request
-from typing import Callable, Tuple, Any, Dict, Optional
 
 from .config import current_config
 

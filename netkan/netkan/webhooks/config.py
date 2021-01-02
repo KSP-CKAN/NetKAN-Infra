@@ -1,5 +1,5 @@
-import boto3
 from pathlib import Path
+import boto3
 
 from ..repos import NetkanRepo, CkanMetaRepo
 from ..utils import init_repo, init_ssh

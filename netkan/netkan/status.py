@@ -4,14 +4,14 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-import boto3
+from typing import Optional, Dict, Any
 from dateutil.parser import parse
-from git import Repo
 from pynamodb.models import Model
 from pynamodb.attributes import (
     UnicodeAttribute, UTCDateTimeAttribute, BooleanAttribute, MapAttribute
 )
-from typing import Optional, Dict, Any
+import boto3
+from git import Repo
 
 from .repos import CkanMetaRepo
 

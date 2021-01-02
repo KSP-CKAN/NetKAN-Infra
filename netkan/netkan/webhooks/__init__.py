@@ -1,8 +1,8 @@
 import os
 import sys
+from pathlib import Path
 import boto3
 from flask import Flask
-from pathlib import Path
 
 from ..notifications import setup_log_handler, catch_all
 from .config import current_config

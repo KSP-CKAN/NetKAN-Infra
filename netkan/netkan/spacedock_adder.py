@@ -1,12 +1,11 @@
 import json
 import re
-from pathlib import Path
 from importlib.resources import read_text
 from string import Template
 from collections import defaultdict
+from typing import Dict, Any
 import git
 import boto3
-from typing import Dict, Any
 
 from .github_pr import GitHubPR
 

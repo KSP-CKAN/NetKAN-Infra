@@ -1,8 +1,7 @@
 import logging
 from datetime import datetime, timezone, timedelta
-from pathlib import Path
-import git
 from typing import Iterable, Optional, List, Tuple
+import git
 
 from .status import ModStatus
 from .repos import NetkanRepo

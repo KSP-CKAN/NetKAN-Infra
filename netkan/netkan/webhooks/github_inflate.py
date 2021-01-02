@@ -1,10 +1,9 @@
 import logging
 from pathlib import Path
-from flask import Blueprint, current_app, request, jsonify
 from typing import List, Tuple, Iterable, Dict, Any, Set
+from flask import Blueprint, current_app, request, jsonify
 
 from ..common import netkans, sqs_batch_entries, pull_all
-from ..metadata import Netkan
 from ..status import ModStatus
 from .github_utils import signature_required
 from .config import current_config

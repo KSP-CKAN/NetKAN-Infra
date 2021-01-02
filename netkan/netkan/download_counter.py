@@ -3,11 +3,10 @@ import logging
 import re
 from pathlib import Path
 from json.decoder import JSONDecodeError
-import requests
-import git
 from importlib.resources import read_text
 from string import Template
 from typing import Optional, Dict, Any
+import requests
 
 from .metadata import Netkan
 from .utils import repo_file_add_or_changed
@@ -123,43 +122,43 @@ class GraphQLQuery:
         '${ident}: repository(owner: "${user}", name: "${repo}") { ...getDownloads }')
 
     def __init__(self, github_token: str) -> None:
-        self.netkanDls: Dict[str, NetkanDownloads] = {}
+        self.netkan_dls: Dict[str, NetkanDownloads] = {}
         self.github_token = github_token
         logging.info('Starting new GraphQL query')
 
     def empty(self) -> bool:
-        return len(self.netkanDls) == 0
+        return len(self.netkan_dls) == 0
 
     def full(self) -> bool:
-        return len(self.netkanDls) >= self.MODULES_PER_GRAPHQL
+        return len(self.netkan_dls) >= self.MODULES_PER_GRAPHQL
 
-    def add(self, nk: NetkanDownloads) -> None:
-        logging.info('Adding %s to GraphQL query', nk.identifier)
-        self.netkanDls[nk.identifier] = nk
+    def add(self, nk_dl: NetkanDownloads) -> None:
+        logging.info('Adding %s to GraphQL query', nk_dl.identifier)
+        self.netkan_dls[nk_dl.identifier] = nk_dl
 
     def get_query(self) -> str:
         return self.GRAPHQL_TEMPLATE.safe_substitute(module_queries="\n".join(
             filter(None, [self.get_module_query(nk)
-                          for nk in self.netkanDls.values()])))
+                          for nk in self.netkan_dls.values()])))
 
-    def get_module_query(self, nk: NetkanDownloads) -> Optional[str]:
-        if nk.kref_id:
-            match = NetkanDownloads.GITHUB_PATTERN.match(nk.kref_id)
+    def get_module_query(self, nk_dl: NetkanDownloads) -> Optional[str]:
+        if nk_dl.kref_id:
+            match = NetkanDownloads.GITHUB_PATTERN.match(nk_dl.kref_id)
             if match:
                 (user, repo) = match.groups()
                 return self.MODULE_TEMPLATE.safe_substitute(
-                    ident=self.graphql_safe_identifier(nk),
+                    ident=self.graphql_safe_identifier(nk_dl),
                     user=user, repo=repo)
         return None
 
-    def graphql_safe_identifier(self, nk: NetkanDownloads) -> str:
+    def graphql_safe_identifier(self, nk_dl: NetkanDownloads) -> str:
         """
         Identifiers can start with numbers and include hyphens.
         GraphQL doesn't like that, so we put an 'x' on the front
         and replace dashes with underscores (which luckily CAN'T
         appear in identifiers, so this is reversible).
         """
-        return f'x{nk.identifier.replace("-", "_")}'
+        return f'x{nk_dl.identifier.replace("-", "_")}'
 
     def from_graphql_safe_identifier(self, fake_ident: str) -> str:
         """
@@ -190,13 +189,13 @@ class GraphQLQuery:
         }, json={'query': query}).json()
 
     def sum_graphql_result(self, apidata: Dict[str, Any]) -> int:
-        sum = 0
+        total = 0
         if apidata.get('parent', None):
-            sum += self.sum_graphql_result(apidata['parent'])
+            total += self.sum_graphql_result(apidata['parent'])
         for release in apidata['releases']['nodes']:
             for asset in release['releaseAssets']['nodes']:
-                sum += asset['downloadCount']
-        return sum
+                total += asset['downloadCount']
+        return total
 
 
 class DownloadCounter:
@@ -213,20 +212,20 @@ class DownloadCounter:
     def get_counts(self) -> None:
         graph_query = GraphQLQuery(self.github_token)
         for netkan in self.nk_repo.all_nk_paths():
-            netkanDl = NetkanDownloads(netkan, self.github_token)
-            if netkanDl.kref_src == 'github':
+            netkan_dl = NetkanDownloads(netkan, self.github_token)
+            if netkan_dl.kref_src == 'github':
                 # Process GitHub modules together in big batches
-                graph_query.add(netkanDl)
+                graph_query.add(netkan_dl)
                 if graph_query.full():
                     # Run the query
                     graph_query.get_result(self.counts)
                     # Start over with fresh query
                     graph_query = GraphQLQuery(self.github_token)
             else:
-                count = netkanDl.get_count()
+                count = netkan_dl.get_count()
                 if count > 0:
-                    logging.info('Count for %s is %s', netkanDl.identifier, count)
-                    self.counts[netkanDl.identifier] = count
+                    logging.info('Count for %s is %s', netkan_dl.identifier, count)
+                    self.counts[netkan_dl.identifier] = count
         if not graph_query.empty():
             # Final pass doesn't overflow the bound
             graph_query.get_result(self.counts)

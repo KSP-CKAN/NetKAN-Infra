@@ -1,5 +1,5 @@
-from flask import Blueprint, current_app, request
 from typing import Tuple
+from flask import Blueprint, current_app, request
 
 from ..common import netkans, sqs_batch_entries, pull_all
 from .config import current_config

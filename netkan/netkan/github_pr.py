@@ -1,6 +1,6 @@
 import json
-import requests
 import logging
+import requests
 
 
 # We don't need a whole lot out of github, consuming a library
@@ -37,13 +37,13 @@ class GitHubPR:
                 error = response.json()['errors'][0]['message']
             except KeyError:
                 pass
-            logging.error('PR for {} failed: {} - {}'.format(
+            logging.error('PR for %s failed: %s - %s',
                 branch,
                 message,
                 error
-            ))
+            )
             return
-        pr = response.json()
-        logging.info('PR for {} opened at {}'.format(
-            branch, pr['html_url']
-        ))
+        pr_json = response.json()
+        logging.info('PR for %s opened at %s',
+            branch, pr_json['html_url']
+        )

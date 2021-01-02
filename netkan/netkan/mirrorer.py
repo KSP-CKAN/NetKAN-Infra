@@ -6,14 +6,13 @@ import hashlib
 import logging
 import shutil
 from pathlib import Path
-import requests
-import boto3
-import internetarchive
-from git import Repo
-import github
 from importlib.resources import read_text
-from jinja2 import Template
 from typing import Optional, List, Union, Iterable, BinaryIO, Dict, Any
+import boto3
+import requests
+import github
+import internetarchive
+from jinja2 import Template
 
 from .metadata import Ckan
 from .repos import CkanMetaRepo
@@ -412,5 +411,5 @@ class Mirrorer:
     def _result_has_epoch(self, result: Dict[str, Any]) -> bool:
         title = result.get('title')
         if title:
-            return self.EPOCH_TITLE_REGEXP.search(title) != None
+            return self.EPOCH_TITLE_REGEXP.search(title) is not None
         return False

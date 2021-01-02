@@ -1,8 +1,8 @@
 import logging
 import subprocess
 from pathlib import Path
-from git import Repo
 from typing import Union
+from git import Repo
 
 
 def init_repo(metadata: str, path: str, deep_clone: bool) -> Repo:
@@ -32,7 +32,7 @@ def init_ssh(key: str, key_path: Path) -> None:
         key_file.chmod(0o400)
         scan = subprocess.run([
             'ssh-keyscan', '-t', 'rsa', 'github.com'
-        ], stdout=subprocess.PIPE)
+        ], stdout=subprocess.PIPE, check=False)
         Path(key_path, 'known_hosts').write_text(scan.stdout.decode('utf-8'))
 
 
