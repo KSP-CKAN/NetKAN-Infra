@@ -40,6 +40,7 @@ class ModStatus(Model):
     last_checked = UTCDateTimeAttribute(null=True)
     last_indexed = UTCDateTimeAttribute(null=True)
     last_inflated = UTCDateTimeAttribute(null=True)
+    last_downloaded = UTCDateTimeAttribute(null=True)
     release_date = UTCDateTimeAttribute(null=True)
     success = BooleanAttribute()
     frozen = BooleanAttribute(default=False)

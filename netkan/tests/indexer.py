@@ -109,7 +109,6 @@ class TestCkan(unittest.TestCase):
         attrs = self.message.status_attrs(new=True)
         self.assertEqual(attrs['ModIdentifier'], 'DogeCoinFlag')
         self.assertTrue(attrs['success'])
-        self.assertIsInstance(attrs['last_checked'], datetime)
         self.assertIsInstance(attrs['last_inflated'], datetime)
         self.assertEqual(attrs['last_error'], None)
         with self.assertRaises(KeyError):
@@ -138,7 +137,6 @@ class TestUpdateCkan(TestCkan):
         attrs = self.message.status_attrs(new=True)
         self.assertEqual(attrs['ModIdentifier'], 'DogeCoinFlag')
         self.assertTrue(attrs['success'])
-        self.assertIsInstance(attrs['last_checked'], datetime)
         self.assertIsInstance(attrs['last_inflated'], datetime)
         self.assertIsInstance(attrs['last_indexed'], datetime)
 
@@ -185,7 +183,6 @@ class TestStagedCkan(TestUpdateCkan):
         attrs = self.message.status_attrs(new=True)
         self.assertEqual(attrs['ModIdentifier'], 'DogeCoinFlag')
         self.assertTrue(attrs['success'])
-        self.assertIsInstance(attrs['last_checked'], datetime)
         self.assertIsInstance(attrs['last_inflated'], datetime)
         with self.assertRaises(KeyError):
             attrs['last_indexed']
@@ -230,7 +227,6 @@ class TestFailedCkan(TestCkan):
         attrs = self.message.status_attrs(new=True)
         self.assertEqual(attrs['ModIdentifier'], 'DogeCoinFlag')
         self.assertFalse(attrs['success'])
-        self.assertIsInstance(attrs['last_checked'], datetime)
         self.assertIsInstance(attrs['last_inflated'], datetime)
         self.assertEqual(
             attrs['last_error'],

@@ -88,17 +88,11 @@ class CkanMessage:
         return commit
 
     def status_attrs(self, new: bool = False) -> Dict[str, Any]:
-        inflation_time = parse(self.CheckTime)
         attrs: Dict[str, Any] = {
             'success': self.Success,
             'last_error': self.ErrorMessage,
             'last_warnings': self.WarningMessages,
-            # We may wish to change the name in the inflator
-            # as the index will set 'last_checked'
-            'last_inflated': inflation_time,
-            # If we have perfomed an inflation, we certainly
-            # have checked the mod!
-            'last_checked': inflation_time,
+            'last_inflated': parse(self.CheckTime),
             # If we're inflating it, it's not frozen
             'frozen': False,
         }
@@ -107,6 +101,10 @@ class CkanMessage:
             attrs['resources'] = resources
         if new:
             attrs['ModIdentifier'] = self.ModIdentifier
+        cache_path = self.ckan.cache_find_file
+        if cache_path:
+            cache_mtime = datetime.fromtimestamp(cache_path.stat().st_mtime)
+            attrs['last_downloaded'] = cache_mtime.astimezone(timezone.utc)
         if self.indexed:
             attrs['last_indexed'] = datetime.now(timezone.utc)
         release_date = getattr(self.ckan, 'release_date', None)
