@@ -508,6 +508,40 @@ t.add_resource(PolicyType(
     }
 ))
 
+# Status CI Permissions
+# CI access for status deployment
+ksp_ci_status_group = t.add_resource(Group("KspCkanCiStatusGroup"))
+t.add_resource(PolicyType(
+    "KspCkanCiStatusRole",
+    PolicyName="StatusDeployment",
+    Groups=[Ref(ksp_ci_status_group)],
+    PolicyDocument={
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+
+                "Effect": "Allow",
+                "Action": [
+                    "s3:PutObject",
+                ],
+                "Resource": [
+                    "arn:aws:s3:::status.ksp-ckan.space/*"
+                ],
+            },
+            {
+
+                "Effect": "Allow",
+                "Action": [
+                    "s3:ListBucket",
+                ],
+                "Resource": [
+                    "arn:aws:s3:::status.ksp-ckan.space"
+                ],
+            },
+        ],
+    }
+))
+
 # Indexer Compute
 # We could utilise an autoscaling group, but that is way
 # more complicated for our use case. If at some point we'd
