@@ -8,6 +8,7 @@ import urllib.parse
 from typing import Optional, List, Tuple, Union, Any, Dict
 import dateutil.parser
 
+from .csharp_compat import csharp_uri_tostring
 
 class Netkan:
 
@@ -292,7 +293,7 @@ class Ckan:
     def cache_prefix(self) -> Optional[str]:
         if 'download' not in self._raw:
             return None
-        return sha1(urllib.parse.unquote(self.download).encode()).hexdigest().upper()[0:8]
+        return sha1(csharp_uri_tostring(self.download).encode()).hexdigest()[0:8].upper()
 
     @property
     def cache_find_file(self) -> Optional[Path]:
