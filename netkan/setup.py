@@ -24,7 +24,7 @@ setup(
         'jinja2',
         'internetarchive',
         'gunicorn>=19.9,!=20.0.0',
-        'discord',
+        'discord.py>=1.6.0',
         'PyGithub',
     ],
     entry_points={

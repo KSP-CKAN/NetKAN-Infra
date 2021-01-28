@@ -2,6 +2,7 @@ FROM python:3.7 as base
 RUN useradd -ms /bin/bash netkan
 ADD . /netkan
 WORKDIR /netkan
+RUN pip install pip --upgrade
 RUN pip install mypy
 RUN chown -R netkan:netkan /netkan
 USER netkan
