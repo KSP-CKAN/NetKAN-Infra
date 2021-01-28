@@ -6,10 +6,9 @@ RUN pip install pip --upgrade
 RUN pip install mypy
 RUN chown -R netkan:netkan /netkan
 USER netkan
-RUN pip install --user . --no-warn-script-location
+RUN pip install --user . --no-warn-script-location --force-reinstall
 RUN mypy .
 RUN python -m unittest -v
-RUN /home/netkan/.local/bin/netkan --help
 
 FROM python:3.7 as production
 COPY --from=base /home/netkan /home/netkan
@@ -19,6 +18,7 @@ WORKDIR /home/netkan
 USER netkan
 ADD .gitconfig .
 ENV PATH "$PATH:/home/netkan/.local/bin"
+RUN /home/netkan/.local/bin/netkan --help
 ENTRYPOINT [".local/bin/netkan"]
 CMD ["--help"]
 
