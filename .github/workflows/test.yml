@@ -1,0 +1,19 @@
+name: Test
+
+on:
+    - push
+    - pull_request
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: Setup Python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: 3.7
+            - name: Install and run Tox
+              run: pip install tox
+            - name: Run Tox
+              run: tox -e py -c netkan

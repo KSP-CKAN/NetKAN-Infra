@@ -38,9 +38,6 @@ setup(
             'pylint',
             'autopep8',
             'troposphere',
-        ],
-        'test': [
-            'mypy',
         ]
     },
 )
