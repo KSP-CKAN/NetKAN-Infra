@@ -1,0 +1,21 @@
+name: Test
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+      - name: Install test dependencies
+        working-directory: netkan
+        run: pip install .[test]
+      - name: Run pytest
+        working-directory: netkan
+        run: pytest --mypy -v

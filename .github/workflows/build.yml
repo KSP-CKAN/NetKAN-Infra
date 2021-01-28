@@ -19,4 +19,4 @@ jobs:
           context: ./netkan
           file: ./netkan/Dockerfile
           push: false
-          target: production
+          target: test

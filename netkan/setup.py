@@ -38,8 +38,13 @@ setup(
             'pylint',
             'autopep8',
             'troposphere',
+            'pytest',
+            'pytest-mypy',
+            'mypy',
         ],
         'test': [
+            'pytest',
+            'pytest-mypy',
             'mypy',
         ]
     },
