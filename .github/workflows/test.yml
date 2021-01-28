@@ -13,7 +13,9 @@ jobs:
               uses: actions/setup-python@v1
               with:
                   python-version: 3.7
-            - name: Install and run Tox
-              run: pip install tox
-            - name: Run Tox
-              run: tox -e py -c netkan
+            - name: Install and run pytest
+              working-directory: netkan
+              run: pip install .[test]
+            - name: Run pytest
+              working-directory: netkan
+              run: pytest --mypy -v

@@ -19,6 +19,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Run tests before deploying
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: ./netkan
+          file: ./netkan/Dockerfile
+          push: false
+          target: test
       - name: Build and push NetKAN-infra
         id: docker_build
         uses: docker/build-push-action@v2

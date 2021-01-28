@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# mypy: ignore_errors=True
+
 import os
 import sys
 from troposphere import GetAtt, Output, Ref, Template, Sub, Base64

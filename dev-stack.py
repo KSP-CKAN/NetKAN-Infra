@@ -1,5 +1,5 @@
-# Converted from SQS_With_CloudWatch_Alarms.template located at:
-# http://aws.amazon.com/cloudformation/aws-cloudformation-templates/
+#!/usr/bin/env python3
+# mypy: ignore_errors=True
 
 import os
 import sys
