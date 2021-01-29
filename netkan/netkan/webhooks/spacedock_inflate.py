@@ -29,28 +29,28 @@ def inflate_hook() -> Tuple[str, int]:
             current_app.logger.error(
                 f'A SpaceDock mod has been deleted, affected netkans: {nk_msg}')
             return '', 204
-        elif request.form.get('event_type') == 'locked':
+        if request.form.get('event_type') == 'locked':
             # Just let the team know on Discord
             nk_msg = ', '.join(nk.identifier for nk in nks)
             current_app.logger.error(
                 f'A SpaceDock mod has been locked, affected netkans: {nk_msg}')
             return '', 204
-        elif request.form.get('event_type') == 'unlocked':
+        if request.form.get('event_type') == 'unlocked':
             # Just let the team know on Discord
             nk_msg = ', '.join(nk.identifier for nk in nks)
             current_app.logger.error(
                 f'A SpaceDock mod has been unlocked again, affected netkans: {nk_msg}')
             return '', 204
-        else:
-            # Submit them to the queue
-            messages = (nk.sqs_message(current_config.ckm_repo.highest_version(nk.identifier))
-                        for nk in nks)
-            for batch in sqs_batch_entries(messages):
-                current_config.client.send_message_batch(
-                    QueueUrl=current_config.inflation_queue.url,
-                    Entries=batch
-                )
-            return '', 204
+
+        # Submit them to the queue
+        messages = (nk.sqs_message(current_config.ckm_repo.highest_version(nk.identifier))
+                    for nk in nks)
+        for batch in sqs_batch_entries(messages):
+            current_config.client.send_message_batch(
+                QueueUrl=current_config.inflation_queue.url,
+                Entries=batch
+            )
+        return '', 204
     return 'No such module', 404
 
 

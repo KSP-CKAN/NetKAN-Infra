@@ -151,7 +151,8 @@ class GraphQLQuery:
                     user=user, repo=repo)
         return None
 
-    def graphql_safe_identifier(self, nk_dl: NetkanDownloads) -> str:
+    @staticmethod
+    def graphql_safe_identifier(nk_dl: NetkanDownloads) -> str:
         """
         Identifiers can start with numbers and include hyphens.
         GraphQL doesn't like that, so we put an 'x' on the front
@@ -160,7 +161,8 @@ class GraphQLQuery:
         """
         return f'x{nk_dl.identifier.replace("-", "_")}'
 
-    def from_graphql_safe_identifier(self, fake_ident: str) -> str:
+    @staticmethod
+    def from_graphql_safe_identifier(fake_ident: str) -> str:
         """
         Inverse of the above. Strip off the first character and
         replace underscores with dashes, to get back to the original

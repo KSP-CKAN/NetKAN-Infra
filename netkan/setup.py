@@ -46,6 +46,8 @@ setup(
             'pytest',
             'pytest-mypy',
             'mypy',
+            'pytest-flake8',
+            'pytest-pylint',
         ]
     },
 )

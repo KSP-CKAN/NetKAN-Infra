@@ -1,9 +1,9 @@
-from netkan.utils import repo_file_add_or_changed
-
 import unittest
 import tempfile
 from pathlib import Path
 from git import Repo
+
+from netkan.utils import repo_file_add_or_changed
 
 
 class TestNetKANUtilsRepoFileAddOrChange(unittest.TestCase):

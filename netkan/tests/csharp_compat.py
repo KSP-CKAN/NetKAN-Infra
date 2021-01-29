@@ -2,6 +2,7 @@ import unittest
 
 from netkan.csharp_compat import csharp_uri_tostring
 
+
 class TestCsharpCompat(unittest.TestCase):
 
     def test_csharp_uri_tostring(self) -> None:

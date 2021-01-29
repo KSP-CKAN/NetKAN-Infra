@@ -1,3 +1,6 @@
+# pylint: disable-all
+# flake8: noqa
+
 import unittest
 from pathlib import Path, PurePath
 from git import Repo

@@ -1,3 +1,6 @@
+# pylint: disable-all
+# flake8: noqa
+
 import unittest
 import tempfile
 import shutil

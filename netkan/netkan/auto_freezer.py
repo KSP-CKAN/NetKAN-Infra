@@ -49,8 +49,7 @@ class AutoFreezer:
         except git.GitCommandError:
             logging.info('Unable to fetch %s', name)
 
-        (getattr(self.nk_repo.git_repo.heads, name, None)
-         or self.nk_repo.git_repo.create_head(name)).checkout()
+        (getattr(self.nk_repo.git_repo.heads, name, None) or self.nk_repo.git_repo.create_head(name)).checkout()
 
     def _ids(self) -> Iterable[str]:
         return (nk.identifier for nk in self.nk_repo.netkans())
@@ -62,17 +61,19 @@ class AutoFreezer:
         idle_mods = []
         for ident in self._ids():
             dttm = self._last_timestamp(ident)
-            if dttm and dttm < update_cutoff and dttm > too_old_cutoff:
+            if dttm and too_old_cutoff < dttm < update_cutoff:
                 idle_mods.append((ident, dttm))
         return idle_mods
 
-    def _last_timestamp(self, ident: str) -> Optional[datetime]:
+    @staticmethod
+    def _last_timestamp(ident: str) -> Optional[datetime]:
         status = ModStatus.get(ident)
         return getattr(status, 'release_date',
                        getattr(status, 'last_indexed',
                                None))
 
-    def _timestamp_before(self, dttm: Optional[datetime], update_cutoff: datetime) -> bool:
+    @staticmethod
+    def _timestamp_before(dttm: Optional[datetime], update_cutoff: datetime) -> bool:
         return dttm < update_cutoff if dttm else False
 
     def _add_freezee(self, ident: str) -> None:
@@ -101,6 +102,5 @@ class AutoFreezer:
                 title='Freeze idle mods',
                 body=(f'The attached mods have not updated in {days} or more days.'
                       ' Freeze them to save the bot some CPU cycles.'
-                      '\n\n'
-                      + self._mod_table(idle_mods)),
+                      '\n\n' + self._mod_table(idle_mods)),
             )

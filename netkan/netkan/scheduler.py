@@ -20,7 +20,7 @@ class NetkanScheduler:
         self.webhooks_group = webhooks_group
         self.github_token = github_token
 
-        # TODO: This isn't super neat, do something better.
+        # FUTURE: This isn't super neat, do something better.
         self.queue_url = 'test_url'
         if queue != 'TestyMcTestFace':
             self.client = boto3.client('sqs')
@@ -35,10 +35,7 @@ class NetkanScheduler:
         }
 
     def _in_group(self, netkan: Netkan) -> bool:
-        if netkan.hook_only():
-            return self.webhooks_group
-        else:
-            return self.nonhooks_group
+        return self.webhooks_group if netkan.hook_only() else self.nonhooks_group
 
     def schedule_all_netkans(self) -> None:
         messages = (nk.sqs_message(self.ckm_repo.highest_version(nk.identifier))
@@ -46,7 +43,8 @@ class NetkanScheduler:
         for batch in sqs_batch_entries(messages):
             self.client.send_message_batch(**self.sqs_batch_attrs(batch))
 
-    def cpu_credits(self, cloudwatch: 'boto3.CloudWatch.Client', instance_id: str,
+    @staticmethod
+    def cpu_credits(cloudwatch: 'boto3.CloudWatch.Client', instance_id: str,
                     start: datetime.datetime, end: datetime.datetime) -> int:
         stats = cloudwatch.get_metric_statistics(
             Dimensions=[{'Name': 'InstanceId', 'Value': instance_id}],
@@ -67,7 +65,8 @@ class NetkanScheduler:
             logging.error("Couldn't acquire CPU Credit Stats")
         return int(creds)
 
-    def volume_credits_percent(self, cloudwatch: 'boto3.CloudWatch.Client', instance_id: str,
+    @staticmethod
+    def volume_credits_percent(cloudwatch: 'boto3.CloudWatch.Client', instance_id: str,
                                start: datetime.datetime, end: datetime.datetime) -> int:
         client = boto3.client('ec2')
         response = client.describe_volumes(

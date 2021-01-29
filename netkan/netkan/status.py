@@ -70,7 +70,7 @@ class ModStatus(Model):
 
             # Persist compability with existing status ui
             if compat:
-                failed = False if mod.success else True
+                failed = not mod.success
                 data[mod.ModIdentifier]['failed'] = failed
                 data[mod.ModIdentifier].pop('success')
 
@@ -101,7 +101,7 @@ class ModStatus(Model):
                         item.pop(update_key)
                     )
                 item['ModIdentifier'] = key
-                item['success'] = False if item['failed'] else True
+                item['success'] = not item['failed']
                 item.pop('failed')
 
                 # Every batch write consumes a credit, we want to leave spare

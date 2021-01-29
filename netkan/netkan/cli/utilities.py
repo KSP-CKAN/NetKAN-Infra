@@ -115,14 +115,14 @@ def redeploy_service(cluster: str, service_name: str) -> None:
                                     cluster=cluster)['serviceArns']
     try:
         service = list(filter(lambda i: service_name in i, services))[0]
-    except IndexError:
+    except IndexError as exc:
         available = '\n    - '.join(
             [f.split('/')[1].split('-')[1] for f in services]
         )
         raise click.UsageError(
             "Service '{}' not found. Available services:\n    - {}".format(
                 service_name, available)
-        )
+        ) from exc
     client.update_service(
         cluster=cluster,
         service=service,

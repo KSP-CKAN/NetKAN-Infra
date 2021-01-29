@@ -27,7 +27,7 @@ RUN chown -R netkan:netkan /netkan
 USER netkan
 WORKDIR /netkan
 RUN pip install --user .[test]
-RUN /home/netkan/.local/bin/pytest --mypy -v
+RUN /home/netkan/.local/bin/pytest -v
 
 FROM production as dev
 USER root

@@ -53,7 +53,7 @@ _COMMON_OPTIONS = [
 ]
 
 
-class SharedArgs(object):
+class SharedArgs():
 
     def __init__(self) -> None:
         self._environment_data = None

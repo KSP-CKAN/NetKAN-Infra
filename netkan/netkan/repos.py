@@ -5,6 +5,7 @@ from typing import Iterable, List, Optional, Generator, Union
 from git import Repo, Commit, GitCommandError
 from .metadata import Netkan, Ckan
 
+
 class XkanRepo:
 
     """
@@ -130,7 +131,8 @@ class NetkanRepo(XkanRepo):
     def netkans(self) -> Iterable[Netkan]:
         return (Netkan(f) for f in self.all_nk_paths())
 
-    def _nk_sort(self, path: Path) -> str:
+    @staticmethod
+    def _nk_sort(path: Path) -> str:
         return path.stem.casefold()
 
 

@@ -36,7 +36,7 @@ class CkanMessage:
             attr_type = '{}Value'.format(item[1]['DataType'])
             content = item[1][attr_type]
             if content.lower() in ['true', 'false']:
-                content = True if content.lower() == 'true' else False
+                content = (content.lower() == 'true')
             if item[0] == 'FileName':
                 content = PurePath(content).name
             setattr(self, item[0], content)
@@ -123,8 +123,7 @@ class CkanMessage:
             if not self.Success and getattr(status, 'last_error', None) != self.ErrorMessage:
                 logging.error('New inflation error for %s: %s',
                               self.ModIdentifier, self.ErrorMessage)
-            elif (getattr(status, 'last_warnings', None) != self.WarningMessages and
-                  self.WarningMessages is not None):
+            elif (getattr(status, 'last_warnings', None) != self.WarningMessages and self.WarningMessages is not None):
                 logging.error('New inflation warnings for %s: %s',
                               self.ModIdentifier, self.WarningMessages)
             actions = [

@@ -31,7 +31,7 @@ class DiscordLogHandler(logging.Handler):
         if as_code:
             return (f'```{msg[start:start+max_len-6]}```'
                     for start in range(0, len(msg), max_len - 6))
-        return (msg[start:start+max_len] for start in range(0, len(msg), max_len))
+        return (msg[start:start + max_len] for start in range(0, len(msg), max_len))
 
 
 def setup_log_handler(debug: bool = False) -> bool:

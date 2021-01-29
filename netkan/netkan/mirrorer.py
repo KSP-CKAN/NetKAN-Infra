@@ -16,6 +16,7 @@ from jinja2 import Template
 
 from .metadata import Ckan
 from .repos import CkanMetaRepo
+from .common import deletion_msg
 
 
 class CkanMirror(Ckan):
@@ -31,8 +32,8 @@ class CkanMirror(Ckan):
         "CC-BY", "CC-BY-1.0", "CC-BY-2.0", "CC-BY-2.5", "CC-BY-3.0", "CC-BY-4.0",
         "CC-BY-SA", "CC-BY-SA-1.0", "CC-BY-SA-2.0", "CC-BY-SA-2.5", "CC-BY-SA-3.0", "CC-BY-SA-4.0",
         "CC-BY-NC", "CC-BY-NC-1.0", "CC-BY-NC-2.0", "CC-BY-NC-2.5", "CC-BY-NC-3.0", "CC-BY-NC-4.0",
-        "CC-BY-NC-SA", "CC-BY-NC-SA-1.0", "CC-BY-NC-SA-2.0", "CC-BY-NC-SA-2.5", "CC-BY-NC-SA-3.0", "CC-BY-NC-SA-4.0", # pylint: disable=line-too-long
-        "CC-BY-NC-ND", "CC-BY-NC-ND-1.0", "CC-BY-NC-ND-2.0", "CC-BY-NC-ND-2.5", "CC-BY-NC-ND-3.0", "CC-BY-NC-ND-4.0", # pylint: disable=line-too-long
+        "CC-BY-NC-SA", "CC-BY-NC-SA-1.0", "CC-BY-NC-SA-2.0", "CC-BY-NC-SA-2.5", "CC-BY-NC-SA-3.0", "CC-BY-NC-SA-4.0",
+        "CC-BY-NC-ND", "CC-BY-NC-ND-1.0", "CC-BY-NC-ND-2.0", "CC-BY-NC-ND-2.5", "CC-BY-NC-ND-3.0", "CC-BY-NC-ND-4.0",
         "CC-BY-ND", "CC-BY-ND-1.0", "CC-BY-ND-2.0", "CC-BY-ND-2.5", "CC-BY-ND-3.0", "CC-BY-ND-4.0",
         "CC0",
         "CDDL", "CPL",
@@ -125,7 +126,7 @@ class CkanMirror(Ckan):
         "Perl"              : 'http://dev.perl.org/licenses/',
         "Python-2.0"        : 'https://www.python.org/download/releases/2.0/license/',
         "QPL-1.0"           : 'https://opensource.org/licenses/QPL-1.0',
-        "W3C"               : 'https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document', # pylint: disable=line-too-long
+        "W3C"               : 'https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document',
         "Zlib"              : 'http://www.zlib.net/zlib_license.html',
         "Zope"              : 'http://old.zope.org/Resources/License.1',
         "Unlicense"         : 'https://unlicense.org/UNLICENSE',
@@ -140,9 +141,7 @@ class CkanMirror(Ckan):
     @property
     def can_mirror(self) -> bool:
         return (
-            self.kind == 'package'
-            and getattr(self, 'download_content_type', '') in Ckan.MIME_TO_EXTENSION
-            and self.redistributable
+            self.kind == 'package' and getattr(self, 'download_content_type', '') in Ckan.MIME_TO_EXTENSION and self.redistributable
         )
 
     def mirrored(self, iarchive: internetarchive.session.ArchiveSession) -> bool:
@@ -172,7 +171,7 @@ class CkanMirror(Ckan):
         )
 
     def mirror_filename(self, with_epoch: bool = True) -> Optional[str]:
-        if not 'download_hash' in self._raw:
+        if 'download_hash' not in self._raw:
             return None
         return '{}-{}-{}.{}'.format(
             self.download_hash['sha1'][0:8],
@@ -329,7 +328,7 @@ class Mirrorer:
                     path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
                     if self.try_mirror(CkanMirror(self.ia_collection, path)):
                         # Successfully handled -> OK to delete
-                        to_delete.append(self.deletion_msg(msg))
+                        to_delete.append(deletion_msg(msg))
                 if to_delete:
                     queue.delete_messages(Entries=to_delete)
                 # Clean up GitPython's lingering file handles between batches
@@ -372,13 +371,6 @@ class Mirrorer:
                 full_name = '/'.join(parsed.path.split('/')[1:3])
                 return self._gh.get_repo(full_name).default_branch
         return 'master'
-
-    @staticmethod
-    def deletion_msg(msg: 'boto3.resources.factory.sqs.Message') -> Dict[str, Any]:
-        return {
-            'Id':            msg.message_id,
-            'ReceiptHandle': msg.receipt_handle,
-        }
 
     def ia_overloaded(self) -> bool:
         response = requests.get(
