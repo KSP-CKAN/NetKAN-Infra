@@ -72,10 +72,6 @@ class AutoFreezer:
                        getattr(status, 'last_indexed',
                                None))
 
-    @staticmethod
-    def _timestamp_before(dttm: Optional[datetime], update_cutoff: datetime) -> bool:
-        return dttm < update_cutoff if dttm else False
-
     def _add_freezee(self, ident: str) -> None:
         self.nk_repo.git_repo.index.move([
             self.nk_repo.nk_path(ident).as_posix(),
@@ -102,5 +98,6 @@ class AutoFreezer:
                 title='Freeze idle mods',
                 body=(f'The attached mods have not updated in {days} or more days.'
                       ' Freeze them to save the bot some CPU cycles.'
-                      '\n\n' + self._mod_table(idle_mods)),
+                      '\n\n'
+                      f'{self._mod_table(idle_mods)}'),
             )

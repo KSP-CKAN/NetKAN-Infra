@@ -7,6 +7,8 @@ class TestCsharpCompat(unittest.TestCase):
 
     def test_csharp_uri_tostring(self) -> None:
         """
+        Make sure we return the same string C# would for new System.Uri(url).ToString()
+
         https://docs.microsoft.com/en-us/dotnet/api/system.uri.tostring?view=netframework-4.7.2
 
         That documentation is incomplete or wrong; these tests determined empirically in Mono.
