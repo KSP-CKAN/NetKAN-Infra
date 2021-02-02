@@ -8,6 +8,7 @@ import git
 import boto3
 
 from .github_pr import GitHubPR
+from .common import deletion_msg
 
 from .repos import NetkanRepo
 
@@ -41,7 +42,7 @@ class SpaceDockAdder:
                 for msg in messages:
                     if self.try_add(json.loads(msg.body)):
                         # Successfully handled -> OK to delete
-                        to_delete.append(self.deletion_msg(msg))
+                        to_delete.append(deletion_msg(msg))
                 self.queue.delete_messages(Entries=to_delete)
                 # Clean up GitPython's lingering file handles between batches
                 self.nk_repo.git_repo.close()
@@ -102,13 +103,7 @@ class SpaceDockAdder:
         return True
 
     @staticmethod
-    def deletion_msg(msg: 'boto3.resources.factory.sqs.Message') -> Dict[str, Any]:
-        return {
-            'Id':            msg.message_id,
-            'ReceiptHandle': msg.receipt_handle,
-        }
-
-    def make_netkan(self, info: Dict[str, Any]) -> Dict[str, Any]:
+    def make_netkan(info: Dict[str, Any]) -> Dict[str, Any]:
         return {
             'spec_version': 'v1.4',
             'identifier': re.sub(r'\W+', '', info.get('name', '')),

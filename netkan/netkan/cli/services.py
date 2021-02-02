@@ -58,8 +58,8 @@ def indexer(common: SharedArgs) -> None:
 def scheduler(common: SharedArgs, max_queued: int, group: str, min_cpu: int, min_io: int) -> None:
     sched = NetkanScheduler(
         common.netkan_repo, common.ckanmeta_repo, common.queue, common.token,
-        nonhooks_group=(group == 'all' or group == 'nonhooks'),
-        webhooks_group=(group == 'all' or group == 'webhooks'),
+        nonhooks_group=(group in ('all', 'nonhooks')),
+        webhooks_group=(group in ('all', 'webhooks')),
     )
     if sched.can_schedule(max_queued, common.dev, min_cpu, min_io):
         sched.schedule_all_netkans()

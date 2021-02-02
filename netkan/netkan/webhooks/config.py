@@ -7,6 +7,8 @@ from ..utils import init_repo, init_ssh
 
 class WebhooksConfig:
 
+    # pylint: disable=attribute-defined-outside-init
+
     # Ideally this would be __init__, but we want other modules to
     # import a reference to our global config object before we set
     # its properties, and that requires a temporary 'empty' state.

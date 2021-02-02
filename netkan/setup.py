@@ -35,17 +35,21 @@ setup(
     extras_require={
         'development': [
             'ptvsd',
-            'pylint',
             'autopep8',
             'troposphere',
             'pytest',
             'pytest-mypy',
             'mypy',
+            'pytest-pylint',
+            'pylint',
+            'pytest-flake8',
         ],
         'test': [
             'pytest',
             'pytest-mypy',
             'mypy',
+            'pytest-flake8',
+            'pytest-pylint',
         ]
     },
 )

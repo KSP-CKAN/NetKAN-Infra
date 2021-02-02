@@ -10,6 +10,7 @@ import dateutil.parser
 
 from .csharp_compat import csharp_uri_tostring
 
+
 class Netkan:
 
     KREF_PATTERN = re.compile('^#/ckan/([^/]+)/(.+)$')
@@ -67,7 +68,8 @@ class Netkan:
             return False
         return self.on_spacedock
 
-    def string_attrib(self, val: str) -> Dict[str, str]:
+    @staticmethod
+    def string_attrib(val: str) -> Dict[str, str]:
         return {
             'DataType': 'String',
             'StringValue': val,
@@ -123,29 +125,29 @@ class Ckan:
         # (except __eq__) are deduced from it by @total_ordering.
         def __gt__(self, other: 'Ckan.Version') -> bool:
 
-            def _string_compare(v1: str, v2: str) -> Tuple[int, str, str]:
+            def _string_compare(ver1: str, ver2: str) -> Tuple[int, str, str]:
                 _result: int
                 _first_remainder = ''
                 _second_remainder = ''
 
                 # Our starting assumptions are, that both versions are completely strings,
                 # with no remainder. We'll then check if they're not.
-                str1 = v1
-                str2 = v2
+                str1 = ver1
+                str2 = ver2
 
                 # Start by walking along our version string until we find a number,
                 # thereby finding the starting string in both cases. If we fall off
                 # the end, then our assumptions made above hold.
-                for i in range(0, len(v1)):
-                    if v1[i].isdigit():
-                        _first_remainder = v1[i:]
-                        str1 = v1[:i]
+                for i, piece in enumerate(ver1):
+                    if piece.isdigit():
+                        _first_remainder = ver1[i:]
+                        str1 = ver1[:i]
                         break
 
-                for i in range(0, len(v2)):
-                    if v2[i].isdigit():
-                        _second_remainder = v2[i:]
-                        str2 = v2[:i]
+                for i, piece in enumerate(ver2):
+                    if piece.isdigit():
+                        _second_remainder = ver2[i:]
+                        str2 = ver2[:i]
                         break
 
                 # Then compare the two strings, and return our comparison state.
@@ -164,42 +166,42 @@ class Ckan:
                             _result = 0
                     else:
                         # Do an artificial __cmp__
-                        _result = ((str1 > str2)-(str1 < str2))
+                        _result = ((str1 > str2) - (str1 < str2))
                 else:
-                    _result = ((str1 > str2)-(str1 < str2))
+                    _result = ((str1 > str2) - (str1 < str2))
 
                 return _result, _first_remainder, _second_remainder
 
-            def _number_compare(v1: str, v2: str) -> Tuple[int, str, str]:
+            def _number_compare(ver1: str, ver2: str) -> Tuple[int, str, str]:
                 _result: int
                 _first_remainder = ''
                 _second_remainder = ''
 
                 minimum_length1 = 0
-                for i in range(0, len(v1)):
-                    if not v1[i].isdigit():
-                        _first_remainder = v1[i:]
+                for i, piece in enumerate(ver1):
+                    if not piece.isdigit():
+                        _first_remainder = ver1[i:]
                         break
                     minimum_length1 += 1
 
                 minimum_length2 = 0
-                for i in range(0, len(v2)):
-                    if not v2[i].isdigit():
-                        _second_remainder = v2[i:]
+                for i, piece in enumerate(ver2):
+                    if not piece.isdigit():
+                        _second_remainder = ver2[i:]
                         break
                     minimum_length2 += 1
 
-                if v1[:minimum_length1].isnumeric():
-                    integer1 = int(v1[:minimum_length1])
+                if ver1[:minimum_length1].isnumeric():
+                    integer1 = int(ver1[:minimum_length1])
                 else:
                     integer1 = 0
 
-                if v2[:minimum_length2].isnumeric():
-                    integer2 = int(v2[:minimum_length2])
+                if ver2[:minimum_length2].isnumeric():
+                    integer2 = int(ver2[:minimum_length2])
                 else:
                     integer2 = 0
 
-                _result = ((integer1 > integer2)-(integer1 < integer2))
+                _result = ((integer1 > integer2) - (integer1 < integer2))
                 return _result, _first_remainder, _second_remainder
 
             # Here begins the main comparison logic
@@ -249,10 +251,10 @@ class Ckan:
 
     CACHE_PATH = Path.home().joinpath('ckan_cache')
     MIME_TO_EXTENSION = {
-        'application/x-gzip':           'gz',
-        'application/x-tar':            'tar',
+        'application/x-gzip': 'gz',
+        'application/x-tar': 'tar',
         'application/x-compressed-tar': 'tar.gz',
-        'application/zip':              'zip',
+        'application/zip': 'zip',
     }
     ISODATETIME_PROPERTIES = [
         'release_date'
@@ -272,7 +274,7 @@ class Ckan:
             if k in dct:
                 try:
                     dct[k] = dateutil.parser.isoparse(dct[k])
-                except: # pylint: disable=bare-except
+                except:  # pylint: disable=bare-except  # noqa: E722
                     pass
         return dct
 
@@ -340,14 +342,8 @@ class Ckan:
 
     def authors(self) -> List[str]:
         auth = self.author
-        if isinstance(auth, list):
-            return auth
-        else:
-            return [auth]
+        return auth if isinstance(auth, list) else [auth]
 
     def licenses(self) -> List[str]:
         lic = self.license
-        if isinstance(lic, list):
-            return lic
-        else:
-            return [lic]
+        return lic if isinstance(lic, list) else [lic]

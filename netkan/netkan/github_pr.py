@@ -38,12 +38,8 @@ class GitHubPR:
             except KeyError:
                 pass
             logging.error('PR for %s failed: %s - %s',
-                branch,
-                message,
-                error
-            )
+                          branch, message, error)
             return
         pr_json = response.json()
         logging.info('PR for %s opened at %s',
-            branch, pr_json['html_url']
-        )
+                     branch, pr_json['html_url'])
