@@ -50,6 +50,10 @@ class TestNetkanRepo(TestRepo):
 
     def setUp(self):
         self.nk_repo = NetkanRepo(self.repo)
+        cfg = self.nk_repo.git_repo.config_writer()
+        cfg.set_value('user', 'name',  'NetKAN inflator Robot TESTER')
+        cfg.set_value('user', 'email', 'netkan-bot@ksp-ckan.space')
+        cfg.release()
 
     def test_nk_path(self):
         self.assertTrue(self.nk_repo.nk_path('DogeCoinFlag').exists())
