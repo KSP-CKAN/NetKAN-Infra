@@ -35,7 +35,8 @@ class SpaceDockAdder:
             )
             if messages:
                 self.nk_repo.git_repo.heads.master.checkout()
-                self.nk_repo.git_repo.remotes.origin.pull('master', strategy_option='ours')
+                self.nk_repo.git_repo.remotes.origin.pull('master', strategy_option='ours', depth='1', allow_unrelated_histories=True)
+                self.nk_repo.git_repo.git.gc(prune='all')
 
                 # Start processing the messages
                 to_delete = []

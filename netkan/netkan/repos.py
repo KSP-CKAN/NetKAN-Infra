@@ -39,8 +39,12 @@ class XkanRepo:
         branch = getattr(self.git_repo.heads, branch_name)
         branch.checkout()
 
-    def pull_remote_branch(self, branch_name: str, strategy_option: str = 'ours') -> None:
-        self.git_repo.remotes.origin.pull(branch_name, strategy_option=strategy_option)
+    def pull_remote_branch(self, branch_name: str, strategy_option: str = 'ours', deep_clone: bool = False) -> None:
+        if deep_clone:
+            self.git_repo.remotes.origin.pull(branch_name, strategy_option=strategy_option)
+        else:
+            self.git_repo.remotes.origin.pull(branch_name, strategy_option=strategy_option, depth='1', allow_unrelated_histories=True)
+        self.git_repo.git.gc(prune='all')
 
     def push_remote_branch(self, branch_name: str) -> None:
         self.git_repo.remotes.origin.push(branch_name)

@@ -322,7 +322,8 @@ class Mirrorer:
                 # Get up to date copy of the metadata for the files we're mirroring
                 logging.info('Updating repo')
                 self.ckm_repo.git_repo.heads.master.checkout()
-                self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs')
+                self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs', depth='1', allow_unrelated_histories=True)
+                self.ckm_repo.git_repo.git.gc(prune='all')
                 # Start processing the messages
                 to_delete = []
                 for msg in messages:
