@@ -29,7 +29,7 @@ The Indexer takes inflated metadata and, if the metadata is different to current
 
 Uploads freshly indexed mods to [the Internet Archive], if allowed by their licenses.
 
-[the Internet Archive]: https://archive.org/details/kspckanmods?sort=-publicdate)
+[the Internet Archive]: https://archive.org/details/kspckanmods?sort=-publicdate
 
 #### Webhooks
 
