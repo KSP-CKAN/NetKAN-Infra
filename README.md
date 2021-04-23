@@ -96,6 +96,7 @@ The individual services communicate via Amazon's SQS (Simple Queue Service) syst
 Message Attribute | Usage
 ----------------- | -----
 Releases          | Number of releases to inflate, for modules with backports
+HighestVersion    | Version number of the latest release already indexed
 
 Payload: JSON contents of .netkan to inflate
 
@@ -109,6 +110,7 @@ Success           | "true" if inflation succeeded, "false" if there was an error
 CheckTime         | The datetime when the inflation happened, in ISO 8601 format
 FileName          | Name of file to create or update, usually `identifier-version.ckan`
 ErrorMessage      | Explanation of why inflation failed if Success is "false", omitted otherwise
+WarningMessages   | Non-fatal potential problems noted during inflation, separated by newlines
 StagingReason     | Body for pull request if Staged is "true", omitted otherwise
 
 Payload: JSON contents of .ckan file to index
