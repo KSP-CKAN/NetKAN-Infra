@@ -17,11 +17,11 @@ github_inflate = Blueprint('github_inflate', __name__)  # pylint: disable=invali
 @signature_required
 def inflate_hook() -> Tuple[Union[Response, str], int]:
     raw = request.get_json(silent=True)
-    branch = raw.get('ref') # mypy: ignore[union-attr]
+    branch = raw.get('ref')  # type: ignore[union-attr]
     if branch != current_config.nk_repo.git_repo.head.ref.path:
         current_app.logger.info('Received inflation request for wrong ref %s, ignoring', branch)
         return jsonify({'message': 'Wrong branch'}), 200
-    commits = raw.get('commits') # mypy: ignore[union-attr]
+    commits = raw.get('commits')  # type: ignore[union-attr]
     if not commits:
         current_app.logger.info('No commits received')
         return jsonify({'message': 'No commits received'}), 200
