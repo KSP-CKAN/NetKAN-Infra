@@ -14,7 +14,8 @@ inflate = Blueprint('inflate', __name__)  # pylint: disable=invalid-name
 @inflate.route('/inflate', methods=['POST'])
 def inflate_hook() -> Tuple[str, int]:
     # SpaceDock doesn't set the `Content-Type: application/json` header
-    ids = request.get_json(force=True).get('identifiers')
+    raw = request.get_json(force=True)
+    ids = raw.get('identifiers') # mypy: ignore[union-attr]
     if not ids:
         current_app.logger.info('No identifiers received')
         return 'An array of identifiers is required', 400

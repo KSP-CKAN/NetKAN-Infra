@@ -18,18 +18,18 @@ github_mirror = Blueprint('github_mirror', __name__)  # pylint: disable=invalid-
 @signature_required
 def mirror_hook() -> Tuple[Union[Response, str], int]:
     raw = request.get_json(silent=True)
-    ref = raw.get('ref')
+    ref = raw.get('ref') # mypy: ignore[union-attr]
     expected_ref = current_config.ckm_repo.git_repo.heads.master.path
     if ref != expected_ref:
         current_app.logger.info(
             "Wrong branch. Expected '%s', got '%s'", expected_ref, ref)
         return jsonify({'message': 'Wrong branch'}), 200
-    commits = raw.get('commits')
+    commits = raw.get('commits') # mypy: ignore[union-attr]
     if not commits:
         current_app.logger.info('No commits received')
         return jsonify({'message': 'No commits received'}), 200
     # Make sure it's not from the crawler
-    sender = raw.get('sender')
+    sender = raw.get('sender') # mypy: ignore[union-attr]
     if sender:
         login = sender.get('login')
         if login:
