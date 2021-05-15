@@ -1,4 +1,5 @@
 import json
+import yaml
 import re
 from functools import total_ordering
 from pathlib import Path
@@ -21,7 +22,7 @@ class Netkan:
             self.contents = self.filename.read_text()
         elif contents:
             self.contents = contents
-        self._raw = json.loads(self.contents)
+        self._raw = yaml.safe_load(self.contents)
         # Extract kref_src + kref_id from the kref
         self.kref_src: Optional[str]
         self.kref_id: Optional[str]

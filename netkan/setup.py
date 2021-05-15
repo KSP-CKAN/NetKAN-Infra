@@ -26,6 +26,7 @@ setup(
         'gunicorn>=19.9,!=20.0.0',
         'discord.py>=1.6.0',
         'PyGithub',
+        'pyyaml',
     ],
     entry_points={
         'console_scripts': [
