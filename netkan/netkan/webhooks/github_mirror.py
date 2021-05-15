@@ -1,8 +1,8 @@
 import re
 from pathlib import Path
 from hashlib import md5
-from typing import Tuple, List, Iterable, Dict, Any, Set
-from flask import Blueprint, current_app, request, jsonify
+from typing import Tuple, List, Iterable, Dict, Any, Set, Union
+from flask import Blueprint, current_app, request, jsonify, Response
 
 from .github_utils import signature_required
 from ..common import sqs_batch_entries
@@ -16,7 +16,7 @@ github_mirror = Blueprint('github_mirror', __name__)  # pylint: disable=invalid-
 # Handles: https://netkan.ksp-ckan.space/gh/mirror
 @github_mirror.route('/mirror', methods=['POST'])
 @signature_required
-def mirror_hook() -> Tuple[str, int]:
+def mirror_hook() -> Tuple[Union[Response, str], int]:
     raw = request.get_json(silent=True)
     ref = raw.get('ref')
     expected_ref = current_config.ckm_repo.git_repo.heads.master.path

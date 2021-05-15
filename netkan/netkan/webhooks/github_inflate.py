@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
-from typing import List, Tuple, Iterable, Dict, Any, Set
-from flask import Blueprint, current_app, request, jsonify
+from typing import List, Tuple, Iterable, Dict, Any, Set, Union
+from flask import Blueprint, current_app, request, jsonify, Response
 
 from ..common import netkans, sqs_batch_entries, pull_all
 from ..status import ModStatus
@@ -15,7 +15,7 @@ github_inflate = Blueprint('github_inflate', __name__)  # pylint: disable=invali
 # Handles: https://netkan.ksp-ckan.space/gh/inflate
 @github_inflate.route('/inflate', methods=['POST'])
 @signature_required
-def inflate_hook() -> Tuple[str, int]:
+def inflate_hook() -> Tuple[Union[Response, str], int]:
     raw = request.get_json(silent=True)
     branch = raw.get('ref')
     if branch != current_config.nk_repo.git_repo.head.ref.path:

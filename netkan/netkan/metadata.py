@@ -1,5 +1,4 @@
 import json
-import yaml
 import re
 from functools import total_ordering
 from pathlib import Path
@@ -7,6 +6,7 @@ from hashlib import sha1
 import uuid
 import urllib.parse
 from typing import Optional, List, Tuple, Union, Any, Dict
+import yaml
 import dateutil.parser
 
 from .csharp_compat import csharp_uri_tostring
