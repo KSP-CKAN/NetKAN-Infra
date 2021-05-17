@@ -134,6 +134,36 @@ class TestNetKANVref(TestNetKAN):
         self.assertFalse(self.netkan.hook_only())
 
 
+class TestNetKANYAML(TestNetKAN):
+
+    def setUp(self):
+        self.netkan = Netkan(contents="""
+spec_version: v1.4
+identifier:   Cosmogator
+$kref:        "#/ckan/github/HebaruSan/Astrogator"
+license:      GPL-3.0
+tags:
+    - plugin
+    - information
+    - control
+install:
+    - find: Astrogator
+      install_to: GameData
+""")
+
+    def test_parsed_yaml_metadata(self):
+        self.assertEqual(self.netkan.spec_version, "v1.4")
+        self.assertEqual(self.netkan.identifier, "Cosmogator")
+        self.assertEqual(self.netkan.kref_src, "github")
+        self.assertEqual(self.netkan.kref_id, "HebaruSan/Astrogator")
+        self.assertEqual(self.netkan.license, "GPL-3.0")
+        self.assertEqual(self.netkan.tags, ["plugin", "information", "control"])
+        self.assertEqual(self.netkan.install, [ {
+            "find": "Astrogator",
+            "install_to": "GameData"
+        } ])
+
+
 class TestCkanSimple(unittest.TestCase):
 
     def setUp(self):
