@@ -51,6 +51,12 @@ setup(
             'mypy',
             'pytest-flake8',
             'pytest-pylint',
+            'types-python-dateutil',
+            'types-click',
+            'types-requests',
+            'types-Flask',
+            'types-Jinja2',
+            'types-PyYAML',
         ]
     },
 )
