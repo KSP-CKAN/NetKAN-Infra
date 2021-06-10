@@ -249,7 +249,7 @@ class TestCkanEmpty(unittest.TestCase):
         self.ckan = Ckan(contents='{}')
 
     def test_version_none(self):
-        self.assertIsNone(self.ckan.version)
+        self.assertRaises(Exception, lambda: self.ckan.version)
 
     def test_cache_prefix(self):
         self.assertIsNone(self.ckan.cache_prefix)
