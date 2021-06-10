@@ -287,10 +287,11 @@ class Ckan:
         raise AttributeError
 
     @property
-    def version(self) -> Optional[Version]:
-        if self._raw.get('version'):
-            return self.Version(self._raw.get('version'))
-        return None
+    def version(self) -> Version:
+        raw_ver = self._raw.get('version')
+        if not raw_ver:
+            raise Exception('Required property `version` not found')
+        return self.Version(raw_ver)
 
     @property
     def cache_prefix(self) -> Optional[str]:
