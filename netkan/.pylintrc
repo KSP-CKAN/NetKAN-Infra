@@ -11,3 +11,4 @@ disable =
     too-many-return-statements,
     too-many-branches,
     too-many-arguments,
+    consider-using-with,

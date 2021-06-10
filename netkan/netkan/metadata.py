@@ -6,6 +6,7 @@ from hashlib import sha1
 import uuid
 import urllib.parse
 from typing import Optional, List, Tuple, Union, Any, Dict
+import yaml
 import dateutil.parser
 
 from .csharp_compat import csharp_uri_tostring
@@ -21,7 +22,7 @@ class Netkan:
             self.contents = self.filename.read_text()
         elif contents:
             self.contents = contents
-        self._raw = json.loads(self.contents)
+        self._raw = yaml.safe_load(self.contents)
         # Extract kref_src + kref_id from the kref
         self.kref_src: Optional[str]
         self.kref_id: Optional[str]

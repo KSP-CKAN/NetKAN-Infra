@@ -1,8 +1,8 @@
 import re
 from pathlib import Path
 from hashlib import md5
-from typing import Tuple, List, Iterable, Dict, Any, Set
-from flask import Blueprint, current_app, request, jsonify
+from typing import Tuple, List, Iterable, Dict, Any, Set, Union
+from flask import Blueprint, current_app, request, jsonify, Response
 
 from .github_utils import signature_required
 from ..common import sqs_batch_entries
@@ -16,20 +16,20 @@ github_mirror = Blueprint('github_mirror', __name__)  # pylint: disable=invalid-
 # Handles: https://netkan.ksp-ckan.space/gh/mirror
 @github_mirror.route('/mirror', methods=['POST'])
 @signature_required
-def mirror_hook() -> Tuple[str, int]:
+def mirror_hook() -> Tuple[Union[Response, str], int]:
     raw = request.get_json(silent=True)
-    ref = raw.get('ref')
+    ref = raw.get('ref')  # type: ignore[union-attr]
     expected_ref = current_config.ckm_repo.git_repo.heads.master.path
     if ref != expected_ref:
         current_app.logger.info(
             "Wrong branch. Expected '%s', got '%s'", expected_ref, ref)
         return jsonify({'message': 'Wrong branch'}), 200
-    commits = raw.get('commits')
+    commits = raw.get('commits')  # type: ignore[union-attr]
     if not commits:
         current_app.logger.info('No commits received')
         return jsonify({'message': 'No commits received'}), 200
     # Make sure it's not from the crawler
-    sender = raw.get('sender')
+    sender = raw.get('sender')  # type: ignore[union-attr]
     if sender:
         login = sender.get('login')
         if login:

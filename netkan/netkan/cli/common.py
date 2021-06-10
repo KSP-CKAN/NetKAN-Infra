@@ -14,7 +14,8 @@ from ..github_pr import GitHubPR
 def ctx_callback(ctx: click.Context, param: click.Parameter,
                  value: Union[str, int]) -> Union[str, int]:
     shared = ctx.ensure_object(SharedArgs)
-    setattr(shared, param.name, value)
+    if param.name:
+        setattr(shared, param.name, value)
     return value
 
 
