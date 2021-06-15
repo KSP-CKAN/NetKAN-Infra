@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Dict, Any
 import git
 import boto3
+import yaml
 
 from .github_pr import GitHubPR
 from .common import deletion_msg
@@ -76,7 +77,7 @@ class SpaceDockAdder:
         self.nk_repo.git_repo.heads[branch_name].checkout()
 
         # Create file
-        netkan_path.write_text(json.dumps(netkan, indent=4))
+        netkan_path.write_text(yaml.dump(netkan))
 
         # Add netkan to branch
         self.nk_repo.git_repo.index.add([netkan_path.as_posix()])
