@@ -77,7 +77,7 @@ class SpaceDockAdder:
         self.nk_repo.git_repo.heads[branch_name].checkout()
 
         # Create file
-        netkan_path.write_text(yaml.dump(netkan))
+        netkan_path.write_text(yaml.dump(netkan, sort_keys=False))
 
         # Add netkan to branch
         self.nk_repo.git_repo.index.add([netkan_path.as_posix()])
