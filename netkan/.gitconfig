@@ -1,3 +1,10 @@
 [user]
 	email = netkan-bot@ksp-ckan.space
 	name = NetKAN inflator Robot
+
+[gc]
+	auto = 2700
+	reflogExpire = 1
+	worktreePruneExpire = now
+	reflogExpireUnreachable = now
+	pruneExpire = now
