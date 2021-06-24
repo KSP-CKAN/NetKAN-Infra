@@ -100,3 +100,25 @@ class TestCkanMetaRepo(TestRepo):
 
     def test_mod_path(self):
         self.assertTrue(self.ckm_repo.mod_path('AwesomeMod').exists())
+
+
+class TestRepoConfig(TestRepo):
+    test_data = Path(PurePath(__file__).parent, 'testdata/CKAN-meta')
+
+    def setUp(self):
+        self.ckm_repo = CkanMetaRepo(self.repo)
+
+    def test_gc_auto(self):
+        self.assertEqual(self.ckm_repo.git_repo.config_reader().get_value('gc','auto'), 2700)
+
+    def test_gc_reflog_expire(self):
+        self.assertEqual(self.ckm_repo.git_repo.config_reader().get_value('gc','reflogExpire'), 1)
+
+    def test_gc_worktreePruneExpire(self):
+        self.assertEqual(self.ckm_repo.git_repo.config_reader().get_value('gc','worktreePruneExpire'), 'now')
+
+    def test_gc_reflog_expire_unreachable(self):
+        self.assertEqual(self.ckm_repo.git_repo.config_reader().get_value('gc','reflogExpireUnreachable'), 'now')
+
+    def test_gc_prune_expire(self):
+        self.assertEqual(self.ckm_repo.git_repo.config_reader().get_value('gc','pruneExpire'), 'now')
