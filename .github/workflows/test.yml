@@ -16,6 +16,9 @@ jobs:
       - name: Install test dependencies
         working-directory: netkan
         run: pip install .[test]
+      - name: force our git config
+        working-directory: netkan
+        run: cp .gitconfig ~/.
       - name: Run pytest
         working-directory: netkan
         run: pytest -v
