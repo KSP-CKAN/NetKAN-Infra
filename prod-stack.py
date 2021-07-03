@@ -628,8 +628,8 @@ docker_service = InitService(
 netkan_instance = Instance(
     'NetKANCompute',
     # ECS Optimised us-west-2
-    ImageId='ami-0e434a58221275ed4',
-    InstanceType='t3.micro',
+    ImageId='ami-064803387adcb64b3',
+    InstanceType='t3.small',
     IamInstanceProfile=Ref(netkan_profile),
     KeyName='techman83_alucard',
     SecurityGroups=['ckan-bot'],
@@ -681,7 +681,7 @@ services = [
     {
         'name': 'Indexer',
         'command': 'indexer',
-        'memory': '156',
+        'memory': '256',
         'secrets': [
             'SSH_KEY', 'GH_Token',
         ],
@@ -743,7 +743,7 @@ services = [
     {
         'name': 'Inflator',
         'image': 'kspckan/inflator',
-        'memory': '156',
+        'memory': '256',
         'secrets': ['GH_Token'],
         'env': [
             (
@@ -833,7 +833,7 @@ services = [
             {
                 'name': 'webhooks',
                 'entrypoint': '.local/bin/gunicorn',
-                'memory': '128',
+                'memory': '256',
                 'command': [
                     '-b', '0.0.0.0:5000', '--access-logfile', '-',
                     '--preload', 'netkan.webhooks:create_app()'
@@ -919,7 +919,7 @@ for service in services:
         linux_parameters = container.get('linux_parameters')
         definition = ContainerDefinition(
             Image=container.get('image', 'kspckan/netkan'),
-            Memory=container.get('memory', '96'),
+            Memory=container.get('memory', '128'),
             Name=container['name'],
             Secrets=[
                 Secret(

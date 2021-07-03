@@ -44,6 +44,12 @@ setup(
             'pytest-pylint',
             'pylint',
             'pytest-flake8',
+            'types-python-dateutil',
+            'types-click',
+            'types-requests',
+            'types-Flask',
+            'types-Jinja2',
+            'types-PyYAML',
         ],
         'test': [
             'pytest',
