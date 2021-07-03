@@ -126,11 +126,8 @@ class CkanMessage:
             elif (getattr(status, 'last_warnings', None) != self.WarningMessages and self.WarningMessages is not None):
                 logging.error('New inflation warnings for %s: %s',
                               self.ModIdentifier, self.WarningMessages)
-            actions = [
-                getattr(ModStatus, key).set(
-                    attrs[key]
-                ) for key in attrs
-            ]
+            actions = [getattr(ModStatus, key).set(val)
+                       for key, val in attrs.items()]
             status.update(actions=actions)
         except ModStatus.DoesNotExist:
             ModStatus(**self.status_attrs(True)).save()
