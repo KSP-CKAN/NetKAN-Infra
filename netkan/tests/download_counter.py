@@ -60,7 +60,7 @@ class TestNetKANNetkanCounts(TestNetKANCounter):
 
     def test_remote_netkan(self):
         self.assertEqual(
-            self.netkan.remote_netkan,
+            self.netkan.kref_id,
             'http://ksp-ckan.space/netkan/DogeCoinFlag.netkan'
         )
 

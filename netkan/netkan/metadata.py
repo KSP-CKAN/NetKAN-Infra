@@ -35,6 +35,12 @@ class Netkan:
             self.kref_src = None
             self.kref_id = None
 
+    def __repr__(self) -> str:
+        try:
+            return f'<{self.__class__.__name__}({self.identifier})>'
+        except AttributeError:
+            return f'<{self.__class__.__name__}(identifier undefined)>'
+
     def __getattr__(self, name: str) -> Any:
         # Return kref host, ie `self.on_spacedock`. Current krefs include
         # github, spacedock, curse and netkan.
@@ -269,6 +275,12 @@ class Ckan:
         elif contents:
             self.contents = contents
         self._raw = json.loads(self.contents, object_hook=self._custom_parser)
+
+    def __repr__(self) -> str:
+        try:
+            return f'<{self.__class__.__name__}({self.identifier}, {self.version})>'
+        except AttributeError:
+            return f'<{self.__class__.__name__}(identifier or version undefined)>'
 
     def _custom_parser(self, dct: Dict[str, Any]) -> Dict[str, Any]:
         # Special handling for DateTime fields

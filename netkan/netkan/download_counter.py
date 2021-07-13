@@ -6,7 +6,10 @@ from json.decoder import JSONDecodeError
 from importlib.resources import read_text
 from string import Template
 from typing import Optional, Dict, Any
+
+from yaml.reader import ReaderError
 import requests
+from requests.exceptions import RequestException
 
 from .metadata import Netkan
 from .utils import repo_file_add_or_changed
@@ -41,10 +44,6 @@ class NetkanDownloads(Netkan):
             return f'https://api.cfwidget.com/project/{self.kref_id}'
         return f'https://api.cfwidget.com/kerbal/ksp-mods/{self.kref_id}'
 
-    @property
-    def remote_netkan(self) -> Optional[str]:
-        return self.kref_id
-
     def count_from_spacedock(self) -> int:
         return requests.get(self.spacedock_api).json()['downloads']
 
@@ -75,12 +74,27 @@ class NetkanDownloads(Netkan):
         return requests.get(self.curse_api).json()['downloads']['total']
 
     def count_from_netkan(self) -> int:
-        if self.remote_netkan:
-            return NetkanDownloads(
-                github_token=self.github_token,
-                contents=requests.get(self.remote_netkan).text
-            ).get_count()
-        return 0
+        meta = self.resolve_meta()
+        return meta.get_count() if meta else 0
+
+    def resolve_meta(self) -> Optional['NetkanDownloads']:
+        if self.kref_src == 'netkan' and self.kref_id:
+            try:
+                # Fortunately only one layer of indirection is allowed
+                return NetkanDownloads(
+                    github_token=self.github_token,
+                    contents=requests.get(self.kref_id).text
+                )
+            except RequestException as exc:
+                logging.error('DownloadCounter metanetkan network request failed for %s: %s',
+                              self.identifier, exc)
+            except ReaderError as exc:
+                logging.error('DownloadCounter metanetkan failed YAML parse for %s: %s',
+                              self.identifier, exc)
+            # Can't get the metanetkan
+            return None
+        # Already have the real me
+        return self
 
     def get_count(self) -> int:
         count = 0
@@ -88,20 +102,20 @@ class NetkanDownloads(Netkan):
             try:
                 count = getattr(self, f'count_from_{self.kref_src}')()
             except JSONDecodeError as exc:
-                logging.error(
-                    'Failed decoding count for %s: %s',
-                    self.identifier, exc)
-            except KeyError as exc:
-                logging.error(
-                    'Download count key \'%s\' missing from api for %s',
-                    exc, self.identifier)
-            except requests.exceptions.RequestException as exc:
-                logging.error('Count retrieval failed for %s: %s',
+                logging.error('DownloadCounter failed JSON parse for %s: %s',
                               self.identifier, exc)
-            except AttributeError:
-                # If the kref_src isn't defined, we haven't created a counter
-                # for it and likely doesn't have one.
-                logging.info('Can\'t get count for %s via %s', self.identifier, self.kref_src)
+            except RequestException as exc:
+                logging.error('DownloadCounter network request failed for %s: %s',
+                              self.identifier, exc)
+            except KeyError as exc:
+                logging.error('DownloadCounter key missing for %s: %s',
+                              self.identifier, exc)
+            except AttributeError as exc:
+                logging.error('DownloadCounter attribute missing for %s: %s',
+                              self.identifier, exc)
+            except Exception as exc:  # pylint: disable=broad-except
+                logging.error('DownloadCounter surprising error for %s: %s',
+                              self.identifier, exc)
         return count
 
 
@@ -214,20 +228,28 @@ class DownloadCounter:
     def get_counts(self) -> None:
         graph_query = GraphQLQuery(self.github_token)
         for netkan in self.nk_repo.all_nk_paths():
-            netkan_dl = NetkanDownloads(netkan, self.github_token)
-            if netkan_dl.kref_src == 'github':
-                # Process GitHub modules together in big batches
-                graph_query.add(netkan_dl)
-                if graph_query.full():
-                    # Run the query
-                    graph_query.get_result(self.counts)
-                    # Start over with fresh query
-                    graph_query = GraphQLQuery(self.github_token)
-            else:
-                count = netkan_dl.get_count()
-                if count > 0:
-                    logging.info('Count for %s is %s', netkan_dl.identifier, count)
-                    self.counts[netkan_dl.identifier] = count
+            try:
+                # Replace with metanetkan if applicable
+                netkan_dl = NetkanDownloads(netkan, self.github_token).resolve_meta()
+                if netkan_dl:
+                    if netkan_dl.kref_src == 'github':
+                        # Process GitHub modules together in big batches
+                        graph_query.add(netkan_dl)
+                        if graph_query.full():
+                            # Run the query
+                            graph_query.get_result(self.counts)
+                            # Start over with fresh query
+                            graph_query = GraphQLQuery(self.github_token)
+                    else:
+                        count = netkan_dl.get_count()
+                        if count > 0:
+                            logging.info('Count for %s is %s', netkan_dl.identifier, count)
+                            self.counts[netkan_dl.identifier] = count
+            except Exception as exc:  # pylint: disable=broad-except
+                # Don't let one bad apple spoil the bunch
+                # Print file path because netkan_dl might be None
+                logging.error('DownloadCounter failed for %s: %s',
+                              netkan, exc)
         if not graph_query.empty():
             # Final pass doesn't overflow the bound
             graph_query.get_result(self.counts)
