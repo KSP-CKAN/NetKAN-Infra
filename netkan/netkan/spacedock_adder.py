@@ -109,6 +109,6 @@ class SpaceDockAdder:
             'spec_version': 'v1.4',
             'identifier': re.sub(r'\W+', '', info.get('name', '')),
             '$kref': f"#/ckan/spacedock/{info.get('id', '')}",
-            'license': info.get('license', '').replace(' ', '-'),
+            'license': info.get('license', '').strip().replace(' ', '-'),
             'x_via': f"Automated {info.get('site_name')} CKAN submission"
         }

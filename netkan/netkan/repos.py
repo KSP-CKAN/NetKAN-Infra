@@ -15,6 +15,9 @@ class XkanRepo:
     def __init__(self, git_repo: Repo) -> None:
         self.git_repo = git_repo
 
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__}({self.git_repo.__repr__()})>'
+
     def commit(self, files: List[Union[str, Path]], commit_message: str) -> Commit:
         index = self.git_repo.index
         index.add([x.as_posix() if isinstance(x, Path) else x for x in files])
@@ -155,5 +158,5 @@ class CkanMetaRepo(XkanRepo):
         return (Ckan(f) for f in self.mod_path(identifier).glob(self.CKANMETA_GLOB))
 
     def highest_version(self, identifier: str) -> Optional[Ckan.Version]:
-        highest = max(self.ckans(identifier), default=None, key=lambda ck: ck.version)  # type: ignore[type-var]
+        highest = max(self.ckans(identifier), default=None, key=lambda ck: ck.version)
         return highest.version if highest else None
