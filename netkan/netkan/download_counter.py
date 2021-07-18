@@ -97,10 +97,16 @@ class NetkanDownloads(Netkan):
         return self
 
     def get_count(self) -> int:
-        count = 0
         if self.has_kref:
             try:
-                count = getattr(self, f'count_from_{self.kref_src}')()
+                if self.kref_src == 'github':
+                    return self.count_from_github()
+                if self.kref_src == 'spacedock':
+                    return self.count_from_spacedock()
+                if self.kref_src == 'curse':
+                    return self.count_from_curse()
+                if self.kref_src == 'netkan':
+                    return self.count_from_netkan()
             except JSONDecodeError as exc:
                 logging.error('DownloadCounter failed JSON parse for %s: %s',
                               self.identifier, exc)
@@ -116,7 +122,7 @@ class NetkanDownloads(Netkan):
             except Exception as exc:  # pylint: disable=broad-except
                 logging.error('DownloadCounter surprising error for %s: %s',
                               self.identifier, exc)
-        return count
+        return 0
 
 
 class GraphQLQuery:
