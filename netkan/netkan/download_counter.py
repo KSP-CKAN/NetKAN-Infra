@@ -262,7 +262,8 @@ class DownloadCounter:
 
     def write_json(self) -> None:
         self.output_file.write_text(
-            json.dumps(self.counts, sort_keys=True, indent=4)
+            json.dumps(self.counts, sort_keys=True, indent=4),
+            encoding='UTF-8'
         )
 
     def commit_counts(self) -> None:

@@ -14,7 +14,7 @@ class GitHubPR:
 
     def create_pull_request(self, title: str, branch: str, body: str) -> None:
         headers = {
-            'Authorization': 'token {}'.format(self.token),
+            'Authorization': f'token {self.token}',
             'Content-Type': 'application/json'
         }
         data = {
@@ -24,9 +24,7 @@ class GitHubPR:
             'body': body,
         }
         response = requests.post(
-            'https://api.github.com/repos/{}/{}/pulls'.format(
-                self.user, self.repo
-            ),
+            f'https://api.github.com/repos/{self.user}/{self.repo}/pulls',
             headers=headers,
             data=json.dumps(data),
         )

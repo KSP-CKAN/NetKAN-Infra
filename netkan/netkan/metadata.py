@@ -19,7 +19,7 @@ class Netkan:
     def __init__(self, filename: Union[str, Path] = None, contents: str = None) -> None:
         if filename:
             self.filename = Path(filename)
-            self.contents = self.filename.read_text()
+            self.contents = self.filename.read_text(encoding='UTF-8')
         elif contents:
             self.contents = contents
         # YAML parser doesn't allow tabs, so replace with spaces
@@ -271,7 +271,7 @@ class Ckan:
     def __init__(self, filename: Union[str, Path] = None, contents: str = None) -> None:
         if filename:
             self.filename = Path(filename)
-            self.contents = self.filename.read_text()
+            self.contents = self.filename.read_text(encoding='UTF-8')
         elif contents:
             self.contents = contents
         self._raw = json.loads(self.contents, object_hook=self._custom_parser)
@@ -325,12 +325,7 @@ class Ckan:
             return None
         if not self.version:
             return None
-        return '{}-{}-{}.{}'.format(
-            self.cache_prefix,
-            self.identifier,
-            self.version.string.replace(':', '-'),
-            self.MIME_TO_EXTENSION[self.download_content_type],
-        )
+        return f'{self.cache_prefix}-{self.identifier}-{self.version.string.replace(":", "-")}.{self.MIME_TO_EXTENSION[self.download_content_type]}'
 
     def source_download(self, branch: str = 'master') -> Optional[str]:
         # self?.resources?.repository

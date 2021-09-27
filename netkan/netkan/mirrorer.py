@@ -166,32 +166,18 @@ class CkanMirror(Ckan):
         return False
 
     def mirror_item(self, with_epoch: bool = True) -> str:
-        return '{}-{}'.format(
-            self.identifier,
-            self._format_version(with_epoch)
-        )
+        return f'{self.identifier}-{self._format_version(with_epoch)}'
 
     def mirror_filename(self, with_epoch: bool = True) -> Optional[str]:
         if 'download_hash' not in self._raw:
             return None
-        return '{}-{}-{}.{}'.format(
-            self.download_hash['sha1'][0:8],
-            self.identifier,
-            self._format_version(with_epoch),
-            Ckan.MIME_TO_EXTENSION[self.download_content_type],
-        )
+        return f'{self.download_hash["sha1"][0:8]}-{self.identifier}-{self._format_version(with_epoch)}.{Ckan.MIME_TO_EXTENSION[self.download_content_type]}'
 
     def mirror_source_filename(self, with_epoch: bool = True) -> str:
-        return '{}-{}.source.zip'.format(
-            self.identifier,
-            self._format_version(with_epoch)
-        )
+        return f'{self.identifier}-{self._format_version(with_epoch)}.source.zip'
 
     def mirror_title(self, with_epoch: bool = True) -> str:
-        return '{} - {}'.format(
-            self.name,
-            self._format_version(with_epoch),
-        )
+        return f'{self.name} - {self._format_version(with_epoch)}'
 
     @property
     def item_metadata(self) -> Dict[str, Any]:

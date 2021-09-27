@@ -28,12 +28,12 @@ def init_ssh(key: str, key_path: Path) -> None:
     key_path.mkdir(exist_ok=True)
     key_file = Path(key_path, 'id_rsa')
     if not key_file.exists():
-        key_file.write_text('{}\n'.format(key))
+        key_file.write_text(f'{key}\n', encoding='UTF-8')
         key_file.chmod(0o400)
         scan = subprocess.run([
             'ssh-keyscan', '-t', 'rsa', 'github.com'
         ], stdout=subprocess.PIPE, check=False)
-        Path(key_path, 'known_hosts').write_text(scan.stdout.decode('utf-8'))
+        Path(key_path, 'known_hosts').write_text(scan.stdout.decode('utf-8'), encoding='UTF-8')
 
 
 def repo_file_add_or_changed(repo: Repo, filename: Union[str, Path]) -> bool:
