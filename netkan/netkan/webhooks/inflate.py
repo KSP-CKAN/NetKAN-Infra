@@ -13,20 +13,21 @@ inflate = Blueprint('inflate', __name__)  # pylint: disable=invalid-name
 # Payload: { "identifiers": [ "Id1", "Id2", ... ] }
 @inflate.route('/inflate', methods=['POST'])
 def inflate_hook() -> Tuple[str, int]:
-    # SpaceDock doesn't set the `Content-Type: application/json` header
-    raw = request.get_json(force=True)
-    ids = raw.get('identifiers')  # type: ignore[union-attr]
-    if not ids:
-        current_app.logger.info('No identifiers received')
-        return 'An array of identifiers is required', 400
-    # Make sure our NetKAN and CKAN-meta repos are up to date
-    pull_all(current_config.repos)
-    messages = (nk.sqs_message(current_config.ckm_repo.highest_version(nk.identifier))
-                for nk in netkans(current_config.nk_repo.git_repo.working_dir, ids))
-    for batch in sqs_batch_entries(messages):
-        current_app.logger.info(f'Queueing inflation request batch: {batch}')
-        current_config.client.send_message_batch(
-            QueueUrl=current_config.inflation_queue.url,
-            Entries=batch
-        )
+    if current_config.nk_repo.git_repo.working_dir:
+        # SpaceDock doesn't set the `Content-Type: application/json` header
+        raw = request.get_json(force=True)
+        ids = raw.get('identifiers')  # type: ignore[union-attr]
+        if not ids:
+            current_app.logger.info('No identifiers received')
+            return 'An array of identifiers is required', 400
+        # Make sure our NetKAN and CKAN-meta repos are up to date
+        pull_all(current_config.repos)
+        messages = (nk.sqs_message(current_config.ckm_repo.highest_version(nk.identifier))
+                    for nk in netkans(str(current_config.nk_repo.git_repo.working_dir), ids))
+        for batch in sqs_batch_entries(messages):
+            current_app.logger.info(f'Queueing inflation request batch: {batch}')
+            current_config.client.send_message_batch(
+                QueueUrl=current_config.inflation_queue.url,
+                Entries=batch
+            )
     return '', 204

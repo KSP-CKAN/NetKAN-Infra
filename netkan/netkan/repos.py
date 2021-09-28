@@ -2,7 +2,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable, List, Optional, Generator, Union
 
-from git import Repo, Commit, GitCommandError
+from git import Repo, GitCommandError
+from git.objects.commit import Commit
 from .metadata import Netkan, Ckan
 
 
@@ -116,7 +117,8 @@ class NetkanRepo(XkanRepo):
 
     @property
     def nk_dir(self) -> Path:
-        return Path(self.git_repo.working_dir, self.NETKAN_DIR)
+        return (Path(self.git_repo.working_dir, self.NETKAN_DIR)
+                if self.git_repo.working_dir else Path(self.NETKAN_DIR))
 
     def nk_path(self, identifier: str) -> Path:
         return self.nk_dir.joinpath(f'{identifier}.{self.UNFROZEN_SUFFIX}')
@@ -149,7 +151,8 @@ class CkanMetaRepo(XkanRepo):
 
     @property
     def ckm_dir(self) -> Path:
-        return Path(self.git_repo.working_dir)
+        return (Path(self.git_repo.working_dir)
+                if self.git_repo.working_dir else Path('.'))
 
     def mod_path(self, identifier: str) -> Path:
         return self.ckm_dir.joinpath(identifier)

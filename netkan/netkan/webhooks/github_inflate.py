@@ -57,15 +57,16 @@ def ids_from_commits(commits: List[Dict[str, Any]]) -> Iterable[str]:
 
 
 def inflate(ids: Iterable[str]) -> None:
-    # Make sure our NetKAN and CKAN-meta repos are up to date
-    pull_all(current_config.repos)
-    messages = (nk.sqs_message(current_config.ckm_repo.highest_version(nk.identifier))
-                for nk in netkans(current_config.nk_repo.git_repo.working_dir, ids))
-    for batch in sqs_batch_entries(messages):
-        current_config.client.send_message_batch(
-            QueueUrl=current_config.inflation_queue.url,
-            Entries=batch
-        )
+    if current_config.nk_repo.git_repo.working_dir:
+        # Make sure our NetKAN and CKAN-meta repos are up to date
+        pull_all(current_config.repos)
+        messages = (nk.sqs_message(current_config.ckm_repo.highest_version(nk.identifier))
+                    for nk in netkans(str(current_config.nk_repo.git_repo.working_dir), ids))
+        for batch in sqs_batch_entries(messages):
+            current_config.client.send_message_batch(
+                QueueUrl=current_config.inflation_queue.url,
+                Entries=batch
+            )
 
 
 def ends_with_frozen(filename: str) -> bool:

@@ -8,7 +8,7 @@ from types import TracebackType
 
 import boto3  # pylint: disable=unused-import
 from dateutil.parser import parse
-from git import Commit
+from git.objects.commit import Commit
 
 from .metadata import Ckan
 from .repos import CkanMetaRepo

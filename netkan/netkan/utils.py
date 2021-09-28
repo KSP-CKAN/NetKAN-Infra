@@ -6,15 +6,12 @@ from git import Repo
 
 
 def init_repo(metadata: str, path: str, deep_clone: bool) -> Repo:
-    if not metadata:
-        return None
     clone_path = Path(path)
     if not clone_path.exists():
         logging.info('Cloning %s', metadata)
-        extra_kwargs = {}
-        if not deep_clone:
-            extra_kwargs['depth'] = 1
-        repo = Repo.clone_from(metadata, clone_path, **extra_kwargs)
+        repo = (Repo.clone_from(metadata, clone_path)
+                if deep_clone else
+                Repo.clone_from(metadata, clone_path, depth=1))
     else:
         repo = Repo(clone_path)
     return repo
@@ -37,10 +34,11 @@ def init_ssh(key: str, key_path: Path) -> None:
 
 
 def repo_file_add_or_changed(repo: Repo, filename: Union[str, Path]) -> bool:
-    relative_file = Path(filename).relative_to(repo.working_dir).as_posix()
-    if relative_file in repo.untracked_files:
-        return True
-    if relative_file in [
-            x.a_path for x in repo.index.diff(None)]:
-        return True
+    if repo.working_dir:
+        relative_file = Path(filename).relative_to(repo.working_dir).as_posix()
+        if relative_file in repo.untracked_files:
+            return True
+        if relative_file in [
+                x.a_path for x in repo.index.diff(None)]:
+            return True
     return False

@@ -227,9 +227,10 @@ class DownloadCounter:
         self.ckm_repo = ckm_repo
         self.counts: Dict[str, Any] = {}
         self.github_token = github_token
-        self.output_file = Path(
-            self.ckm_repo.git_repo.working_dir, 'download_counts.json'
-        )
+        if self.ckm_repo.git_repo.working_dir:
+            self.output_file = Path(
+                self.ckm_repo.git_repo.working_dir, 'download_counts.json'
+            )
 
     def get_counts(self) -> None:
         graph_query = GraphQLQuery(self.github_token)
@@ -261,26 +262,29 @@ class DownloadCounter:
             graph_query.get_result(self.counts)
 
     def write_json(self) -> None:
-        self.output_file.write_text(
-            json.dumps(self.counts, sort_keys=True, indent=4),
-            encoding='UTF-8'
-        )
+        if self.output_file:
+            self.output_file.write_text(
+                json.dumps(self.counts, sort_keys=True, indent=4),
+                encoding='UTF-8'
+            )
 
     def commit_counts(self) -> None:
-        self.ckm_repo.commit(
-            [self.output_file.as_posix()],
-            'NetKAN Updating Download Counts'
-        )
-        logging.info('Download counts changed and committed')
-        self.ckm_repo.git_repo.remotes.origin.push('master')
+        if self.output_file:
+            self.ckm_repo.commit(
+                [self.output_file.as_posix()],
+                'NetKAN Updating Download Counts'
+            )
+            logging.info('Download counts changed and committed')
+            self.ckm_repo.git_repo.remotes.origin.push('master')
 
     def update_counts(self) -> None:
-        self.get_counts()
-        self.ckm_repo.git_repo.remotes.origin.pull(
-            'master', strategy_option='ours'
-        )
-        self.write_json()
-        if repo_file_add_or_changed(self.ckm_repo.git_repo, self.output_file):
-            self.commit_counts()
-        else:
-            logging.info('Download counts match existing data.')
+        if self.output_file:
+            self.get_counts()
+            self.ckm_repo.git_repo.remotes.origin.pull(
+                'master', strategy_option='ours'
+            )
+            self.write_json()
+            if repo_file_add_or_changed(self.ckm_repo.git_repo, self.output_file):
+                self.commit_counts()
+            else:
+                logging.info('Download counts match existing data.')
