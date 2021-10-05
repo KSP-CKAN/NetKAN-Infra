@@ -166,32 +166,18 @@ class CkanMirror(Ckan):
         return False
 
     def mirror_item(self, with_epoch: bool = True) -> str:
-        return '{}-{}'.format(
-            self.identifier,
-            self._format_version(with_epoch)
-        )
+        return f'{self.identifier}-{self._format_version(with_epoch)}'
 
     def mirror_filename(self, with_epoch: bool = True) -> Optional[str]:
         if 'download_hash' not in self._raw:
             return None
-        return '{}-{}-{}.{}'.format(
-            self.download_hash['sha1'][0:8],
-            self.identifier,
-            self._format_version(with_epoch),
-            Ckan.MIME_TO_EXTENSION[self.download_content_type],
-        )
+        return f'{self.download_hash["sha1"][0:8]}-{self.identifier}-{self._format_version(with_epoch)}.{Ckan.MIME_TO_EXTENSION[self.download_content_type]}'
 
     def mirror_source_filename(self, with_epoch: bool = True) -> str:
-        return '{}-{}.source.zip'.format(
-            self.identifier,
-            self._format_version(with_epoch)
-        )
+        return f'{self.identifier}-{self._format_version(with_epoch)}.source.zip'
 
     def mirror_title(self, with_epoch: bool = True) -> str:
-        return '{} - {}'.format(
-            self.name,
-            self._format_version(with_epoch),
-        )
+        return f'{self.name} - {self._format_version(with_epoch)}'
 
     @property
     def item_metadata(self) -> Dict[str, Any]:
@@ -308,32 +294,33 @@ class Mirrorer:
 
     def process_queue(self, queue_name: str, timeout: int) -> None:
         queue = boto3.resource('sqs').get_queue_by_name(QueueName=queue_name)
-        while True:
-            messages = queue.receive_messages(
-                MaxNumberOfMessages=10,
-                MessageAttributeNames=['All'],
-                VisibilityTimeout=timeout,
-            )
-            if messages:
-                # Check if archive.org is overloaded
-                if self.ia_overloaded():
-                    logging.info('The Internet Archive is overloaded, try again later')
-                    continue
-                # Get up to date copy of the metadata for the files we're mirroring
-                logging.info('Updating repo')
-                self.ckm_repo.git_repo.heads.master.checkout()
-                self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs')
-                # Start processing the messages
-                to_delete = []
-                for msg in messages:
-                    path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
-                    if self.try_mirror(CkanMirror(self.ia_collection, path)):
-                        # Successfully handled -> OK to delete
-                        to_delete.append(deletion_msg(msg))
-                if to_delete:
-                    queue.delete_messages(Entries=to_delete)
-                # Clean up GitPython's lingering file handles between batches
-                self.ckm_repo.git_repo.close()
+        if self.ckm_repo.git_repo.working_dir:
+            while True:
+                messages = queue.receive_messages(
+                    MaxNumberOfMessages=10,
+                    MessageAttributeNames=['All'],
+                    VisibilityTimeout=timeout,
+                )
+                if messages:
+                    # Check if archive.org is overloaded
+                    if self.ia_overloaded():
+                        logging.info('The Internet Archive is overloaded, try again later')
+                        continue
+                    # Get up to date copy of the metadata for the files we're mirroring
+                    logging.info('Updating repo')
+                    self.ckm_repo.git_repo.heads.master.checkout()
+                    self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs')
+                    # Start processing the messages
+                    to_delete = []
+                    for msg in messages:
+                        path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
+                        if self.try_mirror(CkanMirror(self.ia_collection, path)):
+                            # Successfully handled -> OK to delete
+                            to_delete.append(deletion_msg(msg))
+                    if to_delete:
+                        queue.delete_messages(Entries=to_delete)
+                    # Clean up GitPython's lingering file handles between batches
+                    self.ckm_repo.git_repo.close()
 
     def try_mirror(self, ckan: CkanMirror) -> bool:
         if not ckan.can_mirror:

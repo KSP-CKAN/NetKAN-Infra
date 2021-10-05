@@ -38,7 +38,7 @@ class TestNetKANUtilsRepoFileAddOrChange(unittest.TestCase):
 
     def test_changes(self):
         existing = Path(self.working, 'existing.txt')
-        existing.write_text('I made a change')
+        existing.write_text('I made a change', encoding='UTF-8')
         self.assertTrue(repo_file_add_or_changed(self.repo, existing))
 
     def test_new_nested(self):
@@ -48,5 +48,5 @@ class TestNetKANUtilsRepoFileAddOrChange(unittest.TestCase):
 
     def test_changes_nested(self):
         existing = Path(self.nested, 'existing_nested.txt')
-        existing.write_text('text')
+        existing.write_text('text', encoding='UTF-8')
         self.assertTrue(repo_file_add_or_changed(self.repo, existing))

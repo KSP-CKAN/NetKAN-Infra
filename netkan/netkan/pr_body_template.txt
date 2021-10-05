@@ -8,5 +8,6 @@ Mod details:
     Abstract = $short_description
     License = $license
     Homepage = $external_link
+    Source code = $source_link
     Description =
 $description

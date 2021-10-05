@@ -8,7 +8,7 @@ from types import TracebackType
 
 import boto3  # pylint: disable=unused-import
 from dateutil.parser import parse
-from git import Commit
+from git.objects.commit import Commit
 
 from .metadata import Ckan
 from .repos import CkanMetaRepo
@@ -33,7 +33,7 @@ class CkanMessage:
         # pylint: enable=invalid-name
         self.indexed = False
         for item in msg.message_attributes.items():
-            attr_type = '{}Value'.format(item[1]['DataType'])
+            attr_type = f'{item[1]["DataType"]}Value'
             content = item[1][attr_type]
             if content.lower() in ['true', 'false']:
                 content = (content.lower() == 'true')
@@ -47,7 +47,7 @@ class CkanMessage:
         self.github_pr = github_pr
 
     def __str__(self) -> str:
-        return '{}: {}'.format(self.ModIdentifier, self.CheckTime)
+        return f'{self.ModIdentifier}: {self.CheckTime}'
 
     @property
     def mod_path(self) -> Path:
@@ -74,7 +74,7 @@ class CkanMessage:
 
     def write_metadata(self) -> None:
         self.mod_path.mkdir(exist_ok=True)
-        with open(self.mod_file, mode='w') as file:
+        with open(self.mod_file, mode='w', encoding='UTF-8') as file:
             file.write(self.body)
 
     def commit_metadata(self, file_created: bool) -> Commit:

@@ -6,15 +6,12 @@ from git import Repo
 
 
 def init_repo(metadata: str, path: str, deep_clone: bool) -> Repo:
-    if not metadata:
-        return None
     clone_path = Path(path)
     if not clone_path.exists():
         logging.info('Cloning %s', metadata)
-        extra_kwargs = {}
-        if not deep_clone:
-            extra_kwargs['depth'] = 1
-        repo = Repo.clone_from(metadata, clone_path, **extra_kwargs)
+        repo = (Repo.clone_from(metadata, clone_path)
+                if deep_clone else
+                Repo.clone_from(metadata, clone_path, depth=1))
     else:
         repo = Repo(clone_path)
     return repo
@@ -28,19 +25,20 @@ def init_ssh(key: str, key_path: Path) -> None:
     key_path.mkdir(exist_ok=True)
     key_file = Path(key_path, 'id_rsa')
     if not key_file.exists():
-        key_file.write_text('{}\n'.format(key))
+        key_file.write_text(f'{key}\n', encoding='UTF-8')
         key_file.chmod(0o400)
         scan = subprocess.run([
             'ssh-keyscan', '-t', 'rsa', 'github.com'
         ], stdout=subprocess.PIPE, check=False)
-        Path(key_path, 'known_hosts').write_text(scan.stdout.decode('utf-8'))
+        Path(key_path, 'known_hosts').write_text(scan.stdout.decode('utf-8'), encoding='UTF-8')
 
 
 def repo_file_add_or_changed(repo: Repo, filename: Union[str, Path]) -> bool:
-    relative_file = Path(filename).relative_to(repo.working_dir).as_posix()
-    if relative_file in repo.untracked_files:
-        return True
-    if relative_file in [
-            x.a_path for x in repo.index.diff(None)]:
-        return True
+    if repo.working_dir:
+        relative_file = Path(filename).relative_to(repo.working_dir).as_posix()
+        if relative_file in repo.untracked_files:
+            return True
+        if relative_file in [
+                x.a_path for x in repo.index.diff(None)]:
+            return True
     return False

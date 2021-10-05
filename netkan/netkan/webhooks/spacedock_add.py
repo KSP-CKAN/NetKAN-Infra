@@ -20,6 +20,7 @@ spacedock_add = Blueprint('spacedock_add', __name__)  # pylint: disable=invalid-
 #     short_description: A mod that you should definitely install
 #     description:       A mod that you should definitely install, and so on and so on
 #     external_link:     https://forum.kerbalspaceprogram.com/index.php?/topic/999999-ThreadTitle
+#     source_link:       https://github.com/user/repo
 #     user_url:          https://spacedock.info/profile/ModAuthor1
 #     mod_url:           https://spacedock.info/mod/12345
 #     site_name:         SpaceDock

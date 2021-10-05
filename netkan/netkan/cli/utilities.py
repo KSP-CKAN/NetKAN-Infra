@@ -64,8 +64,7 @@ def download_counter(common: SharedArgs) -> None:
     help='Dump status to S3 every `interval` seconds',
 )
 def export_status_s3(status_bucket: str, status_key: str, interval: bool) -> None:
-    frequency = 'every {} seconds'.format(
-        interval) if interval else 'once'
+    frequency = f'every {interval} seconds' if interval else 'once'
     logging.info('Exporting to s3://%s/%s %s',
                  status_bucket, status_key, frequency)
     while True:
@@ -107,7 +106,7 @@ def recover_status_timestamps(common: SharedArgs) -> None:
 )
 def redeploy_service(cluster: str, service_name: str) -> None:
     click.secho(
-        'Forcing redeployment of {}:{}'.format(cluster, service_name),
+        f'Forcing redeployment of {cluster}:{service_name}',
         fg='green'
     )
     client = boto3.client('ecs')
@@ -120,8 +119,7 @@ def redeploy_service(cluster: str, service_name: str) -> None:
             [f.split('/')[1].split('-')[1] for f in services]
         )
         raise click.UsageError(
-            "Service '{}' not found. Available services:\n    - {}".format(
-                service_name, available)
+            f"Service '{service_name}' not found. Available services:\n    - {available}"
         ) from exc
     client.update_service(
         cluster=cluster,
@@ -161,12 +159,10 @@ def clean_cache(days: int, cache: str) -> None:
     older_than = (
         datetime.datetime.now() - datetime.timedelta(days=int(days))
     ).timestamp()
-    click.echo('Checking cache for files older than {} days'.format(days))
+    click.echo(f'Checking cache for files older than {days} days')
     for item in Path(cache).glob('*'):
         if item.is_file() and item.stat().st_mtime < older_than:
-            click.echo('Purging {} from ckan cache'.format(
-                item.name
-            ))
+            click.echo(f'Purging {item.name} from ckan cache')
             item.unlink()
 
 

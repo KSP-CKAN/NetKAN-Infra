@@ -90,11 +90,11 @@ class ModStatus(Model):
     # this operation once to seed the existing history.
     @classmethod
     def restore_status(cls, filename: str) -> None:
-        existing = json.loads(Path(filename).read_text())
+        existing = json.loads(Path(filename).read_text(encoding='UTF-8'))
         with cls.batch_write() as batch:
             for key, item in existing.items():
                 for item_key in ['checked', 'indexed', 'inflated']:
-                    update_key = 'last_{}'.format(item_key)
+                    update_key = f'last_{item_key}'
                     if not item[update_key]:
                         continue
                     item[update_key] = parse(
