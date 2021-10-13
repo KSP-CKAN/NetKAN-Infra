@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from pathlib import Path
+import re
 from typing import Iterable, List, Optional, Generator, Union
 
 from git import Repo, GitCommandError
@@ -149,11 +150,24 @@ class CkanMetaRepo(XkanRepo):
     """
 
     CKANMETA_GLOB = '**/*.ckan'
+    IDENTIFIER_PATTERN = re.compile('^[A-Za-z0-9][A-Za-z0-9-]+$')
 
     @property
     def ckm_dir(self) -> Path:
         return (Path(self.git_repo.working_dir)
                 if self.git_repo.working_dir else Path('.'))
+
+    def identifiers(self) -> Iterable[str]:
+        return (path.stem for path in self.ckm_dir.iterdir()
+                if path.is_dir()
+                   and self.IDENTIFIER_PATTERN.fullmatch(path.stem)
+                   and any(child.match('*.ckan')
+                           for child in path.iterdir()))
+
+    def all_latest_modules(self) -> Iterable[Ckan]:
+        return filter(None,
+                      (self.highest_version_module(identifier)
+                       for identifier in self.identifiers()))
 
     def mod_path(self, identifier: str) -> Path:
         return self.ckm_dir.joinpath(identifier)
@@ -161,6 +175,11 @@ class CkanMetaRepo(XkanRepo):
     def ckans(self, identifier: str) -> Iterable[Ckan]:
         return (Ckan(f) for f in self.mod_path(identifier).glob(self.CKANMETA_GLOB))
 
+    def highest_version_module(self, identifier: str) -> Optional[Ckan]:
+        return max(self.ckans(identifier),
+                   default=None,
+                   key=lambda ck: ck.version if ck else Ckan.Version('0'))
+
     def highest_version(self, identifier: str) -> Optional[Ckan.Version]:
-        highest = max(self.ckans(identifier), default=None, key=lambda ck: ck.version)
+        highest = self.highest_version_module(identifier)
         return highest.version if highest else None

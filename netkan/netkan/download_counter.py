@@ -2,127 +2,15 @@ import json
 import logging
 import re
 from pathlib import Path
-from json.decoder import JSONDecodeError
 from importlib.resources import read_text
 from string import Template
-from typing import Optional, Dict, Any
+import urllib.parse
+from typing import Optional, Dict, Tuple, Any
 
-from ruamel.yaml.error import YAMLError
 import requests
-from requests.exceptions import RequestException
 
-from .metadata import Netkan
 from .utils import repo_file_add_or_changed
-from .repos import NetkanRepo, CkanMetaRepo
-
-
-class NetkanDownloads(Netkan):
-    GITHUB_PATTERN = re.compile('^([^/]+)/([^/]+)')
-    GITHUB_API = 'https://api.github.com/repos/'
-
-    def __init__(self, filename: Path = None, github_token: str = None, contents: str = None) -> None:
-        super().__init__(filename, contents)
-        self.github_headers = {'Authorization': f'token {github_token}'}
-        self.github_token = github_token
-
-    @property
-    def spacedock_api(self) -> str:
-        return f'https://spacedock.info/api/mod/{self.kref_id}'
-
-    @property
-    def github_repo_api(self) -> Optional[str]:
-        if self.kref_id:
-            match = self.GITHUB_PATTERN.match(self.kref_id)
-            if match:
-                (user, repo) = match.groups()
-                return f'{self.GITHUB_API}{user}/{repo}'
-        return None
-
-    @property
-    def curse_api(self) -> str:
-        if self.kref_id and self.kref_id.isnumeric():
-            return f'https://api.cfwidget.com/project/{self.kref_id}'
-        return f'https://api.cfwidget.com/kerbal/ksp-mods/{self.kref_id}'
-
-    def count_from_spacedock(self) -> int:
-        return requests.get(self.spacedock_api).json()['downloads']
-
-    def count_from_github(self, url: str = None) -> int:
-        if not url:
-            url = self.github_repo_api
-        if not url:
-            return 0
-        releases = requests.get(
-            f'{url}/releases', headers=self.github_headers
-        ).json()
-
-        total = 0
-        if isinstance(releases, list):
-            for rel in releases:
-                for asset in rel['assets']:
-                    total += asset['download_count']
-
-        repo = requests.get(
-            url, headers=self.github_headers
-        ).json()
-        if 'parent' in repo:
-            url = f"{self.GITHUB_API}{repo['parent']['full_name']}"
-            total += self.count_from_github(url)
-        return total
-
-    def count_from_curse(self) -> int:
-        return requests.get(self.curse_api).json()['downloads']['total']
-
-    def count_from_netkan(self) -> int:
-        meta = self.resolve_meta()
-        return meta.get_count() if meta else 0
-
-    def resolve_meta(self) -> Optional['NetkanDownloads']:
-        if self.kref_src == 'netkan' and self.kref_id:
-            try:
-                # Fortunately only one layer of indirection is allowed
-                return NetkanDownloads(
-                    github_token=self.github_token,
-                    contents=requests.get(self.kref_id).text
-                )
-            except RequestException as exc:
-                logging.error('DownloadCounter metanetkan network request failed for %s: %s',
-                              self.identifier, exc)
-            except YAMLError as exc:
-                logging.error('DownloadCounter metanetkan failed YAML parse for %s: %s',
-                              self.identifier, exc)
-            # Can't get the metanetkan
-            return None
-        # Already have the real me
-        return self
-
-    def get_count(self) -> int:
-        if self.has_kref:
-            try:
-                if self.kref_src == 'github':
-                    return self.count_from_github()
-                if self.kref_src == 'spacedock':
-                    return self.count_from_spacedock()
-                if self.kref_src == 'curse':
-                    return self.count_from_curse()
-                if self.kref_src == 'netkan':
-                    return self.count_from_netkan()
-            except JSONDecodeError as exc:
-                logging.error('DownloadCounter failed JSON parse for %s: %s',
-                              self.identifier, exc)
-            except RequestException as exc:
-                logging.error('DownloadCounter network request failed for %s: %s',
-                              self.identifier, exc)
-            except KeyError as exc:
-                logging.error('DownloadCounter key missing for %s: %s',
-                              self.identifier, exc)
-            except AttributeError as exc:
-                logging.error('DownloadCounter attribute missing for %s: %s',
-                              self.identifier, exc)
-            except Exception as exc:  # pylint: disable=broad-except
-                logging.error('DownloadCounter surprising error for %s: %s',
-                              self.identifier, exc)
-        return 0
+from .repos import CkanMetaRepo
 
 
 class GraphQLQuery:
@@ -142,44 +30,39 @@ class GraphQLQuery:
         '${ident}: repository(owner: "${user}", name: "${repo}") { ...getDownloads }')
 
     def __init__(self, github_token: str) -> None:
-        self.netkan_dls: Dict[str, NetkanDownloads] = {}
+        self.repos: Dict[str, Tuple[str, str]] = {}
         self.github_token = github_token
         logging.info('Starting new GraphQL query')
 
     def empty(self) -> bool:
-        return len(self.netkan_dls) == 0
+        return len(self.repos) == 0
 
     def full(self) -> bool:
-        return len(self.netkan_dls) >= self.MODULES_PER_GRAPHQL
+        return len(self.repos) >= self.MODULES_PER_GRAPHQL
 
-    def add(self, nk_dl: NetkanDownloads) -> None:
-        logging.info('Adding %s to GraphQL query', nk_dl.identifier)
-        self.netkan_dls[nk_dl.identifier] = nk_dl
+    def add(self, identifier: str, user: str, repo: str) -> None:
+        self.repos[identifier] = (user, repo)
 
     def get_query(self) -> str:
         return self.GRAPHQL_TEMPLATE.safe_substitute(module_queries="\n".join(
-            filter(None, [self.get_module_query(nk)
-                          for nk in self.netkan_dls.values()])))
+            filter(None, [self.get_module_query(identifier, user, repo)
+                          for identifier, (user, repo)
+                          in self.repos.items()])))
 
-    def get_module_query(self, nk_dl: NetkanDownloads) -> Optional[str]:
-        if nk_dl.kref_id:
-            match = NetkanDownloads.GITHUB_PATTERN.match(nk_dl.kref_id)
-            if match:
-                (user, repo) = match.groups()
-                return self.MODULE_TEMPLATE.safe_substitute(
-                    ident=self.graphql_safe_identifier(nk_dl),
-                    user=user, repo=repo)
-        return None
+    def get_module_query(self, identifier: str, user: str, repo: str) -> str:
+        return self.MODULE_TEMPLATE.safe_substitute(
+            ident=self.graphql_safe_identifier(identifier),
+            user=user, repo=repo)
 
     @staticmethod
-    def graphql_safe_identifier(nk_dl: NetkanDownloads) -> str:
+    def graphql_safe_identifier(identifier: str) -> str:
         """
         Identifiers can start with numbers and include hyphens.
         GraphQL doesn't like that, so we put an 'x' on the front
         and replace dashes with underscores (which luckily CAN'T
         appear in identifiers, so this is reversible).
         """
-        return f'x{nk_dl.identifier.replace("-", "_")}'
+        return f'x{identifier.replace("-", "_")}'
 
     @staticmethod
     def from_graphql_safe_identifier(fake_ident: str) -> str:
@@ -225,10 +108,49 @@ class GraphQLQuery:
         return total
 
 
+class SpaceDockBatchedQuery:
+
+    SPACEDOCK_API = 'https://spacedock.info/api/download_counts'
+
+    def __init__(self) -> None:
+        self.ids: Dict[str, str] = {}
+
+    def empty(self) -> bool:
+        return len(self.ids) == 0
+
+    def add(self, identifier: str, sd_id: str) -> None:
+        self.ids[identifier] = sd_id
+
+    def get_query(self) -> Dict[str, Any]:
+        return {
+            'mod_id': self.ids.values()
+        }
+
+    def query_to_spacedock(self, query: Dict[str, Any]) -> Dict[str, Any]:
+        return requests.post(self.SPACEDOCK_API, data=query).json()
+
+    def get_result(self, counts: Optional[Dict[str, int]]) -> Dict[str, int]:
+        if not counts:
+            counts = {}
+        full_query = self.get_query()
+        result = self.query_to_spacedock(full_query)
+        sd_counts = {
+            element.get('id'): element.get('downloads')
+            for element in result.get('download_counts', [])
+        }
+        for identifier, sd_id in self.ids.items():
+            count = sd_counts.get(sd_id)
+            if count:
+                counts[identifier] = count
+        return counts
+
+
 class DownloadCounter:
 
-    def __init__(self, nk_repo: NetkanRepo, ckm_repo: CkanMetaRepo, github_token: str) -> None:
-        self.nk_repo = nk_repo
+    GITHUB_PATH_PATTERN = re.compile(r'^/([^/]+)/([^/]+)')
+    SPACEDOCK_PATH_PATTERN = re.compile(r'^/mod/([^/]+)')
+
+    def __init__(self, ckm_repo: CkanMetaRepo, github_token: str) -> None:
         self.ckm_repo = ckm_repo
         self.counts: Dict[str, Any] = {}
         self.github_token = github_token
@@ -239,32 +161,34 @@ class DownloadCounter:
 
     def get_counts(self) -> None:
         graph_query = GraphQLQuery(self.github_token)
-        for netkan in self.nk_repo.all_nk_paths():
+        sd_query = SpaceDockBatchedQuery()
+        for ckan in self.ckm_repo.all_latest_modules():
+            if ckan.kind == 'dlc':
+                continue
             try:
-                # Replace with metanetkan if applicable
-                netkan_dl = NetkanDownloads(netkan, self.github_token).resolve_meta()
-                if netkan_dl:
-                    if netkan_dl.kref_src == 'github':
+                url_parse = urllib.parse.urlparse(ckan.download)
+                if url_parse.netloc == 'github.com':
+                    match = self.GITHUB_PATH_PATTERN.match(url_parse.path)
+                    if match:
                         # Process GitHub modules together in big batches
-                        graph_query.add(netkan_dl)
+                        graph_query.add(ckan.identifier, *match.groups())
                         if graph_query.full():
                             # Run the query
                             graph_query.get_result(self.counts)
                             # Start over with fresh query
                             graph_query = GraphQLQuery(self.github_token)
-                    else:
-                        count = netkan_dl.get_count()
-                        if count > 0:
-                            logging.info('Count for %s is %s', netkan_dl.identifier, count)
-                            self.counts[netkan_dl.identifier] = count
+                elif url_parse.netloc == 'spacedock.info':
+                    match = self.SPACEDOCK_PATH_PATTERN.match(url_parse.path)
+                    if match:
+                        # Process SpaceDock modules together in one huge batch
+                        sd_query.add(ckan.identifier, *match.groups())
             except Exception as exc:  # pylint: disable=broad-except
                 # Don't let one bad apple spoil the bunch
                 # Print file path because netkan_dl might be None
                 logging.error('DownloadCounter failed for %s: %s',
-                              netkan, exc)
-        if not graph_query.empty():
-            # Final pass doesn't overflow the bound
-            graph_query.get_result(self.counts)
+                              ckan, exc)
+        if not sd_query.empty():
+            sd_query.get_result(self.counts)
 
     def write_json(self) -> None:
         if self.output_file:
