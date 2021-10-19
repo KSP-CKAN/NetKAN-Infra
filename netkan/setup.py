@@ -10,7 +10,7 @@ setup(
     author_email='techman83@gmail.com',
     packages=find_packages(),
     package_data={
-        "": ["*.txt", "*.jinja2", "*.graphql"],
+        "": ["*.md", "*.jinja2", "*.graphql"],
     },
     install_requires=[
         'boto3',

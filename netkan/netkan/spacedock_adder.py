@@ -17,7 +17,7 @@ from .repos import NetkanRepo
 # https://github.com/KSP-SpaceDock/SpaceDock/blob/master/KerbalStuff/ckan.py
 class SpaceDockAdder:
 
-    PR_BODY_TEMPLATE = Template(read_text('netkan', 'pr_body_template.txt'))
+    PR_BODY_TEMPLATE = Template(read_text('netkan', 'pr_body_template.md'))
 
     def __init__(self, queue: str, timeout: int, nk_repo: NetkanRepo, github_pr: GitHubPR = None) -> None:
         sqs = boto3.resource('sqs')
