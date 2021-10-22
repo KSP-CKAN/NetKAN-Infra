@@ -12,7 +12,7 @@ class AutoFreezer:
 
     BRANCH_NAME = 'freeze/auto'
 
-    def __init__(self, nk_repo: NetkanRepo, github_pr: GitHubPR = None) -> None:
+    def __init__(self, nk_repo: NetkanRepo, github_pr: GitHubPR) -> None:
         self.nk_repo = nk_repo
         self.github_pr = github_pr
 
@@ -63,6 +63,7 @@ class AutoFreezer:
             dttm = self._last_timestamp(ident)
             if dttm and too_old_cutoff < dttm < update_cutoff:
                 idle_mods.append((ident, dttm))
+        idle_mods.sort(key=lambda mod: mod[1])
         return idle_mods
 
     @staticmethod
@@ -81,7 +82,6 @@ class AutoFreezer:
 
     @staticmethod
     def _mod_table(idle_mods: List[Tuple[str, datetime]]) -> str:
-        idle_mods.sort(key=lambda mod: mod[1])
         return '\n'.join([
             'Mod | Last Update',
             ':-- | :--',
@@ -100,4 +100,5 @@ class AutoFreezer:
                       ' Freeze them to save the bot some CPU cycles.'
                       '\n\n'
                       f'{self._mod_table(idle_mods)}'),
+                labels=['Pull request', 'Freeze', 'Needs looking into'],
             )

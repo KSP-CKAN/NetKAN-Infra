@@ -58,7 +58,7 @@ class SpaceDockAdder:
             return True
 
         # Create branch
-        branch_name = f"add-{netkan.get('identifier')}"
+        branch_name = f"add/{netkan.get('identifier')}"
         try:
             self.nk_repo.git_repo.remotes.origin.fetch(branch_name)
         except git.GitCommandError:
@@ -99,7 +99,8 @@ class SpaceDockAdder:
             self.github_pr.create_pull_request(
                 title=f"Add {info.get('name')} from {info.get('site_name')}",
                 branch=branch_name,
-                body=self.PR_BODY_TEMPLATE.safe_substitute(defaultdict(lambda: '', info))
+                body=self.PR_BODY_TEMPLATE.safe_substitute(defaultdict(lambda: '', info)),
+                labels=['Pull request', 'Mod-request'],
             )
         return True
 
