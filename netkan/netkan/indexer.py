@@ -61,6 +61,10 @@ class CkanMessage:
     def mod_version(self) -> str:
         return self.mod_file.stem
 
+    @property
+    def staging_branch_name(self) -> str:
+        return f'add/{self.mod_version}'
+
     def mod_file_md5(self) -> str:
         with open(self.mod_file, mode='rb') as file:
             return hashlib.md5(file.read()).hexdigest()
@@ -135,14 +139,15 @@ class CkanMessage:
     def process_ckan(self) -> None:
         # Staged CKANs that were inflated successfully and have been changed
         if self.Staged and self.Success and self.metadata_changed():
-            with self.ckm_repo.change_branch(self.mod_version):
+            with self.ckm_repo.change_branch(self.staging_branch_name):
                 self._process_ckan()
             if self.indexed and self.github_pr:
                 self.github_pr.create_pull_request(
                     title=f'NetKAN inflated: {self.ModIdentifier}',
-                    branch=self.mod_version,
+                    branch=self.staging_branch_name,
                     body=getattr(self, 'StagingReason',
-                                 f'{self.ModIdentifier} has been staged, please test and merge')
+                                 f'{self.ModIdentifier} has been staged, please test and merge'),
+                    labels=['Needs looking into'],
                 )
             return
 

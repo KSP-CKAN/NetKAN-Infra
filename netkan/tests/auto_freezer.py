@@ -86,6 +86,7 @@ class TestAutoFreezer(unittest.TestCase):
             self.assertEqual(pr_mock.return_value.create_pull_request.mock_calls, [
                 call(branch='test_branch_name',
                      title='Freeze idle mods',
-                     body='The attached mods have not updated in 69 or more days. Freeze them to save the bot some CPU cycles.\n\nMod | Last Update\n:-- | :--\nAstrogator | 2010-01-01 00:00 UTC\nSmartTank | 2015-01-01 00:00 UTC\nRingworld | 2020-01-01 00:00 UTC'
+                     body='The attached mods have not updated in 69 or more days. Freeze them to save the bot some CPU cycles.\n\nMod | Last Update\n:-- | :--\nAstrogator | 2010-01-01 00:00 UTC\nSmartTank | 2015-01-01 00:00 UTC\nRingworld | 2020-01-01 00:00 UTC',
+                     labels=['Pull request', 'Freeze', 'Needs looking into'],
                 )
             ])

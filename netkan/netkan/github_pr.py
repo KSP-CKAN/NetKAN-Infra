@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Optional, List
 import requests
 
 
@@ -12,21 +13,20 @@ class GitHubPR:
         self.repo = repo
         self.user = user
 
-    def create_pull_request(self, title: str, branch: str, body: str) -> None:
-        headers = {
-            'Authorization': f'token {self.token}',
-            'Content-Type': 'application/json'
-        }
-        data = {
-            'title': title,
-            'base': 'master',
-            'head': branch,
-            'body': body,
-        }
+    def create_pull_request(self, title: str, branch: str, body: str, labels: Optional[List[str]] = None) -> None:
         response = requests.post(
             f'https://api.github.com/repos/{self.user}/{self.repo}/pulls',
-            headers=headers,
-            data=json.dumps(data),
+            headers={
+                'Authorization': f'token {self.token}',
+                'Content-Type': 'application/json'
+            },
+            data=json.dumps({
+                'title': title,
+                'base': 'master',
+                'head': branch,
+                'body': body,
+                'labels': labels or [],
+            }),
         )
         if response.status_code not in [200, 201, 204]:
             error = ''
