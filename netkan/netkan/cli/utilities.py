@@ -15,6 +15,7 @@ from ..download_counter import DownloadCounter
 from ..ticket_closer import TicketCloser
 from ..auto_freezer import AutoFreezer
 from ..mirrorer import Mirrorer
+from ..avc_validator_pusher import AVCValidatorPusher
 
 
 @click.command()
@@ -179,3 +180,13 @@ def mirror_purge_epochs(common: SharedArgs, dry_run: bool) -> None:
         common.ckanmeta_repo, common.ia_access,
         common.ia_secret, common.ia_collection
     ).purge_epochs(dry_run)
+
+
+@click.command()
+@common_options
+@pass_state
+def avc_validator_pusher(common):
+    AVCValidatorPusher(
+        common.netkan_remote,
+        common.token
+    ).send_to_repos()
