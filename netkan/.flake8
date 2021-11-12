@@ -1,8 +1,0 @@
-[flake8]
-ignore =
-    # Whitespace before colons
-    E203,
-    # Whitespace after colons
-    E241,
-    # Line too long
-    E501,
