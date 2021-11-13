@@ -25,7 +25,6 @@ class GitHubPR:
                 'base': 'master',
                 'head': branch,
                 'body': body,
-                'labels': labels or [],
             }),
         )
         if response.status_code not in [200, 201, 204]:
@@ -41,3 +40,15 @@ class GitHubPR:
         pr_json = response.json()
         logging.info('PR for %s opened at %s',
                      branch, pr_json['html_url'])
+        if labels:
+            # Labels have to be set separately via the issues API
+            requests.post(
+                f'https://api.github.com/repos/{self.user}/{self.repo}/issues/{pr_json["number"]}/labels',
+                headers={
+                    'Authorization': f'token {self.token}',
+                    'Content-Type': 'application/json'
+                },
+                data=json.dumps({
+                    'labels': labels
+                })
+            )
