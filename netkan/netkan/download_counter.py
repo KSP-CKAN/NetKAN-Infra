@@ -196,12 +196,17 @@ class GraphQLQuery:
             counts = {}
         full_query = self.get_query()
         result = self.graphql_to_github(full_query)
-        for fake_ident, apidata in result['data'].items():
-            if apidata:
-                real_ident = self.from_graphql_safe_identifier(fake_ident)
-                count = self.sum_graphql_result(apidata)
-                logging.info('Count for %s is %s', real_ident, count)
-                counts[real_ident] = count
+        if 'errors' in result:
+            logging.error('DownloadCounter GraphQL query failed: %s',
+                ', '.join(err['message'] for err in result['errors'])
+                if result['errors'] else 'Empty errors list')
+        else:
+            for fake_ident, apidata in result['data'].items():
+                if apidata:
+                    real_ident = self.from_graphql_safe_identifier(fake_ident)
+                    count = self.sum_graphql_result(apidata)
+                    logging.info('Count for %s is %s', real_ident, count)
+                    counts[real_ident] = count
         return counts
 
     def graphql_to_github(self, query: str) -> Dict[str, Any]:
