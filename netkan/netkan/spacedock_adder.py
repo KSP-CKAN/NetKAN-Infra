@@ -9,6 +9,7 @@ import boto3
 import yaml
 
 from .github_pr import GitHubPR
+from .mod_analyzer import ModAnalyzer
 from .common import deletion_msg
 
 from .repos import NetkanRepo
@@ -105,11 +106,18 @@ class SpaceDockAdder:
         return True
 
     @staticmethod
+    def sd_download_url(info: Dict[str, Any]) -> str:
+        return f"https://spacedock.info/mod/{info.get('id', '')}/{info.get('name', '')}/download"
+
+    @staticmethod
     def make_netkan(info: Dict[str, Any]) -> Dict[str, Any]:
+        ident = re.sub(r'\W+', '', info.get('name', ''))
+        mod = ModAnalyzer(ident, SpaceDockAdder.sd_download_url(info))
         return {
             'spec_version': 'v1.4',
-            'identifier': re.sub(r'\W+', '', info.get('name', '')),
+            'identifier': ident,
             '$kref': f"#/ckan/spacedock/{info.get('id', '')}",
             'license': info.get('license', '').strip().replace(' ', '-'),
+            **mod.get_netkan_properties(),
             'x_via': f"Automated {info.get('site_name')} CKAN submission"
         }
