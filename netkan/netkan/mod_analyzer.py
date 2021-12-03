@@ -2,7 +2,7 @@ import re
 import tempfile
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile
-from typing import Dict, Any
+from typing import Dict, List, Any, Union
 import requests
 
 
@@ -13,6 +13,15 @@ class ModAnalyzer:
                             re.MULTILINE)
     PARTS_PATTERN = re.compile(r'^\s*PART\b',
                                re.MULTILINE)
+    FILTERS = [
+        '__MACOSX', '.DS_Store',
+        'Thumbs.db',
+        '.git', '.gitignore',
+    ]
+    FILTER_REGEXPS = [
+        r'\.mdb$', r'\.pdb$',
+        r'~$',
+    ]
 
     def __init__(self, ident: str, download_url: str) -> None:
         self.ident = ident
@@ -89,6 +98,22 @@ class ModAnalyzer:
         # No GameData, multiple folders in root, manual review required
         return ''
 
+    def get_filters(self) -> List[str]:
+        return [filt for filt in self.FILTERS
+                # Normal filter are case insensitive
+                if any(filt.casefold() in Path(zi.filename.casefold()).parts
+                       for zi in self.files)]
+
+    def get_filter_regexps(self) -> List[str]:
+        return [filt for filt in self.FILTER_REGEXPS
+                # Regex filters are case sensitive
+                if any(re.search(filt, zi.filename)
+                       for zi in self.files)]
+
+    @staticmethod
+    def flatten(a_list: List[str]) -> Union[List[str], str]:
+        return a_list[0] if len(a_list) == 1 else a_list
+
     def get_netkan_properties(self) -> Dict[str, Any]:
         props: Dict[str, Any] = { }
         if self.has_version_file():
@@ -105,9 +130,17 @@ class ModAnalyzer:
             props['depends'] = [ {
                 'name': 'ModuleManager'
             } ]
-        if not self.has_ident_folder():
+        filters = self.get_filters()
+        filter_regexps = self.get_filter_regexps()
+        if not self.has_ident_folder() or filters or filter_regexps:
+            # Can't use default stanza
             props['install'] = [ {
-                'find': self.find_folder(),
+                'find': (self.ident if self.has_ident_folder()
+                         else self.find_folder()),
                 'install_to': 'GameData'
             } ]
+            if filters:
+                props['install'][0]['filter'] = ModAnalyzer.flatten(filters)
+            if filter_regexps:
+                props['install'][0]['filter_regexp'] = ModAnalyzer.flatten(filter_regexps)
         return props
