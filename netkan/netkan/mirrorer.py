@@ -1,7 +1,7 @@
 import os
 import re
 import tempfile
-import urllib.request
+import urllib.parse
 import hashlib
 import logging
 import shutil
@@ -135,6 +135,8 @@ class CkanMirror(Ckan):
 
     EPOCH_VERSION_REGEXP = re.compile('^[0-9]+:')
 
+    USER_AGENT = 'Mozilla/5.0 (compatible; Netkanbot/1.0; CKAN; +https://github.com/KSP-CKAN/NetKAN-Infra'
+
     def __init__(self, collection: str, filename: Union[str, Path] = None, contents: str = None) -> None:
         Ckan.__init__(self, filename, contents)
         self.collection = collection
@@ -235,7 +237,11 @@ class CkanMirror(Ckan):
         if target_path:
             with tempfile.NamedTemporaryFile() as tmp:
                 logging.info('Downloading %s', self.download)
-                urllib.request.urlretrieve(self.download, tmp.name)
+                tmp.write(requests.get(
+                    self.download,
+                    headers={ 'User-Agent': self.USER_AGENT }
+                ).content)
+                tmp.flush()
                 tmp_path = Path(tmp.name)
                 file = self.open_if_hash_match(tmp_path)
                 if file:
@@ -342,7 +348,11 @@ class Mirrorer:
             if source_url:
                 with tempfile.NamedTemporaryFile() as tmp:
                     logging.info('Attempting to archive source from %s', source_url)
-                    urllib.request.urlretrieve(source_url, tmp.name)
+                    tmp.write(requests.get(
+                        source_url,
+                        headers={ 'User-Agent': CkanMirror.USER_AGENT }
+                    ).content)
+                    tmp.flush()
                     item.upload_file(tmp.name, ckan.mirror_source_filename(),
                                      ckan.item_metadata,
                                      ckan.source_download_headers(tmp.name))
