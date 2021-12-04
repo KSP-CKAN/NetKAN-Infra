@@ -1,12 +1,13 @@
 import json
 import re
+import io
 from importlib.resources import read_text
 from string import Template
 from collections import defaultdict
 from typing import Dict, Any
 import git
 import boto3
-import yaml
+from ruamel.yaml import YAML
 
 from .github_pr import GitHubPR
 from .mod_analyzer import ModAnalyzer
@@ -27,6 +28,8 @@ class SpaceDockAdder:
         self.timeout = timeout
         self.nk_repo = nk_repo
         self.github_pr = github_pr
+        self.yaml = YAML(typ='safe')
+        self.yaml.indent(mapping=2, sequence=4, offset=2)
 
     def run(self) -> None:
         while True:
@@ -78,7 +81,7 @@ class SpaceDockAdder:
         self.nk_repo.git_repo.heads[branch_name].checkout()
 
         # Create file
-        netkan_path.write_text(yaml.dump(netkan, sort_keys=False))
+        netkan_path.write_text(self.yaml_dump(netkan))
 
         # Add netkan to branch
         self.nk_repo.git_repo.index.add([netkan_path.as_posix()])
@@ -104,6 +107,11 @@ class SpaceDockAdder:
                 labels=['Pull request', 'Mod-request'],
             )
         return True
+
+    def yaml_dump(self, obj: Dict[str, Any]) -> str:
+        sio = io.StringIO()
+        self.yaml.dump(obj, sio)
+        return sio.getvalue()
 
     @staticmethod
     def sd_download_url(info: Dict[str, Any]) -> str:
