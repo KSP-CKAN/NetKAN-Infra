@@ -13,6 +13,10 @@ class ModAnalyzer:
                             re.MULTILINE)
     PARTS_PATTERN = re.compile(r'^\s*PART\b',
                                re.MULTILINE)
+    KOPERNICUS_PATTERN = re.compile(r'^\s*@Kopernicus\b',
+                                    re.MULTILINE)
+    TUFX_PATTERN = re.compile(r'^\s*TUFX_PROFILE\b',
+                              re.MULTILINE)
     FILTERS = [
         '__MACOSX', '.DS_Store',
         'Thumbs.db',
@@ -51,23 +55,31 @@ class ModAnalyzer:
         return any(zi.filename.lower().endswith('.cfg')
                    for zi in self.files)
 
-    def str_has_mm_syntax(self, cfg_str: str) -> bool:
-        return self.MM_PATTERN.search(cfg_str) is not None
-
     def has_mm_syntax(self) -> bool:
         return (False if not self.zip
                 else any(zi.filename.lower().endswith('.cfg')
-                         and self.str_has_mm_syntax(
+                         and self.MM_PATTERN.search(
                              self.zip.read(zi.filename).decode("utf-8"))
                          for zi in self.files))
-
-    def str_has_parts(self, cfg_str: str) -> bool:
-        return self.PARTS_PATTERN.search(cfg_str) is not None
 
     def has_parts(self) -> bool:
         return (False if not self.zip
                 else any(zi.filename.lower().endswith('.cfg')
-                         and self.str_has_parts(
+                         and self.PARTS_PATTERN.search(
+                             self.zip.read(zi.filename).decode("utf-8"))
+                         for zi in self.files))
+
+    def has_kopernicus_syntax(self) -> bool:
+        return (False if not self.zip
+                else any(zi.filename.lower().endswith('.cfg')
+                         and self.KOPERNICUS_PATTERN.search(
+                             self.zip.read(zi.filename).decode("utf-8"))
+                         for zi in self.files))
+
+    def has_tufx_syntax(self) -> bool:
+        return (False if not self.zip
+                else any(zi.filename.lower().endswith('.cfg')
+                         and self.TUFX_PATTERN.search(
                              self.zip.read(zi.filename).decode("utf-8"))
                          for zi in self.files))
 
@@ -116,8 +128,10 @@ class ModAnalyzer:
 
     def get_netkan_properties(self) -> Dict[str, Any]:
         props: Dict[str, Any] = { }
+
         if self.has_version_file():
             props['$vref'] = '#/ckan/ksp-avc'
+
         props['tags'] = []
         if self.has_dll():
             props['tags'].append('plugin')
@@ -126,10 +140,18 @@ class ModAnalyzer:
         elif self.has_cfg():
             # Mark .cfg files with no parts as config
             props['tags'].append('config')
-        if self.has_mm_syntax():
-            props['depends'] = [ {
-                'name': 'ModuleManager'
-            } ]
+
+        depends = [
+            *([{'name': 'ModuleManager'}]
+              if self.has_mm_syntax() else []),
+            *([{'name': 'Kopernicus'}]
+              if self.has_kopernicus_syntax() else []),
+            *([{'name': 'TUFX'}]
+              if self.has_tufx_syntax() else []),
+        ]
+        if depends:
+            props['depends'] = depends
+
         filters = self.get_filters()
         filter_regexps = self.get_filter_regexps()
         if not self.has_ident_folder() or filters or filter_regexps:
@@ -143,4 +165,5 @@ class ModAnalyzer:
                 props['install'][0]['filter'] = ModAnalyzer.flatten(filters)
             if filter_regexps:
                 props['install'][0]['filter_regexp'] = ModAnalyzer.flatten(filter_regexps)
+
         return props
