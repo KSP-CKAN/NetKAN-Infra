@@ -2,7 +2,7 @@ import re
 import tempfile
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile
-from typing import Dict, List, Any, Union
+from typing import Dict, List, Any, Union, Pattern
 import requests
 
 
@@ -13,6 +13,8 @@ class ModAnalyzer:
                             re.MULTILINE)
     PARTS_PATTERN = re.compile(r'^\s*PART\b',
                                re.MULTILINE)
+    TECHTREE_PATTERN = re.compile(r'^\s*@TechTree\b',
+                                  re.MULTILINE)
     KOPERNICUS_PATTERN = re.compile(r'^\s*@Kopernicus\b',
                                     re.MULTILINE)
     TUFX_PATTERN = re.compile(r'^\s*TUFX_PROFILE\b',
@@ -55,33 +57,27 @@ class ModAnalyzer:
         return any(zi.filename.lower().endswith('.cfg')
                    for zi in self.files)
 
-    def has_mm_syntax(self) -> bool:
+    def pattern_matches_any_cfg(self, pattern: Pattern[str]) -> bool:
         return (False if not self.zip
                 else any(zi.filename.lower().endswith('.cfg')
-                         and self.MM_PATTERN.search(
+                         and pattern.search(
                              self.zip.read(zi.filename).decode("utf-8"))
                          for zi in self.files))
+
+    def has_mm_syntax(self) -> bool:
+        return self.pattern_matches_any_cfg(self.MM_PATTERN)
 
     def has_parts(self) -> bool:
-        return (False if not self.zip
-                else any(zi.filename.lower().endswith('.cfg')
-                         and self.PARTS_PATTERN.search(
-                             self.zip.read(zi.filename).decode("utf-8"))
-                         for zi in self.files))
+        return self.pattern_matches_any_cfg(self.PARTS_PATTERN)
 
     def has_kopernicus_syntax(self) -> bool:
-        return (False if not self.zip
-                else any(zi.filename.lower().endswith('.cfg')
-                         and self.KOPERNICUS_PATTERN.search(
-                             self.zip.read(zi.filename).decode("utf-8"))
-                         for zi in self.files))
+        return self.pattern_matches_any_cfg(self.KOPERNICUS_PATTERN)
 
     def has_tufx_syntax(self) -> bool:
-        return (False if not self.zip
-                else any(zi.filename.lower().endswith('.cfg')
-                         and self.TUFX_PATTERN.search(
-                             self.zip.read(zi.filename).decode("utf-8"))
-                         for zi in self.files))
+        return self.pattern_matches_any_cfg(self.TUFX_PATTERN)
+
+    def has_techtree_syntax(self) -> bool:
+        return self.pattern_matches_any_cfg(self.TECHTREE_PATTERN)
 
     def has_ident_folder(self) -> bool:
         return any(self.ident in Path(zi.filename).parts[:-1]
@@ -140,6 +136,8 @@ class ModAnalyzer:
         elif self.has_cfg():
             # Mark .cfg files with no parts as config
             props['tags'].append('config')
+        if self.has_techtree_syntax():
+            props['tags'].append('tech-tree')
 
         depends = [
             *([{'name': 'ModuleManager'}]
