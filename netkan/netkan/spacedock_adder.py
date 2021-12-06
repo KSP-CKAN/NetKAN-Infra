@@ -28,7 +28,7 @@ class SpaceDockAdder:
         self.timeout = timeout
         self.nk_repo = nk_repo
         self.github_pr = github_pr
-        self.yaml = YAML(typ='safe')
+        self.yaml = YAML()
         self.yaml.indent(mapping=2, sequence=4, offset=2)
 
     def run(self) -> None:
