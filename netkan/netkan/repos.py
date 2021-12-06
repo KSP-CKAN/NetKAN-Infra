@@ -79,7 +79,8 @@ class XkanRepo:
                 self.git_repo.heads, branch_name
             )
             branch.checkout()
-        except GitCommandError:
+        except (GitCommandError, AttributeError):
+            # Branch doesn't exist on remote, just create it locally
             if branch_name not in self.git_repo.heads:
                 branch = self.git_repo.create_head(branch_name)
             else:
