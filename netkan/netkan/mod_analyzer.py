@@ -128,25 +128,26 @@ class ModAnalyzer:
         if self.has_version_file():
             props['$vref'] = '#/ckan/ksp-avc'
 
-        props['tags'] = []
-        if self.has_dll():
-            props['tags'].append('plugin')
-        if self.has_parts():
-            props['tags'].append('parts')
-        elif self.has_cfg():
-            # Mark .cfg files with no parts as config
-            props['tags'].append('config')
-        if self.has_techtree_syntax():
-            props['tags'].append('tech-tree')
+        props['tags'] = [
+            *(['plugin'] if self.has_dll()
+              else []),
+            *(['parts'] if self.has_parts()
+              # Mark .cfg files with no parts as config
+              else ['config'] if self.has_cfg()
+              else []),
+            *(['tech-tree'] if self.has_techtree_syntax()
+              else []),
+        ]
 
         depends = [
-            *([{'name': 'ModuleManager'}]
-              if self.has_mm_syntax() else []),
-            *([{'name': 'Kopernicus'}]
-              if self.has_kopernicus_syntax() else []),
-            *([{'name': 'TUFX'}]
-              if self.has_tufx_syntax() else []),
+            *([{'name': 'ModuleManager'}] if self.has_mm_syntax()
+              else []),
+            *([{'name': 'TUFX'}] if self.has_tufx_syntax()
+              else []),
         ]
+        if self.has_kopernicus_syntax():
+            props['tags'].append('planet-pack')
+            depends.append({'name': 'Kopernicus'})
         if depends:
             props['depends'] = depends
 
