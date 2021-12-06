@@ -8,7 +8,7 @@ import requests
 
 class ModAnalyzer:
 
-    USER_AGENT = 'Mozilla/5.0 (compatible; Netkanbot/1.0; CKAN; +https://github.com/KSP-CKAN/NetKAN-Infra'
+    USER_AGENT = 'Mozilla/5.0 (compatible; Netkanbot/1.0; CKAN; +https://github.com/KSP-CKAN/NetKAN-Infra)'
     MM_PATTERN = re.compile(r'^\s*[@+$\-!%]|^\s*[a-zA-Z0-9_]+:',
                             re.MULTILINE)
     PARTS_PATTERN = re.compile(r'^\s*PART\b',
