@@ -6,7 +6,7 @@ from hashlib import sha1
 import uuid
 import urllib.parse
 from typing import Optional, List, Tuple, Union, Any, Dict
-import yaml
+from ruamel.yaml import YAML
 import dateutil.parser
 
 from .csharp_compat import csharp_uri_tostring
@@ -22,8 +22,9 @@ class Netkan:
             self.contents = self.filename.read_text(encoding='UTF-8')
         elif contents:
             self.contents = contents
+        yaml = YAML(typ='safe')
         # YAML parser doesn't allow tabs, so replace with spaces
-        self._raw = yaml.safe_load(self.contents.replace('\t', '    '))
+        self._raw = yaml.load(self.contents.replace('\t', '    '))
         # Extract kref_src + kref_id from the kref
         self.kref_src: Optional[str]
         self.kref_id: Optional[str]

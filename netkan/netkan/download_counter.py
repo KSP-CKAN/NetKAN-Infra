@@ -7,7 +7,7 @@ from importlib.resources import read_text
 from string import Template
 from typing import Optional, Dict, Any
 
-from yaml.reader import ReaderError
+from ruamel.yaml.error import YAMLError
 import requests
 from requests.exceptions import RequestException
 
@@ -88,7 +88,7 @@ class NetkanDownloads(Netkan):
             except RequestException as exc:
                 logging.error('DownloadCounter metanetkan network request failed for %s: %s',
                               self.identifier, exc)
-            except ReaderError as exc:
+            except YAMLError as exc:
                 logging.error('DownloadCounter metanetkan failed YAML parse for %s: %s',
                               self.identifier, exc)
             # Can't get the metanetkan

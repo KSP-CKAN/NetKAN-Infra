@@ -26,7 +26,7 @@ setup(
         'gunicorn>=19.9,!=20.0.0',
         'discord.py>=1.6.0',
         'PyGithub',
-        'pyyaml',
+        'ruamel.yaml',
     ],
     entry_points={
         'console_scripts': [
@@ -48,7 +48,6 @@ setup(
             'types-requests',
             'types-Flask',
             'types-Jinja2',
-            'types-PyYAML',
         ],
         'test': [
             'pytest',
@@ -60,7 +59,6 @@ setup(
             'types-requests',
             'types-Flask',
             'types-Jinja2',
-            'types-PyYAML',
         ]
     },
 )
