@@ -61,7 +61,7 @@ class ModAnalyzer:
         return (False if not self.zip
                 else any(zi.filename.lower().endswith('.cfg')
                          and pattern.search(
-                             self.zip.read(zi.filename).decode("utf-8"))
+                             self.zip.read(zi.filename).decode('utf8', errors='ignore'))
                          for zi in self.files))
 
     def has_mm_syntax(self) -> bool:
