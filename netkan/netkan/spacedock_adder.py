@@ -4,7 +4,8 @@ import io
 from importlib.resources import read_text
 from string import Template
 from collections import defaultdict
-from typing import Dict, Any
+import logging
+from typing import Dict, Any, Optional
 import git
 import boto3
 from ruamel.yaml import YAML
@@ -117,15 +118,22 @@ class SpaceDockAdder:
     def sd_download_url(info: Dict[str, Any]) -> str:
         return f"https://spacedock.info/mod/{info.get('id', '')}/{info.get('name', '')}/download"
 
-    @staticmethod
-    def make_netkan(info: Dict[str, Any]) -> Dict[str, Any]:
+    @classmethod
+    def make_netkan(cls, info: Dict[str, Any]) -> Dict[str, Any]:
         ident = re.sub(r'\W+', '', info.get('name', ''))
-        mod = ModAnalyzer(ident, SpaceDockAdder.sd_download_url(info))
+        mod: Optional[ModAnalyzer] = None
+        url = SpaceDockAdder.sd_download_url(info)
+        try:
+            mod = ModAnalyzer(ident, url)
+        except Exception as exc:  # pylint: disable=broad-except
+            # Tell Discord about the problem and move on
+            logging.error('%s failed to analyze %s from %s',
+                cls.__name__, ident, url, exc_info=exc)
         return {
             'spec_version': 'v1.4',
             'identifier': ident,
             '$kref': f"#/ckan/spacedock/{info.get('id', '')}",
             'license': info.get('license', '').strip().replace(' ', '-'),
-            **mod.get_netkan_properties(),
+            **(mod.get_netkan_properties() if mod else {}),
             'x_via': f"Automated {info.get('site_name')} CKAN submission"
         }
