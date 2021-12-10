@@ -16,7 +16,7 @@ from jinja2 import Template
 
 from .metadata import Ckan
 from .repos import CkanMetaRepo
-from .common import deletion_msg
+from .common import deletion_msg, download_stream_to_file
 
 
 class CkanMirror(Ckan):
@@ -135,8 +135,6 @@ class CkanMirror(Ckan):
 
     EPOCH_VERSION_REGEXP = re.compile('^[0-9]+:')
 
-    USER_AGENT = 'Mozilla/5.0 (compatible; Netkanbot/1.0; CKAN; +https://github.com/KSP-CKAN/NetKAN-Infra)'
-
     def __init__(self, collection: str, filename: Union[str, Path] = None, contents: str = None) -> None:
         Ckan.__init__(self, filename, contents)
         self.collection = collection
@@ -237,10 +235,7 @@ class CkanMirror(Ckan):
         if target_path:
             with tempfile.NamedTemporaryFile() as tmp:
                 logging.info('Downloading %s', self.download)
-                tmp.write(requests.get(
-                    self.download,
-                    headers={ 'User-Agent': self.USER_AGENT }
-                ).content)
+                download_stream_to_file(self.download, tmp)
                 tmp.flush()
                 tmp_path = Path(tmp.name)
                 file = self.open_if_hash_match(tmp_path)
@@ -348,10 +343,7 @@ class Mirrorer:
             if source_url:
                 with tempfile.NamedTemporaryFile() as tmp:
                     logging.info('Attempting to archive source from %s', source_url)
-                    tmp.write(requests.get(
-                        source_url,
-                        headers={ 'User-Agent': CkanMirror.USER_AGENT }
-                    ).content)
+                    download_stream_to_file(source_url, tmp)
                     tmp.flush()
                     item.upload_file(tmp.name, ckan.mirror_source_filename(),
                                      ckan.item_metadata,

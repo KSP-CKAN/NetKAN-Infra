@@ -3,12 +3,12 @@ import tempfile
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile
 from typing import Dict, List, Any, Union, Pattern
-import requests
+
+from .common import download_stream_to_file
 
 
 class ModAnalyzer:
 
-    USER_AGENT = 'Mozilla/5.0 (compatible; Netkanbot/1.0; CKAN; +https://github.com/KSP-CKAN/NetKAN-Infra)'
     MM_PATTERN = re.compile(r'^\s*[@+$\-!%]|^\s*[a-zA-Z0-9_]+:',
                             re.MULTILINE)
     PARTS_PATTERN = re.compile(r'^\s*PART\b',
@@ -32,10 +32,7 @@ class ModAnalyzer:
     def __init__(self, ident: str, download_url: str) -> None:
         self.ident = ident
         self.download_file = tempfile.NamedTemporaryFile()
-        self.download_file.write(requests.get(
-            download_url,
-            headers={ 'User-Agent': self.USER_AGENT }
-        ).content)
+        download_stream_to_file(download_url, self.download_file)
         self.download_file.flush()
         self.zip = (ZipFile(self.download_file, 'r')
                     if is_zipfile(self.download_file)
