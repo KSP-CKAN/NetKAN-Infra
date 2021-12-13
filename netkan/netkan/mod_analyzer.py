@@ -7,20 +7,29 @@ from typing import Dict, List, Any, Union, Pattern
 from .common import download_stream_to_file
 
 
+class CfgAspect:
+
+    def __init__(self, cfg_regex: str, tags: List[str], depends: List[str]) -> None:
+        self.cfg_pattern = re.compile(cfg_regex, re.MULTILINE)
+        self.tags = tags
+        self.depends = depends
+
+    def analyze(self, analyzer: 'ModAnalyzer') -> None:
+        if analyzer.pattern_matches_any_cfg(self.cfg_pattern):
+            analyzer.tags += self.tags
+            analyzer.depends += [{'name': dep} for dep in self.depends]
+
+
 class ModAnalyzer:
 
-    MM_PATTERN = re.compile(r'^\s*[@+$\-!%]|^\s*[a-zA-Z0-9_]+:',
-                            re.MULTILINE)
-    PARTS_PATTERN = re.compile(r'^\s*PART\b',
-                               re.MULTILINE)
-    TECHTREE_PATTERN = re.compile(r'^\s*@TechTree\b',
-                                  re.MULTILINE)
-    KOPERNICUS_PATTERN = re.compile(r'^\s*@Kopernicus\b',
-                                    re.MULTILINE)
-    STATIC_PATTERN = re.compile(r'^\s*STATIC\b',
-                                re.MULTILINE)
-    TUFX_PATTERN = re.compile(r'^\s*TUFX_PROFILE\b',
-                              re.MULTILINE)
+    ASPECTS: List[CfgAspect] = [
+        CfgAspect(r'^\s*[@+$\-!%]|^\s*[a-zA-Z0-9_]+:', [],              ['ModuleManager']),
+        CfgAspect(r'^\s*PART\b',                       ['parts'],       []),
+        CfgAspect(r'^\s*@TechTree\b',                  ['tech-tree'],   []),
+        CfgAspect(r'^\s*@Kopernicus\b',                ['planet-pack'], ['Kopernicus']),
+        CfgAspect(r'^\s*STATIC\b',                     ['buildings'],   ['KerbalKonstructs']),
+        CfgAspect(r'^\s*TUFX_PROFILE\b',               ['graphics'],    ['TUFX']),
+    ]
     FILTERS = [
         '__MACOSX', '.DS_Store',
         'Thumbs.db',
@@ -44,6 +53,14 @@ class ModAnalyzer:
                       [zi for zi in self.zip.infolist()
                        if not zi.is_dir()])
 
+        self.tags: List[str] = [*(['plugin'] if self.has_dll() else []),
+                                *(['config'] if self.has_cfg() else [])]
+        self.depends: List[Dict[str, str]] = []
+        for aspect in self.ASPECTS:
+            aspect.analyze(self)
+        if 'parts' in self.tags:
+            self.tags.remove('config')
+
     def has_version_file(self) -> bool:
         return any(zi.filename.lower().endswith('.version')
                    for zi in self.files)
@@ -62,24 +79,6 @@ class ModAnalyzer:
                          and pattern.search(
                              self.zip.read(zi.filename).decode('utf8', errors='ignore'))
                          for zi in self.files))
-
-    def has_mm_syntax(self) -> bool:
-        return self.pattern_matches_any_cfg(self.MM_PATTERN)
-
-    def has_parts(self) -> bool:
-        return self.pattern_matches_any_cfg(self.PARTS_PATTERN)
-
-    def has_kopernicus_syntax(self) -> bool:
-        return self.pattern_matches_any_cfg(self.KOPERNICUS_PATTERN)
-
-    def has_static_syntax(self) -> bool:
-        return self.pattern_matches_any_cfg(self.STATIC_PATTERN)
-
-    def has_tufx_syntax(self) -> bool:
-        return self.pattern_matches_any_cfg(self.TUFX_PATTERN)
-
-    def has_techtree_syntax(self) -> bool:
-        return self.pattern_matches_any_cfg(self.TECHTREE_PATTERN)
 
     def has_ident_folder(self) -> bool:
         return any(self.ident in Path(zi.filename).parts[:-1]
@@ -129,32 +128,9 @@ class ModAnalyzer:
 
         if self.has_version_file():
             props['$vref'] = '#/ckan/ksp-avc'
-
-        props['tags'] = [
-            *(['plugin'] if self.has_dll()
-              else []),
-            *(['parts'] if self.has_parts()
-              # Mark .cfg files with no parts as config
-              else ['config'] if self.has_cfg()
-              else []),
-            *(['tech-tree'] if self.has_techtree_syntax()
-              else []),
-        ]
-
-        depends = [
-            *([{'name': 'ModuleManager'}] if self.has_mm_syntax()
-              else []),
-            *([{'name': 'TUFX'}] if self.has_tufx_syntax()
-              else []),
-        ]
-        if self.has_kopernicus_syntax():
-            props['tags'].append('planet-pack')
-            depends.append({'name': 'Kopernicus'})
-        if self.has_static_syntax():
-            props['tags'].append('buildings')
-            depends.append({'name': 'KerbalKonstructs'})
-        if depends:
-            props['depends'] = depends
+        props['tags'] = self.tags
+        if self.depends:
+            props['depends'] = self.depends
 
         filters = self.get_filters()
         filter_regexps = self.get_filter_regexps()
