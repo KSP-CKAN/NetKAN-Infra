@@ -22,6 +22,7 @@ class TestRepo(unittest.TestCase):
         cls.upstream.mkdir()
         Repo.init(cls.upstream, bare=True)
         shutil.copytree(cls.test_data, cls.working)
+        shutil.copy(Path(__file__).parent.parent / '.gitconfig', cls.working / '.git' / 'config')
         cls.repo = Repo.init(cls.working)
         cls.repo.index.add(cls.repo.untracked_files)
         cls.repo.index.commit('Test Data')
