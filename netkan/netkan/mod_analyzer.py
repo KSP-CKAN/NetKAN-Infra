@@ -17,6 +17,8 @@ class ModAnalyzer:
                                   re.MULTILINE)
     KOPERNICUS_PATTERN = re.compile(r'^\s*@Kopernicus\b',
                                     re.MULTILINE)
+    STATIC_PATTERN = re.compile(r'^\s*STATIC\b',
+                                re.MULTILINE)
     TUFX_PATTERN = re.compile(r'^\s*TUFX_PROFILE\b',
                               re.MULTILINE)
     FILTERS = [
@@ -69,6 +71,9 @@ class ModAnalyzer:
 
     def has_kopernicus_syntax(self) -> bool:
         return self.pattern_matches_any_cfg(self.KOPERNICUS_PATTERN)
+
+    def has_static_syntax(self) -> bool:
+        return self.pattern_matches_any_cfg(self.STATIC_PATTERN)
 
     def has_tufx_syntax(self) -> bool:
         return self.pattern_matches_any_cfg(self.TUFX_PATTERN)
@@ -145,6 +150,9 @@ class ModAnalyzer:
         if self.has_kopernicus_syntax():
             props['tags'].append('planet-pack')
             depends.append({'name': 'Kopernicus'})
+        if self.has_static_syntax():
+            props['tags'].append('buildings')
+            depends.append({'name': 'KerbalKonstructs'})
         if depends:
             props['depends'] = depends
 
