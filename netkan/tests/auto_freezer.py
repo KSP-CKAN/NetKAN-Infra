@@ -22,6 +22,17 @@ class TestAutoFreezer(unittest.TestCase):
         'SmartTank':  a_long_time_ago,
         'Ringworld':  now,
     }
+    IDENT_RESOURCES = {
+        'Astrogator': {
+            'homepage': 'https://forum.kerbalspaceprogram.com/index.php?/topic/155998-*'
+        },
+        'SmartTank': {
+            'repository': 'https://github.com/HebaruSan/SmartTank'
+        },
+        'Ringworld': {
+            'bugtracker': 'https://github.com/HebaruSan/Ringworld/issues'
+        },
+    }
 
     def test_find_idle_mods(self):
         """
@@ -64,8 +75,12 @@ class TestAutoFreezer(unittest.TestCase):
         # Arrange
         with patch('git.Repo') as repo_mock, \
             patch('netkan.repos.NetkanRepo') as nk_repo_mock, \
+            patch('netkan.auto_freezer.ModStatus') as status_mock, \
             patch('netkan.github_pr.GitHubPR') as pr_mock:
 
+            status_mock.get.side_effect = lambda ident: unittest.mock.Mock(
+                release_date=self.IDENT_TIMESTAMPS[ident],
+                resources=self.IDENT_RESOURCES[ident])
             unittest.util._MAX_LENGTH=999999999 # :snake:
 
             nk_repo = nk_repo_mock(git.Repo('/blah'))
@@ -86,7 +101,7 @@ class TestAutoFreezer(unittest.TestCase):
             self.assertEqual(pr_mock.return_value.create_pull_request.mock_calls, [
                 call(branch='test_branch_name',
                      title='Freeze idle mods',
-                     body='The attached mods have not updated in 69 or more days. Freeze them to save the bot some CPU cycles.\n\nMod | Last Update\n:-- | :--\nAstrogator | 2010-01-01 00:00 UTC\nSmartTank | 2015-01-01 00:00 UTC\nRingworld | 2020-01-01 00:00 UTC',
+                     body='The attached mods have not updated in 69 or more days. Freeze them to save the bot some CPU cycles.\n\nMod | Last Update\n:-- | :--\n**Astrogator**<br>[homepage](https://forum.kerbalspaceprogram.com/index.php?/topic/155998-*) | 2010-01-01 00:00 UTC\n**SmartTank**<br>[repository](https://github.com/HebaruSan/SmartTank) | 2015-01-01 00:00 UTC\n**Ringworld**<br>[bugtracker](https://github.com/HebaruSan/Ringworld/issues) | 2020-01-01 00:00 UTC',
                      labels=['Pull request', 'Freeze', 'Needs looking into'],
                 )
             ])

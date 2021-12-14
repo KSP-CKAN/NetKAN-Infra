@@ -85,9 +85,19 @@ class AutoFreezer:
         return '\n'.join([
             'Mod | Last Update',
             ':-- | :--',
-            *[f'{mod[0]} | {mod[1].astimezone(timezone.utc):%Y-%m-%d %H:%M %Z}'
+            *[f'{AutoFreezer._mod_cell(mod[0])} | {mod[1].astimezone(timezone.utc):%Y-%m-%d %H:%M %Z}'
               for mod in idle_mods]
         ])
+
+    @staticmethod
+    def _mod_cell(ident: str) -> str:
+        status = ModStatus.get(ident)
+        resources = getattr(status, 'resources', None)
+        if resources:
+            links = r' \| '.join(f'[{key}]({url})'
+                                 for key, url in resources.items())
+            return f'**{ident}**<br>{links}'
+        return f'**{ident}**'
 
     def _submit_pr(self, branch_name: str, days: int, idle_mods: List[Tuple[str, datetime]]) -> None:
         if self.github_pr:
