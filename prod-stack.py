@@ -810,7 +810,9 @@ services = [
     {
         'name': 'TicketCloser',
         'command': 'ticket-closer',
-        'env': [],
+        'env': [
+            ('CKAN_USER', NETKAN_USER),
+        ],
         'secrets': ['GH_Token'],
         'schedule': 'rate(1 day)',
     },

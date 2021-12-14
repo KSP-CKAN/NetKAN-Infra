@@ -143,7 +143,7 @@ def redeploy_service(cluster: str, service_name: str) -> None:
 @common_options
 @pass_state
 def ticket_closer(common: SharedArgs, days_limit: int) -> None:
-    TicketCloser(common.token).close_tickets(days_limit)
+    TicketCloser(common.token, common.user).close_tickets(days_limit)
 
 
 @click.command()

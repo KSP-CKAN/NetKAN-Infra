@@ -1,57 +1,51 @@
 import logging
-import datetime
+from datetime import datetime, timedelta
+from importlib.resources import read_text
+from collections import defaultdict
+from string import Template
 import github
 
 
 class TicketCloser:
 
-    def __init__(self, token: str) -> None:
+    REPO_NAMES = ['CKAN', 'NetKAN']
+    BODY_TEMPLATE = Template(read_text('netkan', 'ticket_close_template.md'))
+
+    def __init__(self, token: str, user_name: str) -> None:
         self._gh = github.Github(token)
+        self._user_name = user_name
 
     def close_tickets(self, days_limit: int = 7) -> None:
-        date_cutoff = datetime.datetime.now() - datetime.timedelta(days=days_limit)
+        date_cutoff = datetime.now() - timedelta(days=days_limit)
 
-        for repo_name in ['CKAN', 'NetKAN']:
-            repo = self._gh.get_repo(f'KSP-CKAN/{repo_name}')
-            issues = repo.get_issues(
-                state='open', labels=[repo.get_label('support')], assignee='none')
+        for repo_name in self.REPO_NAMES:
+            repo = self._gh.get_repo(f'{self._user_name}/{repo_name}')
+            issues = repo.get_issues(state='open',
+                                     labels=[repo.get_label('support')],
+                                     assignee='none')
 
             for issue in issues:
 
                 if issue.comments < 1:
-                    logging.info(
-                        'Skipped (no comments): %s (%s#%s)',
-                        issue.title, repo_name, issue.number)
+                    logging.info('Skipped (no comments): %s (%s#%s)',
+                                 issue.title, repo_name, issue.number)
                     continue
 
                 # Skip if last comment is by OP
                 # get_comments()[-1] throws an exception
                 last_comment = issue.get_comments().reversed[0]
                 if last_comment.user.login == issue.user.login:
-                    logging.info(
-                        'Skipped (author comment): %s (%s#%s)',
-                        issue.title, repo_name, issue.number)
+                    logging.info('Skipped (author comment): %s (%s#%s)',
+                                 issue.title, repo_name, issue.number)
                     continue
 
                 if issue.updated_at > date_cutoff:
-                    logging.info(
-                        'Skipped (recent update): %s (%s#%s)',
-                        issue.title, repo_name, issue.number)
+                    logging.info('Skipped (recent update): %s (%s#%s)',
+                                 issue.title, repo_name, issue.number)
                     continue
 
-                logging.info(
-                    'Closing: %s (%s#%s)',
-                    issue.title, repo_name, issue.number)
+                logging.info('Closing: %s (%s#%s)',
+                             issue.title, repo_name, issue.number)
 
-                comment_body = (
-                    "Hey there! I'm a fun-loving automated bot who's "
-                    "responsible for making sure old support tickets get "
-                    "closed out. As we haven't seen any activity on this "
-                    "ticket for a while, we're hoping the problem has been "
-                    "resolved and I'm closing out the ticket automatically. "
-                    "If I'm doing this in error, please add a comment to this"
-                    " ticket to let us know, and we'll re-open it!"
-                )
-                issue.create_comment(comment_body)
-
+                issue.create_comment(self.BODY_TEMPLATE.safe_substitute(defaultdict(lambda: '', {})))
                 issue.edit(state='closed')
