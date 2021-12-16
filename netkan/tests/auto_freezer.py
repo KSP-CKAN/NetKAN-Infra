@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 import unittest
 from unittest.mock import patch, call
 import git
+from pynamodb.attributes import MapAttribute
 
 from netkan.auto_freezer import AutoFreezer
 from netkan.repos import NetkanRepo
@@ -80,7 +81,7 @@ class TestAutoFreezer(unittest.TestCase):
 
             status_mock.get.side_effect = lambda ident: unittest.mock.Mock(
                 release_date=self.IDENT_TIMESTAMPS[ident],
-                resources=self.IDENT_RESOURCES[ident])
+                resources=MapAttribute(**self.IDENT_RESOURCES[ident]))
             unittest.util._MAX_LENGTH=999999999 # :snake:
 
             nk_repo = nk_repo_mock(git.Repo('/blah'))

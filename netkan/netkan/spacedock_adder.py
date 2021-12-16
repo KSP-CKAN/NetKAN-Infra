@@ -72,7 +72,7 @@ class SpaceDockAdder:
         if branch_name not in self.nk_repo.git_repo.heads:
             self.nk_repo.git_repo.create_head(
                 branch_name,
-                getattr(
+                getattr( # type: ignore[arg-type]
                     self.nk_repo.git_repo.remotes.origin.refs,
                     branch_name,
                     self.nk_repo.git_repo.remotes.origin.refs.master
