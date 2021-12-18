@@ -29,6 +29,7 @@ class ModAnalyzer:
         CfgAspect(r'^\s*@Kopernicus\b',                ['planet-pack'], ['Kopernicus']),
         CfgAspect(r'^\s*STATIC\b',                     ['buildings'],   ['KerbalKonstructs']),
         CfgAspect(r'^\s*TUFX_PROFILE\b',               ['graphics'],    ['TUFX']),
+        CfgAspect(r'^\s*CONTRACT_TYPE\b',              ['career'],      ['ContractConfigurator']),
     ]
     FILTERS = [
         '__MACOSX', '.DS_Store',
