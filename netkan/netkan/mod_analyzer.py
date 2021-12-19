@@ -23,13 +23,17 @@ class CfgAspect:
 class ModAnalyzer:
 
     ASPECTS: List[CfgAspect] = [
-        CfgAspect(r'^\s*[@+$\-!%]|^\s*[a-zA-Z0-9_]+:', [],              ['ModuleManager']),
-        CfgAspect(r'^\s*PART\b',                       ['parts'],       []),
-        CfgAspect(r'^\s*@TechTree\b',                  ['tech-tree'],   []),
-        CfgAspect(r'^\s*@Kopernicus\b',                ['planet-pack'], ['Kopernicus']),
-        CfgAspect(r'^\s*STATIC\b',                     ['buildings'],   ['KerbalKonstructs']),
-        CfgAspect(r'^\s*TUFX_PROFILE\b',               ['graphics'],    ['TUFX']),
-        CfgAspect(r'^\s*CONTRACT_TYPE\b',              ['career'],      ['ContractConfigurator']),
+        CfgAspect(r'^\s*[@+$\-!%]|^\s*[a-zA-Z0-9_]+:',
+                                            [],               ['ModuleManager']),
+        CfgAspect(r'^\s*PART\b',            ['parts'],        []),
+        CfgAspect(r'^\s*@TechTree\b',       ['tech-tree'],    []),
+        CfgAspect(r'^\s*@Kopernicus\b',     ['planet-pack'],  ['Kopernicus']),
+        CfgAspect(r'^\s*STATIC\b',          ['buildings'],    ['KerbalKonstructs']),
+        CfgAspect(r'^\s*TUFX_PROFILE\b',    ['graphics'],     ['TUFX']),
+        CfgAspect(r'^\s*CONTRACT_TYPE\b',   ['career'],       ['ContractConfigurator']),
+        CfgAspect(r'^\s*@CUSTOMBARNKIT\b',  [],               ['CustomBarnKit']),
+        CfgAspect(r'^\s*name\s*=\s*ModuleB9PartSwitch\b',
+                                            [],               ['B9PartSwitch']),
     ]
     FILTERS = [
         '__MACOSX', '.DS_Store',
