@@ -105,7 +105,7 @@ class ModAnalyzer:
             # Found GameData with only one subdir, return it
             return next(iter(parts_after_gd))
         # If no GameData, look for unique folder in root
-        first_parts = {dirs[0] for dirs in dir_parts}
+        first_parts = {dirs[0] for dirs in dir_parts if len(dirs) > 0}
         if len(first_parts) == 1:
             # No GameData but only one root folder, return it
             return next(iter(first_parts))
