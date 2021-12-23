@@ -9,8 +9,9 @@ import discord
 def catch_all(type_: Type[BaseException], value: BaseException, traceback: Optional[TracebackType]) -> None:
     # Log an error for Discord
     logging.error("Uncaught exception:", exc_info=(type_, value, traceback))
-    # Pass to default handler (prints, exits, etc.)
-    sys.__excepthook__(type_, value, traceback)
+    if traceback:
+        # Pass to default handler (prints, exits, etc.)
+        sys.__excepthook__(type_, value, traceback)
 
 
 class DiscordLogHandler(logging.Handler):
