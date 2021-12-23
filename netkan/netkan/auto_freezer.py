@@ -95,7 +95,7 @@ class AutoFreezer:
         resources = getattr(status, 'resources', None)
         if resources:
             links = r' \| '.join(f'[{key}]({url})'
-                                 for key, url in resources.as_dict().items())
+                                 for key, url in sorted(resources.as_dict().items()))
             return f'**{ident}**<br>{links}'
         return f'**{ident}**'
 
