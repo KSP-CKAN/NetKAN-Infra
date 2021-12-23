@@ -1,12 +1,12 @@
 import os
 import sys
 import logging
-from typing import Iterable, Type
+from typing import Iterable, Type, Optional
 from types import TracebackType
 import discord
 
 
-def catch_all(type_: Type[BaseException], value: BaseException, traceback: TracebackType) -> None:
+def catch_all(type_: Type[BaseException], value: BaseException, traceback: Optional[TracebackType]) -> None:
     # Log an error for Discord
     logging.error("Uncaught exception:", exc_info=(type_, value, traceback))
     # Pass to default handler (prints, exits, etc.)
