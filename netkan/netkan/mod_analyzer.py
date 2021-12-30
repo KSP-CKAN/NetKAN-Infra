@@ -26,6 +26,7 @@ class ModAnalyzer:
         CfgAspect(r'^\s*[@+$\-!%]|^\s*[a-zA-Z0-9_]+:',
                                             [],               ['ModuleManager']),
         CfgAspect(r'^\s*PART\b',            ['parts'],        []),
+        CfgAspect(r'^\s*INTERNAL\b',        ['crewed'],       []),
         CfgAspect(r'^\s*@TechTree\b',       ['tech-tree'],    []),
         CfgAspect(r'^\s*@Kopernicus\b',     ['planet-pack'],  ['Kopernicus']),
         CfgAspect(r'^\s*STATIC\b',          ['buildings'],    ['KerbalKonstructs']),
