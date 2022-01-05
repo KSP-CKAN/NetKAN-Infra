@@ -9,7 +9,6 @@ from pathlib import Path
 from importlib.resources import read_text
 from typing import Optional, List, Union, Iterable, BinaryIO, Dict, Any
 import boto3
-import requests
 import github
 import internetarchive
 from jinja2 import Template
@@ -311,7 +310,7 @@ class Mirrorer:
                     to_delete = []
                     for msg in messages:
                         # Check if archive.org is overloaded before each upload
-                        if self.ia_overloaded():
+                        if self.ia_session.s3_is_overloaded(access_key=self.ia_access):
                             logging.info('The Internet Archive is overloaded, try again later')
                             break
                         path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
@@ -361,11 +360,6 @@ class Mirrorer:
                 full_name = '/'.join(parsed.path.split('/')[1:3])
                 return self._gh.get_repo(full_name).default_branch
         return 'master'
-
-    def ia_overloaded(self) -> bool:
-        response = requests.get(
-            f'https://s3.us.archive.org/?check_limit=1&accesskey={self.ia_access}')
-        return response.status_code == 503 or response.json().get('over_limit')
 
     def purge_epochs(self, dry_run: bool) -> None:
         if dry_run:
