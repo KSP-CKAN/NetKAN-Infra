@@ -303,10 +303,6 @@ class Mirrorer:
                     VisibilityTimeout=timeout,
                 )
                 if messages:
-                    # Check if archive.org is overloaded
-                    if self.ia_overloaded():
-                        logging.info('The Internet Archive is overloaded, try again later')
-                        continue
                     # Get up to date copy of the metadata for the files we're mirroring
                     logging.info('Updating repo')
                     self.ckm_repo.git_repo.heads.master.checkout()
@@ -314,6 +310,10 @@ class Mirrorer:
                     # Start processing the messages
                     to_delete = []
                     for msg in messages:
+                        # Check if archive.org is overloaded before each upload
+                        if self.ia_overloaded():
+                            logging.info('The Internet Archive is overloaded, try again later')
+                            break
                         path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
                         if self.try_mirror(CkanMirror(self.ia_collection, path)):
                             # Successfully handled -> OK to delete
