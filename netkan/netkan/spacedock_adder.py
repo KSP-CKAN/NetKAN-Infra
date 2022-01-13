@@ -130,7 +130,7 @@ class SpaceDockAdder:
             logging.error('%s failed to analyze %s from %s',
                 cls.__name__, ident, url, exc_info=exc)
         return {
-            'spec_version': 'v1.4',
+            'spec_version': 'v1.10',
             'identifier': ident,
             '$kref': f"#/ckan/spacedock/{info.get('id', '')}",
             'license': info.get('license', '').strip().replace(' ', '-'),
