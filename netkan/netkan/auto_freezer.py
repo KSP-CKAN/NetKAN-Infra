@@ -68,10 +68,14 @@ class AutoFreezer:
 
     @staticmethod
     def _last_timestamp(ident: str) -> Optional[datetime]:
-        status = ModStatus.get(ident)
-        return getattr(status, 'release_date',
-                       getattr(status, 'last_indexed',
-                               None))
+        try:
+            status = ModStatus.get(ident)
+            return getattr(status, 'release_date',
+                           getattr(status, 'last_indexed',
+                                   None))
+        except ModStatus.DoesNotExist:
+            # No timestamp if mod isn't in the status table (very freshly merged)
+            return None
 
     def _add_freezee(self, ident: str) -> None:
         self.nk_repo.git_repo.index.move([
