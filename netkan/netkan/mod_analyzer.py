@@ -36,6 +36,8 @@ class ModAnalyzer:
         CfgAspect(r'^\s*@CUSTOMBARNKIT\b',  [],               ['CustomBarnKit']),
         CfgAspect(r'^\s*name\s*=\s*ModuleB9PartSwitch\b',
                                             [],               ['B9PartSwitch']),
+        CfgAspect(r'^\s*name\s*=\s*ModuleWaterfallFX\b',
+                                            ['graphics'],     ['Waterfall']),
     ]
     FILTERS = [
         '__MACOSX', '.DS_Store',
