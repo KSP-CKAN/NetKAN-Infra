@@ -1,7 +1,8 @@
 import re
 import tempfile
 from pathlib import Path
-from zipfile import ZipFile, is_zipfile
+from zipfile import ZipFile, is_zipfile, ZipInfo
+from itertools import groupby
 from typing import Dict, List, Any, Union, Pattern
 
 from .common import download_stream_to_file
@@ -43,8 +44,10 @@ class ModAnalyzer:
     ]
     FILTER_REGEXPS = [
         r'\.mdb$', r'\.pdb$',
-        r'~$',
+        r'~$',     r'\.craft$',
     ]
+    CRAFT_TYPE_REGEXP = re.compile(r'^\s*type = (?P<type>VAB|SPH)',
+                                   re.MULTILINE)
 
     def __init__(self, ident: str, download_url: str) -> None:
         self.ident = ident
@@ -67,6 +70,14 @@ class ModAnalyzer:
         if 'parts' in self.tags:
             self.tags.remove('config')
 
+        self.default_install_stanza = {'find': ident,
+                                       'install_to': 'GameData'}
+
+    def read_zipped_file(self, zipinfo: ZipInfo) -> str:
+        return ('' if not self.zip else
+                self.zip.read(zipinfo.filename).decode('utf-8-sig',
+                                                  errors='ignore'))
+
     def has_version_file(self) -> bool:
         return any(zi.filename.lower().endswith('.version')
                    for zi in self.files)
@@ -82,9 +93,16 @@ class ModAnalyzer:
     def pattern_matches_any_cfg(self, pattern: Pattern[str]) -> bool:
         return (False if not self.zip
                 else any(zi.filename.lower().endswith('.cfg')
-                         and pattern.search(
-                             self.zip.read(zi.filename).decode('utf-8-sig', errors='ignore'))
+                         and pattern.search(self.read_zipped_file(zi))
                          for zi in self.files))
+
+    def get_crafts(self) -> List[ZipInfo]:
+        return [zi for zi in self.files
+                if zi.filename.lower().endswith('.craft')]
+
+    def get_ship_type(self, zipinfo: ZipInfo) -> str:
+        match = self.CRAFT_TYPE_REGEXP.search(self.read_zipped_file(zipinfo))
+        return match.group('type') if match else ''
 
     def has_ident_folder(self) -> bool:
         return any(self.ident in Path(zi.filename).parts[:-1]
@@ -101,16 +119,23 @@ class ModAnalyzer:
                           if i < len(dirs) - 1}
         if len(parts_after_gd) > 1:
             # Multiple folders under GameData, manual review required
-            return ''
+            # unless one of them is the identifier
+            return (f'GameData/{self.ident}'
+                    if self.ident in parts_after_gd
+                    else '')
         if len(parts_after_gd) == 1:
             # Found GameData with only one subdir, return it
             return next(iter(parts_after_gd))
-        # If no GameData, look for unique folder in root
+        # No GameData, find the identifier anywhere else
+        if self.has_ident_folder():
+            return self.ident
+        # No GameData and no identifier folder, look for unique folder in root
         first_parts = {dirs[0] for dirs in dir_parts if len(dirs) > 0}
         if len(first_parts) == 1:
             # No GameData but only one root folder, return it
             return next(iter(first_parts))
-        # No GameData, multiple folders in root, manual review required
+        # No GameData, multiple folders in root, no identifier folder;
+        # manual review required
         return ''
 
     def get_filters(self) -> List[str]:
@@ -125,31 +150,50 @@ class ModAnalyzer:
                 if any(re.search(filt, zi.filename)
                        for zi in self.files)]
 
+    def get_ships_install_stanzas(self) -> List[Dict[str, Any]]:
+        # {'VAB': {Paths of folders containing VAB crafts},
+        #  'SPH': {Paths of folders containing SPH crafts}}
+        craft_groups = {craft_type: {Path(craft.filename).parent
+                                     for craft in crafts}
+                        for craft_type, crafts
+                        in groupby(sorted(self.get_crafts(),
+                                          key=self.get_ship_type),
+                                   self.get_ship_type)}
+        return sum([[{'file': path.as_posix(),
+                      'install_to': 'Ships'}
+                     if path.parts[-1] == craft_type
+                     else {'file': path.as_posix(),
+                           'install_to': 'Ships',
+                           'as': craft_type}
+                     for path in paths]
+                    for craft_type, paths in craft_groups.items()],
+                   [])
+
+    def get_install_stanzas(self) -> Dict[str, List[Dict[str, Any]]]:
+        stanzas: List[Dict[str, Any]] = [{'find': self.find_folder(),
+                                          'install_to': 'GameData'},
+                                         *self.get_ships_install_stanzas()]
+        filters = self.get_filters()
+        filter_regexps = self.get_filter_regexps()
+        if filters:
+            stanzas[0]['filter'] = ModAnalyzer.flatten(filters)
+        if filter_regexps:
+            stanzas[0]['filter_regexp'] = ModAnalyzer.flatten(filter_regexps)
+
+        if len(stanzas) == 1 and self.default_install_stanza in stanzas:
+            stanzas.remove(self.default_install_stanza)
+        return { 'install': stanzas } if stanzas else { }
+
     @staticmethod
     def flatten(a_list: List[str]) -> Union[List[str], str]:
         return a_list[0] if len(a_list) == 1 else a_list
 
     def get_netkan_properties(self) -> Dict[str, Any]:
         props: Dict[str, Any] = { }
-
         if self.has_version_file():
             props['$vref'] = '#/ckan/ksp-avc'
         props['tags'] = self.tags
         if self.depends:
             props['depends'] = self.depends
-
-        filters = self.get_filters()
-        filter_regexps = self.get_filter_regexps()
-        if not self.has_ident_folder() or filters or filter_regexps:
-            # Can't use default stanza
-            props['install'] = [ {
-                'find': (self.ident if self.has_ident_folder()
-                         else self.find_folder()),
-                'install_to': 'GameData'
-            } ]
-            if filters:
-                props['install'][0]['filter'] = ModAnalyzer.flatten(filters)
-            if filter_regexps:
-                props['install'][0]['filter_regexp'] = ModAnalyzer.flatten(filter_regexps)
-
+        props.update(self.get_install_stanzas())
         return props
