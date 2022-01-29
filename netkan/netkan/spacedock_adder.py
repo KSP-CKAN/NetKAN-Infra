@@ -120,7 +120,7 @@ class SpaceDockAdder:
 
     @classmethod
     def make_netkan(cls, info: Dict[str, Any]) -> Dict[str, Any]:
-        ident = re.sub(r'\W+', '', info.get('name', ''))
+        ident = re.sub(r'[\W_]+', '', info.get('name', ''))
         mod: Optional[ModAnalyzer] = None
         url = SpaceDockAdder.sd_download_url(info)
         try:
