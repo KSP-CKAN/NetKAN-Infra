@@ -1,54 +1,32 @@
-import json
 import logging
-from typing import Optional, List
-import requests
+from typing import Optional, List, Dict, Any
+from github import Github, GithubException
+
+from .common import USER_AGENT
 
 
-# We don't need a whole lot out of github, consuming a library
-# and learning how it worked seemed like a waste.
 class GitHubPR:
 
     def __init__(self, token: str, repo: str, user: str) -> None:
-        self.token = token
-        self.repo = repo
-        self.user = user
+        self.repo = Github(token, user_agent=USER_AGENT).get_repo(f'{user}/{repo}')
 
     def create_pull_request(self, title: str, branch: str, body: str, labels: Optional[List[str]] = None) -> None:
-        response = requests.post(
-            f'https://api.github.com/repos/{self.user}/{self.repo}/pulls',
-            headers={
-                'Authorization': f'token {self.token}',
-                'Content-Type': 'application/json'
-            },
-            data=json.dumps({
-                'title': title,
-                'base': 'master',
-                'head': branch,
-                'body': body,
-            }),
-        )
-        if response.status_code not in [200, 201, 204]:
-            error = ''
-            message = response.json()['message']
-            try:
-                error = response.json()['errors'][0]['message']
-            except KeyError:
-                pass
-            logging.error('PR for %s failed: %s - %s',
-                          branch, message, error)
-            return
-        pr_json = response.json()
-        logging.info('PR for %s opened at %s',
-                     branch, pr_json['html_url'])
-        if labels:
-            # Labels have to be set separately via the issues API
-            requests.post(
-                f'https://api.github.com/repos/{self.user}/{self.repo}/issues/{pr_json["number"]}/labels',
-                headers={
-                    'Authorization': f'token {self.token}',
-                    'Content-Type': 'application/json'
-                },
-                data=json.dumps({
-                    'labels': labels
-                })
-            )
+        try:
+            pull = self.repo.create_pull(title, body, 'master', branch)
+            logging.info('Pull request for %s opened at %s', branch, pull.html_url)
+
+            if labels:
+                # Labels have to be set separately
+                pull.set_labels(*labels)
+
+        except GithubException as exc:
+            logging.error('Pull request for %s failed: %s',
+                          branch, self.get_error_message(exc.data), exc_info=exc)
+
+    @staticmethod
+    def get_error_message(exc_data: Dict[str, Any]) -> str:
+        return ' - '.join([exc_data.get('message',
+                                        'Unknown error'),
+                           *(err['message']
+                             for err in exc_data.get('errors', [])
+                             if 'message' in err)])

@@ -5,6 +5,8 @@ from collections import defaultdict
 from string import Template
 import github
 
+from .common import USER_AGENT
+
 
 class TicketCloser:
 
@@ -12,7 +14,7 @@ class TicketCloser:
     BODY_TEMPLATE = Template(read_text('netkan', 'ticket_close_template.md'))
 
     def __init__(self, token: str, user_name: str) -> None:
-        self._gh = github.Github(token)
+        self._gh = github.Github(token, user_agent=USER_AGENT)
         self._user_name = user_name
 
     def close_tickets(self, days_limit: int = 7) -> None:

@@ -15,7 +15,7 @@ from jinja2 import Template
 
 from .metadata import Ckan
 from .repos import CkanMetaRepo
-from .common import deletion_msg, download_stream_to_file
+from .common import deletion_msg, download_stream_to_file, USER_AGENT
 
 
 class CkanMirror(Ckan):
@@ -290,7 +290,9 @@ class Mirrorer:
                 'secret': ia_secret,
             }
         })
-        self._gh = github.Github(token) if token else github.Github()
+        self._gh = (github.Github(token, user_agent=USER_AGENT)
+                    if token else
+                    github.Github(user_agent=USER_AGENT))
 
     def process_queue(self, queue_name: str, timeout: int) -> None:
         queue = boto3.resource('sqs').get_queue_by_name(QueueName=queue_name)
