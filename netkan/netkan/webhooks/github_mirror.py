@@ -53,7 +53,7 @@ forbidden_id_chars = re.compile('[^-_A-Za-z0-9]')  # pylint: disable=invalid-nam
 def batch_message(path: Path) -> Dict[str, Any]:
     body = path.as_posix()
     return {
-        'Id':                     forbidden_id_chars.sub('_', body)[0:80],
+        'Id':                     forbidden_id_chars.sub('_', body)[-80:],
         'MessageBody':            body,
         'MessageGroupId':         '1',
         'MessageDeduplicationId': md5(body.encode()).hexdigest()
