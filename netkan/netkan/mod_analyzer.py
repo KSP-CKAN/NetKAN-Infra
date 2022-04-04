@@ -2,7 +2,6 @@ import re
 import tempfile
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile, ZipInfo
-from itertools import groupby
 from typing import Dict, List, Any, Union, Pattern
 
 from .common import download_stream_to_file
@@ -48,7 +47,8 @@ class ModAnalyzer:
         r'\.mdb$', r'\.pdb$',
         r'~$',     r'\.craft$',
     ]
-    CRAFT_TYPE_REGEXP = re.compile(r'^\s*type = (?P<type>VAB|SPH)',
+    # None = subassembly
+    CRAFT_TYPE_REGEXP = re.compile(r'^\s*type = (?P<type>VAB|SPH|None)',
                                    re.MULTILINE)
 
     def __init__(self, ident: str, download_url: str) -> None:
@@ -153,28 +153,12 @@ class ModAnalyzer:
                        for zi in self.files)]
 
     def get_ships_install_stanzas(self) -> List[Dict[str, Any]]:
-        # {'VAB': {Paths of folders containing VAB crafts},
-        #  'SPH': {Paths of folders containing SPH crafts}}
-        craft_groups = {craft_type: {Path(craft.filename).parent
-                                     for craft in crafts}
-                        for craft_type, crafts
-                        in groupby(sorted(self.get_crafts(),
-                                          key=self.get_ship_type),
-                                   self.get_ship_type)}
-        return sum([[
-            # well-structured: /*/VAB/file.craft
-            {'file': path.as_posix(),
-             'install_to': 'Ships'}
-            if path.parts[-1] == craft_type
-            # misnamed parent directory: /*/some_folder/file.craft
-            else {'file': path.as_posix(),
-                  'install_to': 'Ships',
-                  'as': craft_type}
-            # in root of zip: /file.craft
-            # ignoring for now
-            for path in paths if len(path.parts) > 0]
-            for craft_type, paths in craft_groups.items()],
-            [])
+        paths_with_type = [(Path(craft.filename), self.get_ship_type(craft))
+                           for craft in self.get_crafts()]
+        return [{'file': path.as_posix(),
+                 'install_to': f'Ships/{type}'}
+                for path, type in paths_with_type
+                if type != 'None']
 
     def get_install_stanzas(self) -> Dict[str, List[Dict[str, Any]]]:
         stanzas: List[Dict[str, Any]] = [{'find': self.find_folder(),
