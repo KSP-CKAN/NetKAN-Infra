@@ -78,7 +78,7 @@ class ModAnalyzer:
     def read_zipped_file(self, zipinfo: ZipInfo) -> str:
         return ('' if not self.zip else
                 self.zip.read(zipinfo.filename).decode('utf-8-sig',
-                                                  errors='ignore'))
+                                                       errors='ignore'))
 
     def has_version_file(self) -> bool:
         return any(zi.filename.lower().endswith('.version')
@@ -161,15 +161,20 @@ class ModAnalyzer:
                         in groupby(sorted(self.get_crafts(),
                                           key=self.get_ship_type),
                                    self.get_ship_type)}
-        return sum([[{'file': path.as_posix(),
-                      'install_to': 'Ships'}
-                     if path.parts[-1] == craft_type
-                     else {'file': path.as_posix(),
-                           'install_to': 'Ships',
-                           'as': craft_type}
-                     for path in paths]
-                    for craft_type, paths in craft_groups.items()],
-                   [])
+        return sum([[
+            # well-structured: /*/VAB/file.craft
+            {'file': path.as_posix(),
+             'install_to': 'Ships'}
+            if path.parts[-1] == craft_type
+            # misnamed parent directory: /*/some_folder/file.craft
+            else {'file': path.as_posix(),
+                  'install_to': 'Ships',
+                  'as': craft_type}
+            # in root of zip: /file.craft
+            # ignoring for now
+            for path in paths if len(path.parts) > 0]
+            for craft_type, paths in craft_groups.items()],
+            [])
 
     def get_install_stanzas(self) -> Dict[str, List[Dict[str, Any]]]:
         stanzas: List[Dict[str, Any]] = [{'find': self.find_folder(),
@@ -184,14 +189,14 @@ class ModAnalyzer:
 
         if len(stanzas) == 1 and self.default_install_stanza in stanzas:
             stanzas.remove(self.default_install_stanza)
-        return { 'install': stanzas } if stanzas else { }
+        return {'install': stanzas} if stanzas else {}
 
     @staticmethod
     def flatten(a_list: List[str]) -> Union[List[str], str]:
         return a_list[0] if len(a_list) == 1 else a_list
 
     def get_netkan_properties(self) -> Dict[str, Any]:
-        props: Dict[str, Any] = { }
+        props: Dict[str, Any] = {}
         if self.has_version_file():
             props['$vref'] = '#/ckan/ksp-avc'
         props['tags'] = self.tags
