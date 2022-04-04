@@ -41,7 +41,8 @@ class SpaceDockAdder:
             )
             if messages:
                 self.nk_repo.git_repo.heads.master.checkout()
-                self.nk_repo.git_repo.remotes.origin.pull('master', strategy_option='ours')
+                self.nk_repo.git_repo.remotes.origin.pull(
+                    'master', strategy_option='ours')
 
                 # Start processing the messages
                 to_delete = []
@@ -72,7 +73,7 @@ class SpaceDockAdder:
         if branch_name not in self.nk_repo.git_repo.heads:
             self.nk_repo.git_repo.create_head(
                 branch_name,
-                getattr( # type: ignore[arg-type]
+                getattr(  # type: ignore[arg-type]
                     self.nk_repo.git_repo.remotes.origin.refs,
                     branch_name,
                     self.nk_repo.git_repo.remotes.origin.refs.master
@@ -97,14 +98,16 @@ class SpaceDockAdder:
         )
 
         # Push branch
-        self.nk_repo.git_repo.remotes.origin.push('{mod}:{mod}'.format(mod=branch_name))
+        self.nk_repo.git_repo.remotes.origin.push(
+            '{mod}:{mod}'.format(mod=branch_name))
 
         # Create pull request
         if self.github_pr:
             self.github_pr.create_pull_request(
                 title=f"Add {info.get('name')} from {info.get('site_name')}",
                 branch=branch_name,
-                body=self.PR_BODY_TEMPLATE.safe_substitute(defaultdict(lambda: '', info)),
+                body=self.PR_BODY_TEMPLATE.safe_substitute(
+                    defaultdict(lambda: '', info)),
                 labels=['Pull request', 'Mod-request'],
             )
         return True
@@ -122,18 +125,20 @@ class SpaceDockAdder:
     def make_netkan(cls, info: Dict[str, Any]) -> Dict[str, Any]:
         ident = re.sub(r'[\W_]+', '', info.get('name', ''))
         mod: Optional[ModAnalyzer] = None
+        props: Dict[str, Any] = {}
         url = SpaceDockAdder.sd_download_url(info)
         try:
             mod = ModAnalyzer(ident, url)
+            props = mod.get_netkan_properties() if mod else {}
         except Exception as exc:  # pylint: disable=broad-except
             # Tell Discord about the problem and move on
             logging.error('%s failed to analyze %s from %s',
-                cls.__name__, ident, url, exc_info=exc)
+                          cls.__name__, ident, url, exc_info=exc)
         return {
             'spec_version': 'v1.18',
             'identifier': ident,
             '$kref': f"#/ckan/spacedock/{info.get('id', '')}",
             'license': info.get('license', '').strip().replace(' ', '-'),
-            **(mod.get_netkan_properties() if mod else {}),
+            **(props),
             'x_via': f"Automated {info.get('site_name')} CKAN submission"
         }
