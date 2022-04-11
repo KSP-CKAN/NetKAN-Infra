@@ -324,6 +324,7 @@ class Mirrorer:
                     except FileNotFoundError as exc:
                         logging.error('Error mirroring %s: %s',
                                       msg.body, exc)
+                        to_delete.append(deletion_msg(msg))
                 if to_delete:
                     queue.delete_messages(Entries=to_delete)
                 # Clean up GitPython's lingering file handles between batches
