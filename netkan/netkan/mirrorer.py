@@ -303,26 +303,31 @@ class Mirrorer:
                     MessageAttributeNames=['All'],
                     VisibilityTimeout=timeout,
                 )
-                if messages:
-                    # Get up to date copy of the metadata for the files we're mirroring
-                    logging.info('Updating repo')
-                    self.ckm_repo.git_repo.heads.master.checkout()
-                    self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs')
-                    # Start processing the messages
-                    to_delete = []
-                    for msg in messages:
-                        # Check if archive.org is overloaded before each upload
-                        if self.ia_session.s3_is_overloaded(access_key=self.ia_access):
-                            logging.info('The Internet Archive is overloaded, try again later')
-                            break
-                        path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
+                if not messages:
+                    continue
+                # Get up to date copy of the metadata for the files we're mirroring
+                logging.info('Updating repo')
+                self.ckm_repo.git_repo.heads.master.checkout()
+                self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs')
+                # Start processing the messages
+                to_delete = []
+                for msg in messages:
+                    # Check if archive.org is overloaded before each upload
+                    if self.ia_session.s3_is_overloaded(access_key=self.ia_access):
+                        logging.info('The Internet Archive is overloaded, try again later')
+                        break
+                    path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
+                    try:
                         if self.try_mirror(CkanMirror(self.ia_collection, path)):
                             # Successfully handled -> OK to delete
                             to_delete.append(deletion_msg(msg))
-                    if to_delete:
-                        queue.delete_messages(Entries=to_delete)
-                    # Clean up GitPython's lingering file handles between batches
-                    self.ckm_repo.git_repo.close()
+                    except FileNotFoundError as exc:
+                        logging.error('Error mirroring %s: %s',
+                                      msg.body, exc)
+                if to_delete:
+                    queue.delete_messages(Entries=to_delete)
+                # Clean up GitPython's lingering file handles between batches
+                self.ckm_repo.git_repo.close()
 
     def try_mirror(self, ckan: CkanMirror) -> bool:
         if not ckan.can_mirror:
