@@ -94,4 +94,14 @@ def freeze(ids: List[str]) -> None:
             except ModStatus.DoesNotExist:
                 # No status, don't need to freeze
                 pass
+            # Delete cached downloads
+            cached_downloads = list(filter(
+                None,
+                (ck.cache_find_file
+                 for ck in current_config.ckm_repo.ckans(ident))))
+            if cached_downloads:
+                logging.info('Purging %s files from cache for %s',
+                             len(cached_downloads), ident)
+                for download in cached_downloads:
+                    download.unlink()
         logging.info('Done!')
