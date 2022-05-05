@@ -628,7 +628,7 @@ docker_service = InitService(
 netkan_instance = Instance(
     'NetKANCompute',
     # ECS Optimised us-west-2
-    ImageId='ami-064803387adcb64b3',
+    ImageId='ami-0e0e34cdb5fd714fc',
     InstanceType='t3.small',
     IamInstanceProfile=Ref(netkan_profile),
     KeyName='techman83_alucard',
@@ -659,7 +659,7 @@ netkan_instance = Instance(
         BlockDeviceMapping(
             DeviceName='/dev/xvdh',
             Ebs=EBSBlockDevice(
-                VolumeSize='50',
+                VolumeSize='100',
                 VolumeType='standard',
             )
         )
