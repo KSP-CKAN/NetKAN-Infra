@@ -22,7 +22,7 @@ setup(
         'requests',
         'flask',
         'jinja2',
-        'internetarchive',
+        'internetarchive!=3.0.1',
         'gunicorn>=19.9,!=20.0.0',
         'discord.py>=1.6.0',
         'PyGithub',
