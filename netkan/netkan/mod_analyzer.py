@@ -7,22 +7,42 @@ from typing import Dict, List, Any, Union, Pattern
 from .common import download_stream_to_file
 
 
-class CfgAspect:
-
-    def __init__(self, cfg_regex: str, tags: List[str], depends: List[str]) -> None:
-        self.cfg_pattern = re.compile(cfg_regex, re.MULTILINE)
+class ModAspect:
+    def __init__(self, tags: List[str], depends: List[str]) -> None:
         self.tags = tags
         self.depends = depends
 
+    def apply_match(self, analyzer: 'ModAnalyzer') -> None:
+        analyzer.tags += self.tags
+        analyzer.depends += [{'name': dep} for dep in self.depends]
+
+    def analyze(self, analyzer: 'ModAnalyzer') -> None:
+        """
+        Child classes should override this and call apply_match on a match
+        """
+
+class FilenameAspect(ModAspect):
+    def __init__(self, name_regex: str, tags: List[str], depends: List[str]) -> None:
+        super().__init__(tags, depends)
+        self.name_pattern = re.compile(name_regex)
+
+    def analyze(self, analyzer: 'ModAnalyzer') -> None:
+        if analyzer.pattern_matches_any_filename(self.name_pattern):
+            self.apply_match(analyzer)
+
+class CfgAspect(ModAspect):
+
+    def __init__(self, cfg_regex: str, tags: List[str], depends: List[str]) -> None:
+        super().__init__(tags, depends)
+        self.cfg_pattern = re.compile(cfg_regex, re.MULTILINE)
+
     def analyze(self, analyzer: 'ModAnalyzer') -> None:
         if analyzer.pattern_matches_any_cfg(self.cfg_pattern):
-            analyzer.tags += self.tags
-            analyzer.depends += [{'name': dep} for dep in self.depends]
-
+            self.apply_match(analyzer)
 
 class ModAnalyzer:
 
-    ASPECTS: List[CfgAspect] = [
+    ASPECTS: List[ModAspect] = [
         CfgAspect(r'^\s*[@+$\-!%]|^\s*[a-zA-Z0-9_]+:',
                                             [],               ['ModuleManager']),
         CfgAspect(r'^\s*PART\b',            ['parts'],        []),
@@ -37,6 +57,9 @@ class ModAnalyzer:
                                             [],               ['B9PartSwitch']),
         CfgAspect(r'^\s*name\s*=\s*ModuleWaterfallFX\b',
                                             ['graphics'],     ['Waterfall']),
+
+        FilenameAspect(r'.ks$',             ['config',
+                                             'control'],      ['kOS']),
     ]
     FILTERS = [
         '__MACOSX', '.DS_Store',
@@ -91,6 +114,11 @@ class ModAnalyzer:
     def has_cfg(self) -> bool:
         return any(zi.filename.lower().endswith('.cfg')
                    for zi in self.files)
+
+    def pattern_matches_any_filename(self, pattern: Pattern[str]) -> bool:
+        return (False if not self.zip
+                else any(pattern.search(zi.filename)
+                         for zi in self.files))
 
     def pattern_matches_any_cfg(self, pattern: Pattern[str]) -> bool:
         return (False if not self.zip
@@ -183,7 +211,8 @@ class ModAnalyzer:
         props: Dict[str, Any] = {}
         if self.has_version_file():
             props['$vref'] = '#/ckan/ksp-avc'
-        props['tags'] = self.tags
+        if self.tags:
+            props['tags'] = self.tags
         if self.depends:
             props['depends'] = self.depends
         props.update(self.get_install_stanzas())
