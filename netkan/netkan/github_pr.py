@@ -21,7 +21,7 @@ class GitHubPR:
 
         except GithubException as exc:
             logging.error('Pull request for %s failed: %s',
-                          branch, self.get_error_message(exc.data), exc_info=exc)
+                          branch, self.get_error_message(exc.data))
 
     @staticmethod
     def get_error_message(exc_data: Dict[str, Any]) -> str:
