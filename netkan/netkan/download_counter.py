@@ -94,9 +94,10 @@ class GraphQLQuery:
 
     def graphql_to_github(self, query: str) -> Dict[str, Any]:
         logging.info('Contacting GitHub')
-        return requests.post(self.GITHUB_API, headers={
-            'Authorization': f'bearer {self.github_token}'
-        }, json={'query': query}).json()
+        return requests.post(self.GITHUB_API,
+                             headers={'Authorization': f'bearer {self.github_token}'},
+                             json={'query': query},
+                             timeout=60).json()
 
     def sum_graphql_result(self, apidata: Dict[str, Any]) -> int:
         total = 0
@@ -127,7 +128,7 @@ class SpaceDockBatchedQuery:
         }
 
     def query_to_spacedock(self, query: Dict[str, Any]) -> Dict[str, Any]:
-        return requests.post(self.SPACEDOCK_API, data=query).json()
+        return requests.post(self.SPACEDOCK_API, data=query, timeout=60).json()
 
     def get_result(self, counts: Optional[Dict[str, int]]) -> Dict[str, int]:
         if not counts:

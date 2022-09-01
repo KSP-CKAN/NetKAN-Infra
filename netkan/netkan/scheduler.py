@@ -107,9 +107,8 @@ class NetkanScheduler:
 
             end = datetime.datetime.utcnow()
             start = end - datetime.timedelta(minutes=10)
-            response = requests.get(
-                'http://169.254.169.254/latest/meta-data/instance-id'
-            )
+            response = requests.get('http://169.254.169.254/latest/meta-data/instance-id',
+                                    timeout=60)
             instance_id = response.text
             cloudwatch = boto3.client('cloudwatch')
 
