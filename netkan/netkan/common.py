@@ -48,6 +48,7 @@ def download_stream_to_file(download_url: str, dest_file: IO[bytes]) -> None:
     # Get big files in little chunks
     with requests.get(download_url,
                       headers={'User-Agent': USER_AGENT},
-                      stream=True) as req:
+                      stream=True,
+                      timeout=60) as req:
         for chunk in req.iter_content(chunk_size=8192):
             dest_file.write(chunk)
