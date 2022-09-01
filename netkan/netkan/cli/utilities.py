@@ -43,7 +43,6 @@ def auto_freezer(common: SharedArgs, days_limit: int, days_till_ignore: int) -> 
 def download_counter(common: SharedArgs) -> None:
     logging.info('Starting Download Count Calculation...')
     DownloadCounter(
-        common.netkan_repo,
         common.ckanmeta_repo,
         common.token
     ).update_counts()
