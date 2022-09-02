@@ -5,7 +5,7 @@ from pathlib import Path
 from importlib.resources import read_text
 from string import Template
 import urllib.parse
-from typing import Optional, Dict, Tuple, Any
+from typing import Dict, Tuple, Any
 
 import requests
 
@@ -73,17 +73,17 @@ class GraphQLQuery:
         """
         return fake_ident[1:].replace("_", "-")
 
-    def get_result(self, counts: Optional[Dict[str, int]]) -> Dict[str, int]:
-        logging.info('Running GraphQL query')
-        if not counts:
+    def get_result(self, counts: Dict[str, int] = None) -> Dict[str, int]:
+        if counts is None:
             counts = {}
+        logging.info('Running GraphQL query')
         full_query = self.get_query()
         result = self.graphql_to_github(full_query)
         if 'errors' in result:
-            logging.error('DownloadCounter GraphQL query failed: %s',
+            logging.error('DownloadCounter errors in GraphQL query: %s',
                 ', '.join(err['message'] for err in result['errors'])
                 if result['errors'] else 'Empty errors list')
-        else:
+        if 'data' in result:
             for fake_ident, apidata in result['data'].items():
                 if apidata:
                     real_ident = self.from_graphql_safe_identifier(fake_ident)
@@ -114,12 +114,12 @@ class SpaceDockBatchedQuery:
     SPACEDOCK_API = 'https://spacedock.info/api/download_counts'
 
     def __init__(self) -> None:
-        self.ids: Dict[str, str] = {}
+        self.ids: Dict[str, int] = {}
 
     def empty(self) -> bool:
         return len(self.ids) == 0
 
-    def add(self, identifier: str, sd_id: str) -> None:
+    def add(self, identifier: str, sd_id: int) -> None:
         self.ids[identifier] = sd_id
 
     def get_query(self) -> Dict[str, Any]:
@@ -130,8 +130,8 @@ class SpaceDockBatchedQuery:
     def query_to_spacedock(self, query: Dict[str, Any]) -> Dict[str, Any]:
         return requests.post(self.SPACEDOCK_API, data=query, timeout=60).json()
 
-    def get_result(self, counts: Optional[Dict[str, int]]) -> Dict[str, int]:
-        if not counts:
+    def get_result(self, counts: Dict[str, int] = None) -> Dict[str, int]:
+        if counts is None:
             counts = {}
         full_query = self.get_query()
         result = self.query_to_spacedock(full_query)
@@ -142,6 +142,7 @@ class SpaceDockBatchedQuery:
         for identifier, sd_id in self.ids.items():
             count = sd_counts.get(sd_id)
             if count:
+                logging.info('Count for %s is %s', identifier, count)
                 counts[identifier] = count
         return counts
 
@@ -182,14 +183,20 @@ class DownloadCounter:
                     match = self.SPACEDOCK_PATH_PATTERN.match(url_parse.path)
                     if match:
                         # Process SpaceDock modules together in one huge batch
-                        sd_query.add(ckan.identifier, *match.groups())
+                        sd_query.add(ckan.identifier, int(match.group(1)))
+                    else:
+                        logging.error('Failed to parse SD URL for %s: %s',
+                                      ckan.identifier, ckan.download)
             except Exception as exc:  # pylint: disable=broad-except
                 # Don't let one bad apple spoil the bunch
                 # Print file path because netkan_dl might be None
-                logging.error('DownloadCounter failed for %s: %s',
-                              ckan, exc)
+                logging.error('DownloadCounter failed for %s',
+                              ckan.identifier, exc_info=exc)
         if not sd_query.empty():
             sd_query.get_result(self.counts)
+        if not graph_query.empty():
+            # Final pass doesn't overflow the bound
+            graph_query.get_result(self.counts)
 
     def write_json(self) -> None:
         if self.output_file:
