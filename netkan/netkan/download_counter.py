@@ -31,23 +31,39 @@ class GraphQLQuery:
 
     def __init__(self, github_token: str) -> None:
         self.repos: Dict[str, Tuple[str, str]] = {}
+        self.requests: Dict[Tuple[str, str], str] = {}
+        self.cache: Dict[Tuple[str, str], int] = {}
         self.github_token = github_token
         logging.info('Starting new GraphQL query')
 
     def empty(self) -> bool:
+        # We might need to return values that are already cached
         return len(self.repos) == 0
 
     def full(self) -> bool:
-        return len(self.repos) >= self.MODULES_PER_GRAPHQL
+        # We only need to do requests for uncached mods
+        return len(self.requests) >= self.MODULES_PER_GRAPHQL
 
     def add(self, identifier: str, user: str, repo: str) -> None:
-        self.repos[identifier] = (user, repo)
+        user_repo = (user, repo)
+        self.repos[identifier] = user_repo
+        # Queue this request if we haven't already
+        if user_repo not in self.cache and user_repo not in self.requests:
+            self.requests[user_repo] = identifier
+        else:
+            logging.debug('Skipping duplicate request for %s, %s, %s',
+                          identifier, user, repo)
+
+    def clear(self) -> None:
+        self.repos.clear()
+        self.requests.clear()
+        # Keep self.cache for shared $krefs
 
     def get_query(self) -> str:
         return self.GRAPHQL_TEMPLATE.safe_substitute(module_queries="\n".join(
             filter(None, [self.get_module_query(identifier, user, repo)
-                          for identifier, (user, repo)
-                          in self.repos.items()])))
+                          for (user, repo), identifier
+                          in self.requests.items()])))
 
     def get_module_query(self, identifier: str, user: str, repo: str) -> str:
         return self.MODULE_TEMPLATE.safe_substitute(
@@ -88,8 +104,15 @@ class GraphQLQuery:
                 if apidata:
                     real_ident = self.from_graphql_safe_identifier(fake_ident)
                     count = self.sum_graphql_result(apidata)
-                    logging.info('Count for %s is %s', real_ident, count)
-                    counts[real_ident] = count
+                    user_repo = self.repos[real_ident]
+                    # Cache results per repo, for shared $krefs
+                    self.cache[user_repo] = count
+        # Retrieve everything from the cache, new and old alike
+        for ident, user_repo in self.repos.items():
+            if user_repo in self.cache:
+                count = self.cache[user_repo]
+                logging.info('Count for %s is %s', ident, count)
+                counts[ident] = count
         return counts
 
     def graphql_to_github(self, query: str) -> Dict[str, Any]:
@@ -124,7 +147,8 @@ class SpaceDockBatchedQuery:
 
     def get_query(self) -> Dict[str, Any]:
         return {
-            'mod_id': self.ids.values()
+            # Ensure uniqueness for shared $krefs
+            'mod_id': list(set(self.ids.values()))
         }
 
     def query_to_spacedock(self, query: Dict[str, Any]) -> Dict[str, Any]:
@@ -177,8 +201,8 @@ class DownloadCounter:
                         if graph_query.full():
                             # Run the query
                             graph_query.get_result(self.counts)
-                            # Start over with fresh query
-                            graph_query = GraphQLQuery(self.github_token)
+                            # Clear request list
+                            graph_query.clear()
                 elif url_parse.netloc == 'spacedock.info':
                     match = self.SPACEDOCK_PATH_PATTERN.match(url_parse.path)
                     if match:
