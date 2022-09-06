@@ -11,6 +11,7 @@ import requests
 
 from .utils import repo_file_add_or_changed
 from .repos import CkanMetaRepo
+from .metadata import Ckan
 
 
 class GraphQLQuery:
@@ -171,6 +172,39 @@ class SpaceDockBatchedQuery:
         return counts
 
 
+class InternetArchiveBatchedQuery:
+
+    # https://archive.org/services/docs/api/views_api.html
+    IARCHIVE_API = 'https://be-api.us.archive.org/views/v1/short/'
+
+    # It let me get away with 35 in testing, let's pad that
+    MODULES_PER_REQUEST = 30
+
+    def __init__(self) -> None:
+        self.ids: Dict[str, str] = {}
+
+    def empty(self) -> bool:
+        return len(self.ids) == 0
+
+    def full(self) -> bool:
+        return len(self.ids) >= self.MODULES_PER_REQUEST
+
+    def _get_ia_ident(self, ckan: Ckan) -> str:
+        return f'{ckan.identifier}-{ckan.version.string.replace(":", "-")}'
+
+    def add(self, ckan: Ckan) -> None:
+        self.ids[ckan.identifier] = self._get_ia_ident(ckan)
+
+    def get_result(self, counts: Dict[str, int] = None) -> Dict[str, int]:
+        if counts is None:
+            counts = {}
+        result = requests.get(self.IARCHIVE_API + ','.join(self.ids.values()),
+                              timeout=60).json()
+        for ckan_ident, ia_ident in self.ids.items():
+            counts[ckan_ident] = result[ia_ident]['all_time']
+        return counts
+
+
 class DownloadCounter:
 
     GITHUB_PATH_PATTERN = re.compile(r'^/([^/]+)/([^/]+)')
@@ -188,6 +222,7 @@ class DownloadCounter:
     def get_counts(self) -> None:
         graph_query = GraphQLQuery(self.github_token)
         sd_query = SpaceDockBatchedQuery()
+        ia_query = InternetArchiveBatchedQuery()
         for ckan in self.ckm_repo.all_latest_modules():
             if ckan.kind == 'dlc':
                 continue
@@ -211,6 +246,11 @@ class DownloadCounter:
                     else:
                         logging.error('Failed to parse SD URL for %s: %s',
                                       ckan.identifier, ckan.download)
+                elif url_parse.netloc == 'archive.org':
+                    ia_query.add(ckan)
+                    if ia_query.full():
+                        ia_query.get_result(self.counts)
+                        ia_query = InternetArchiveBatchedQuery()
             except Exception as exc:  # pylint: disable=broad-except
                 # Don't let one bad apple spoil the bunch
                 # Print file path because netkan_dl might be None
@@ -221,6 +261,8 @@ class DownloadCounter:
         if not graph_query.empty():
             # Final pass doesn't overflow the bound
             graph_query.get_result(self.counts)
+        if not ia_query.empty():
+            ia_query.get_result(self.counts)
 
     def write_json(self) -> None:
         if self.output_file:
