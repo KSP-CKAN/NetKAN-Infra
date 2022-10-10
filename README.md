@@ -37,7 +37,7 @@ The webhooks provide a web server that responds to messages from other hosts and
 
 #### Download Counter
 
-When started, it goes through the entire NetKAN metadata repository and collects the download counts for each of those mods, then commits them to the [metadata repository].
+Collects download counts for indexed mods and commits them to the [metadata repository].
 
 #### Status Page
 
