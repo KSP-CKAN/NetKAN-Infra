@@ -21,6 +21,7 @@ class ModAspect:
         Child classes should override this and call apply_match on a match
         """
 
+
 class FilenameAspect(ModAspect):
     def __init__(self, name_regex: str, tags: List[str], depends: List[str]) -> None:
         super().__init__(tags, depends)
@@ -29,6 +30,7 @@ class FilenameAspect(ModAspect):
     def analyze(self, analyzer: 'ModAnalyzer') -> None:
         if analyzer.pattern_matches_any_filename(self.name_pattern):
             self.apply_match(analyzer)
+
 
 class CfgAspect(ModAspect):
 
@@ -39,6 +41,7 @@ class CfgAspect(ModAspect):
     def analyze(self, analyzer: 'ModAnalyzer') -> None:
         if analyzer.pattern_matches_any_cfg(self.cfg_pattern):
             self.apply_match(analyzer)
+
 
 class ModAnalyzer:
 
@@ -141,16 +144,19 @@ class ModAnalyzer:
     def find_folder(self) -> str:
         # First look for a unique entry directly under GameData
         dir_parts = {Path(zi.filename).parts[:-1] for zi in self.files}
-        dirs_with_gamedata = {(dirs, dirs.index('GameData'))
-                              for dirs in dir_parts
-                              if 'GameData' in dirs}
-        parts_after_gd = {dirs[i + 1]
+        dir_parts_folded = [(dirs, [d.casefold() for d in dirs])
+                            for dirs in dir_parts]
+        gamedata_folded = 'GameData'.casefold()
+        dirs_with_gamedata = {(dirs, dirs_folded.index(gamedata_folded))
+                              for dirs, dirs_folded in dir_parts_folded
+                              if gamedata_folded in dirs_folded}
+        parts_after_gd = {dirs[i + 1]: f'{dirs[i]}/{dirs[i + 1]}'
                           for dirs, i in dirs_with_gamedata
                           if i < len(dirs) - 1}
         if len(parts_after_gd) > 1:
             # Multiple folders under GameData, manual review required
             # unless one of them is the identifier
-            return (f'GameData/{self.ident}'
+            return (parts_after_gd[self.ident]
                     if self.ident in parts_after_gd
                     else '')
         if len(parts_after_gd) == 1:
