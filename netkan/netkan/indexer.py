@@ -19,7 +19,7 @@ from .github_pr import GitHubPR
 class CkanMessage:
 
     def __init__(self, msg: 'boto3.resources.factory.sqs.Message',
-                 ckm_repo: CkanMetaRepo, github_pr: GitHubPR = None) -> None:
+                 ckm_repo: CkanMetaRepo, github_pr: Optional[GitHubPR] = None) -> None:
         self.body = msg.body
         self.ckan = Ckan(contents=self.body)
         # pylint: disable=invalid-name
@@ -36,7 +36,7 @@ class CkanMessage:
             attr_type = f'{item[1]["DataType"]}Value'
             content = item[1][attr_type]
             if content.lower() in ['true', 'false']:
-                content = (content.lower() == 'true')
+                content = content.lower() == 'true'
             if item[0] == 'FileName':
                 content = PurePath(content).name
             setattr(self, item[0], content)
@@ -163,7 +163,7 @@ class CkanMessage:
 
 class MessageHandler:
 
-    def __init__(self, repo: CkanMetaRepo, github_pr: GitHubPR = None) -> None:
+    def __init__(self, repo: CkanMetaRepo, github_pr: Optional[GitHubPR] = None) -> None:
         self.ckm_repo = repo
         self.github_pr = github_pr
         self.master: Deque[CkanMessage] = deque()

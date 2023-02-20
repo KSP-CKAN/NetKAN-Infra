@@ -134,7 +134,7 @@ class CkanMirror(Ckan):
 
     EPOCH_VERSION_REGEXP = re.compile('^[0-9]+:')
 
-    def __init__(self, collection: str, filename: Union[str, Path] = None, contents: str = None) -> None:
+    def __init__(self, collection: str, filename: Optional[Union[str, Path]] = None, contents: Optional[str] = None) -> None:
         Ckan.__init__(self, filename, contents)
         self.collection = collection
 
@@ -280,7 +280,7 @@ class Mirrorer:
     EPOCH_ID_REGEXP = re.compile('-[0-9]+-')
     EPOCH_TITLE_REGEXP = re.compile(' - [0-9]+:')
 
-    def __init__(self, ckm_repo: CkanMetaRepo, ia_access: str, ia_secret: str, ia_collection: str, token: str = None) -> None:
+    def __init__(self, ckm_repo: CkanMetaRepo, ia_access: str, ia_secret: str, ia_collection: str, token: Optional[str] = None) -> None:
         self.ckm_repo = ckm_repo
         self.ia_collection = ia_collection
         self.ia_access = ia_access
