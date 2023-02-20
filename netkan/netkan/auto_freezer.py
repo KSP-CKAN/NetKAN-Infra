@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Iterable, Optional, List, Tuple
-import git
 
 from .status import ModStatus
 from .repos import NetkanRepo
@@ -20,15 +19,14 @@ class AutoFreezer:
         self.nk_repo.git_repo.remotes.origin.pull('master', strategy_option='ours')
         idle_mods = self._find_idle_mods(days_limit, days_till_ignore)
         if idle_mods:
-            self._checkout_branch(self.BRANCH_NAME)
-            for ident, _ in idle_mods:
-                if self.nk_repo.nk_path(ident).exists():
-                    logging.info('Freezing %s', ident)
-                    self._add_freezee(ident)
-                else:
-                    logging.info('Already froze %s', ident)
-            self._submit_pr(self.BRANCH_NAME, days_limit, idle_mods)
-            self.nk_repo.git_repo.heads.master.checkout()
+            with self.nk_repo.change_branch(self.BRANCH_NAME):
+                for ident, _ in idle_mods:
+                    if self.nk_repo.nk_path(ident).exists():
+                        logging.info('Freezing %s', ident)
+                        self._add_freezee(ident)
+                    else:
+                        logging.info('Already froze %s', ident)
+                self._submit_pr(self.BRANCH_NAME, days_limit, idle_mods)
 
     def mark_frozen_mods(self) -> None:
         with ModStatus.batch_write() as batch:
@@ -42,14 +40,6 @@ class AutoFreezer:
 
     def _is_frozen(self, ident: str) -> bool:
         return not self.nk_repo.nk_path(ident).exists()
-
-    def _checkout_branch(self, name: str) -> None:
-        try:
-            self.nk_repo.git_repo.remotes.origin.fetch(name)
-        except git.GitCommandError:
-            logging.info('Unable to fetch %s', name)
-
-        (getattr(self.nk_repo.git_repo.heads, name, None) or self.nk_repo.git_repo.create_head(name)).checkout()
 
     def _ids(self) -> Iterable[str]:
         return (nk.identifier for nk in self.nk_repo.netkans())
