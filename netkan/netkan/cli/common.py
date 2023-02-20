@@ -63,6 +63,7 @@ class SharedArgs:
         self._ckanmeta_repo: Optional[CkanMetaRepo] = None
         self._netkan_repo: Optional[NetkanRepo] = None
         self._github_pr: Optional[GitHubPR] = None
+        self.deep_clone = False
 
     def __getattribute__(self, name: str) -> Any:
         attr = super().__getattribute__(name)

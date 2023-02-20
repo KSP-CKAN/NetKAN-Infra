@@ -8,14 +8,14 @@ import requests
 from .repos import NetkanRepo, CkanMetaRepo
 from .metadata import Netkan
 from .common import sqs_batch_entries, github_limit_remaining
+from .cli.common import SharedArgs
 
 
 class NetkanScheduler:
 
-    def __init__(self, nk_repo: NetkanRepo, ckm_repo: CkanMetaRepo, queue: str, github_token: str,
+    def __init__(self, common: SharedArgs, queue: str, github_token: str,
                  nonhooks_group: bool = False, webhooks_group: bool = False) -> None:
-        self.nk_repo = nk_repo
-        self.ckm_repo = ckm_repo
+        self.common = common
         self.nonhooks_group = nonhooks_group
         self.webhooks_group = webhooks_group
         self.github_token = github_token
@@ -27,6 +27,14 @@ class NetkanScheduler:
             sqs = boto3.resource('sqs')
             self.queue = sqs.get_queue_by_name(QueueName=queue)
             self.queue_url = self.queue.url
+
+    @property
+    def nk_repo(self) -> NetkanRepo:
+        return self.common.netkan_repo
+
+    @property
+    def ckm_repo(self) -> CkanMetaRepo:
+        return self.common.ckanmeta_repo
 
     def sqs_batch_attrs(self, batch: List[Dict[str, Any]]) -> Dict[str, Any]:
         return {

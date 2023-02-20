@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 from pathlib import Path, PurePath
 from git import Repo
 
@@ -12,10 +13,11 @@ class TestScheduler(unittest.TestCase):
     ckm_root = PurePath(__file__).parent.joinpath('testdata', 'CKAN-meta')
 
     def setUp(self):
-        self.nk_repo = NetkanRepo(Repo.init(self.test_data))
-        self.ckm_repo = CkanMetaRepo(Repo.init(self.ckm_root))
-        self.scheduler = NetkanScheduler(self.nk_repo, self.ckm_repo, 'TestyMcTestFace', 'token')
-        self.messages = (nk.sqs_message(self.ckm_repo.highest_version(nk.identifier))
+        common = Mock()
+        common.netkan_repo = NetkanRepo(Repo.init(self.test_data))
+        common.ckanmeta_repo = CkanMetaRepo(Repo.init(self.ckm_root))
+        self.scheduler = NetkanScheduler(common, 'TestyMcTestFace', 'token')
+        self.messages = (nk.sqs_message(self.scheduler.ckm_repo.highest_version(nk.identifier))
                          for nk in self.scheduler.nk_repo.netkans())
 
     def test_netkans(self):
@@ -37,10 +39,11 @@ class TestScheduler(unittest.TestCase):
         self.assertEqual(len(attrs['Entries']), 10)
 
     def test_sqs_batching_ten(self):
-        test_data = Path(PurePath(__file__).parent, 'testdata/NetTEN')
-        scheduler = NetkanScheduler(
-            NetkanRepo(Repo.init(test_data)), self.ckm_repo, 'TestyMcTestFace', 'token')
-        messages = (nk.sqs_message(self.ckm_repo.highest_version(nk.identifier))
+        common = Mock()
+        common.netkan_repo = NetkanRepo(Repo.init(Path(PurePath(__file__).parent, 'testdata/NetTEN')))
+        common.ckanmeta_repo = CkanMetaRepo(Repo.init(self.ckm_root))
+        scheduler = NetkanScheduler(common, 'TestyMcTestFace', 'token')
+        messages = (nk.sqs_message(scheduler.ckm_repo.highest_version(nk.identifier))
                     for nk in scheduler.nk_repo.netkans())
 
         batches = []
