@@ -22,7 +22,7 @@ class SpaceDockAdder:
 
     PR_BODY_TEMPLATE = Template(read_text('netkan', 'pr_body_template.md'))
 
-    def __init__(self, queue: str, timeout: int, nk_repo: NetkanRepo, github_pr: GitHubPR = None) -> None:
+    def __init__(self, queue: str, timeout: int, nk_repo: NetkanRepo, github_pr: Optional[GitHubPR] = None) -> None:
         sqs = boto3.resource('sqs')
         self.sqs_client = boto3.client('sqs')
         self.queue = sqs.get_queue_by_name(QueueName=queue)

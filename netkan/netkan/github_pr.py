@@ -22,6 +22,9 @@ class GitHubPR:
         except GithubException as exc:
             logging.error('Pull request for %s failed: %s',
                           branch, self.get_error_message(exc.data))
+            for pull in self.repo.get_pulls(head=f'{self.repo.owner}:{branch}'):
+                # Post description as a comment if pull request exists
+                pull.create_issue_comment(body)
 
     @staticmethod
     def get_error_message(exc_data: Dict[str, Any]) -> str:

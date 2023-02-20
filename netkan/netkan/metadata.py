@@ -16,7 +16,7 @@ class Netkan:
 
     KREF_PATTERN = re.compile('^#/ckan/([^/]+)/(.+)$')
 
-    def __init__(self, filename: Union[str, Path] = None, contents: str = None) -> None:
+    def __init__(self, filename: Optional[Union[str, Path]] = None, contents: Optional[str] = None) -> None:
         if filename:
             self.filename = Path(filename)
             self.contents = self.filename.read_text(encoding='UTF-8')
@@ -84,13 +84,13 @@ class Netkan:
             'StringValue': val,
         }
 
-    def sqs_message_attribs(self, high_ver: 'Ckan.Version' = None) -> Dict[str, Any]:
+    def sqs_message_attribs(self, high_ver: Optional['Ckan.Version'] = None) -> Dict[str, Any]:
         attribs = {}
         if high_ver and not getattr(self, 'x_netkan_allow_out_of_order', False):
             attribs['HighestVersion'] = self.string_attrib(high_ver.string)
         return attribs
 
-    def sqs_message(self, high_ver: 'Ckan.Version' = None) -> Dict[str, Any]:
+    def sqs_message(self, high_ver: Optional['Ckan.Version'] = None) -> Dict[str, Any]:
         hex_id = uuid.uuid4().hex
         return {
             'Id': hex_id,
@@ -112,7 +112,7 @@ class Ckan:
             self.string = version_string
             match = self.PATTERN.fullmatch(self.string)
             if not match:
-                raise Exception('Invalid version format')
+                raise ValueError('Invalid version format')
             if match.group('epoch') and match.group('epoch').isnumeric():
                 self.epoch = int(match.group('epoch'))
             else:
@@ -121,7 +121,7 @@ class Ckan:
                 self.epoch = 0
             self.bare_version = match.group('version')
             if self.bare_version is None:
-                raise Exception
+                raise ValueError
 
         # @total_ordering doesn't generate this one right. Maybe it compares the strings?
         def __eq__(self, other: object) -> bool:
@@ -175,9 +175,9 @@ class Ckan:
                             _result = 0
                     else:
                         # Do an artificial __cmp__
-                        _result = ((str1 > str2) - (str1 < str2))
+                        _result = (str1 > str2) - (str1 < str2)
                 else:
-                    _result = ((str1 > str2) - (str1 < str2))
+                    _result = (str1 > str2) - (str1 < str2)
 
                 return _result, _first_remainder, _second_remainder
 
@@ -210,7 +210,7 @@ class Ckan:
                 else:
                     integer2 = 0
 
-                _result = ((integer1 > integer2) - (integer1 < integer2))
+                _result = (integer1 > integer2) - (integer1 < integer2)
                 return _result, _first_remainder, _second_remainder
 
             # Here begins the main comparison logic
@@ -269,7 +269,7 @@ class Ckan:
         'release_date'
     ]
 
-    def __init__(self, filename: Union[str, Path] = None, contents: str = None) -> None:
+    def __init__(self, filename: Optional[Union[str, Path]] = None, contents: Optional[str] = None) -> None:
         if filename:
             self.filename = Path(filename)
             self.contents = self.filename.read_text(encoding='UTF-8')
@@ -304,7 +304,7 @@ class Ckan:
     def version(self) -> Version:
         raw_ver = self._raw.get('version')
         if not raw_ver:
-            raise Exception('Required property `version` not found')
+            raise AttributeError('Required property `version` not found')
         return self.Version(raw_ver)
 
     @property

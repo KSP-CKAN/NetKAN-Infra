@@ -5,7 +5,7 @@ from pathlib import Path
 from importlib.resources import read_text
 from string import Template
 import urllib.parse
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Optional
 
 import requests
 
@@ -90,7 +90,7 @@ class GraphQLQuery:
         """
         return fake_ident[1:].replace("_", "-")
 
-    def get_result(self, counts: Dict[str, int] = None) -> Dict[str, int]:
+    def get_result(self, counts: Optional[Dict[str, int]] = None) -> Dict[str, int]:
         if counts is None:
             counts = {}
         logging.info('Running GraphQL query')
@@ -155,7 +155,7 @@ class SpaceDockBatchedQuery:
     def query_to_spacedock(self, query: Dict[str, Any]) -> Dict[str, Any]:
         return requests.post(self.SPACEDOCK_API, data=query, timeout=60).json()
 
-    def get_result(self, counts: Dict[str, int] = None) -> Dict[str, int]:
+    def get_result(self, counts: Optional[Dict[str, int]] = None) -> Dict[str, int]:
         if counts is None:
             counts = {}
         full_query = self.get_query()
@@ -195,7 +195,7 @@ class InternetArchiveBatchedQuery:
     def add(self, ckan: Ckan) -> None:
         self.ids[ckan.identifier] = self._get_ia_ident(ckan)
 
-    def get_result(self, counts: Dict[str, int] = None) -> Dict[str, int]:
+    def get_result(self, counts: Optional[Dict[str, int]] = None) -> Dict[str, int]:
         if counts is None:
             counts = {}
         result = requests.get(self.IARCHIVE_API + ','.join(self.ids.values()),
