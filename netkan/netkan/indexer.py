@@ -166,23 +166,23 @@ class MessageHandler:
     def __init__(self, repo: CkanMetaRepo, github_pr: Optional[GitHubPR] = None) -> None:
         self.ckm_repo = repo
         self.github_pr = github_pr
-        self.master: Deque[CkanMessage] = deque()
+        self.main: Deque[CkanMessage] = deque()
         self.staged: Deque[CkanMessage] = deque()
         self.processed: List[CkanMessage] = []
 
     def __str__(self) -> str:
-        return str(self.master + self.staged)
+        return str(self.main + self.staged)
 
     def __len__(self) -> int:
-        return len(self.master + self.staged)
+        return len(self.main + self.staged)
 
     # Apparently gitpython can be leaky on long running processes
     # we can ensure we call close on it and run our handler inside
     # a context manager
     def __enter__(self) -> 'MessageHandler':
-        if not self.ckm_repo.is_active_branch('master'):
-            self.ckm_repo.checkout_branch('master')
-        self.ckm_repo.pull_remote_branch('master')
+        if not self.ckm_repo.is_active_branch('main'):
+            self.ckm_repo.checkout_branch('main')
+        self.ckm_repo.pull_remote_branch('main')
         return self
 
     def __exit__(self, exc_type: Type[BaseException],
@@ -196,7 +196,7 @@ class MessageHandler:
             self.github_pr
         )
         if not ckan.Staged:
-            self.master.append(ckan)
+            self.mamainster.append(ckan)
         else:
             self.staged.append(ckan)
 
@@ -209,12 +209,12 @@ class MessageHandler:
     def sqs_delete_entries(self) -> List[Dict[str, Any]]:
         return [c.delete_attrs for c in self.processed]
 
-    # Currently we intermingle Staged/Master commits
+    # Currently we intermingle Staged/main commits
     # separating them out will be a little more efficient
     # with our push/pull traffic.
     def process_ckans(self) -> None:
-        self._process_queue(self.master)
+        self._process_queue(self.main)
         if any(ckan.indexed for ckan in self.processed):
-            self.ckm_repo.pull_remote_branch('master')
-            self.ckm_repo.push_remote_branch('master')
+            self.ckm_repo.pull_remote_branch('main')
+            self.ckm_repo.push_remote_branch('main')
         self._process_queue(self.staged)

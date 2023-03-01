@@ -39,7 +39,7 @@ class XkanRepo:
         it doesn't quite mirror what Git will do directly. If the branch
         doesn't exist an 'AttributeError' will be thown.
 
-        repo.checkout_branch('master')
+        repo.checkout_branch('main')
         """
         branch = getattr(self.git_repo.heads, branch_name)
         branch.checkout()

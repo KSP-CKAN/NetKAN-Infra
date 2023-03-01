@@ -16,8 +16,8 @@ Every once in a while, the Scheduler kicks off and submits NetKAN metadata for t
 
 The core of the system, it has the job to _inflate_ NetKAN metadata to CKAN metadata as described in the [Schema] and [Spec].
 
-[Spec]: https://github.com/KSP-CKAN/CKAN/blob/master/Spec.md
-[Schema]: https://github.com/KSP-CKAN/CKAN/blob/master/CKAN.schema
+[Spec]: https://github.com/KSP-CKAN/CKAN/blob/main/Spec.md
+[Schema]: https://github.com/KSP-CKAN/CKAN/blob/main/CKAN.schema
 
 #### Indexer
 
@@ -76,16 +76,16 @@ Cert Bot         | certbot/dns-route53    | certbot/certbot |
 
 [Webhooks]: #Webhooks
 
-[netkan/netkan/scheduler.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/scheduler.py
-[Netkan/Processors/QueueHandler.cs]: https://github.com/KSP-CKAN/CKAN/blob/master/Netkan/Processors/QueueHandler.cs
-[netkan/netkan/indexer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/indexer.py
-[netkan/netkan/mirrorer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/mirrorer.py
-[netkan/netkan/download_counter.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/download_counter.py
-[netkan/netkan/spacedock_adder.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/spacedock_adder.py
-[netkan/netkan/ticket_closer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/ticket_closer.py
-[netkan/netkan/auto_freezer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/auto_freezer.py
-[netkan/netkan/cli/utilities.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/cli/utilities.py
-[netkan/netkan/webhooks]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/webhooks
+[netkan/netkan/scheduler.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/main/netkan/netkan/scheduler.py
+[Netkan/Processors/QueueHandler.cs]: https://github.com/KSP-CKAN/CKAN/blob/main/Netkan/Processors/QueueHandler.cs
+[netkan/netkan/indexer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/main/netkan/netkan/indexer.py
+[netkan/netkan/mirrorer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/main/netkan/netkan/mirrorer.py
+[netkan/netkan/download_counter.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/main/netkan/netkan/download_counter.py
+[netkan/netkan/spacedock_adder.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/main/netkan/netkan/spacedock_adder.py
+[netkan/netkan/ticket_closer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/main/netkan/netkan/ticket_closer.py
+[netkan/netkan/auto_freezer.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/main/netkan/netkan/auto_freezer.py
+[netkan/netkan/cli/utilities.py]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/main/netkan/netkan/cli/utilities.py
+[netkan/netkan/webhooks]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/main/netkan/netkan/webhooks
 
 ### Queues
 
@@ -146,7 +146,7 @@ Route                     | Parameters                                          
 
 [push API]: https://developer.github.com/webhooks/event-payloads/#push
 [release API]: https://developer.github.com/webhooks/event-payloads/#release
-[Adder code comments]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/master/netkan/netkan/webhooks/spacedock_add.py#L12-L25
+[Adder code comments]: https://github.com/KSP-CKAN/NetKAN-Infra/blob/main/netkan/netkan/webhooks/spacedock_add.py#L12-L25
 
 ## Developing
 

@@ -328,7 +328,7 @@ class Ckan:
             return None
         return f'{self.cache_prefix}-{self.identifier}-{self.version.string.replace(":", "-")}.{self.MIME_TO_EXTENSION[self.download_content_type]}'
 
-    def source_download(self, branch: str = 'master') -> Optional[str]:
+    def source_download(self, branch: str = 'main') -> Optional[str]:
         # self?.resources?.repository
         repository = getattr(self, 'resources', {}).get('repository', None)
         if repository:

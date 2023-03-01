@@ -30,7 +30,7 @@ def sqs_batch_entries(messages: Iterable[Dict[str, str]],
 
 def pull_all(repos: Iterable[Repo]) -> None:
     for repo in repos:
-        repo.remotes.origin.pull('master', strategy_option='theirs')
+        repo.remotes.origin.pull('main', strategy_option='theirs')
 
 
 def github_limit_remaining(token: str) -> int:

@@ -12,7 +12,7 @@ class GitHubPR:
 
     def create_pull_request(self, title: str, branch: str, body: str, labels: Optional[List[str]] = None) -> None:
         try:
-            pull = self.repo.create_pull(title, body, 'master', branch)
+            pull = self.repo.create_pull(title, body, 'main', branch)
             logging.info('Pull request for %s opened at %s', branch, pull.html_url)
 
             if labels:

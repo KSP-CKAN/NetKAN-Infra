@@ -27,7 +27,7 @@ class TestRepo(unittest.TestCase):
         cls.repo.index.add(cls.repo.untracked_files)
         cls.repo.index.commit('Test Data')
         cls.repo.create_remote('origin', cls.upstream.as_posix())
-        cls.repo.remotes.origin.push('master:master')
+        cls.repo.remotes.origin.push('main:main')
 
     @classmethod
     def tearDownClass(cls):
@@ -37,7 +37,7 @@ class TestRepo(unittest.TestCase):
     def tearDown(self):
         meta = self.repo
         meta.git.clean('-df')
-        meta.heads.master.checkout()
+        meta.heads.main.checkout()
         try:
             cleanup = meta.create_head('cleanup', 'HEAD~1')
             meta.head.reference = cleanup
@@ -56,16 +56,16 @@ class TestNetkanRepo(TestRepo):
         self.assertTrue(self.nk_repo.nk_path('DogeCoinFlag').exists())
 
     def test_active_branch(self):
-        self.assertEqual(self.nk_repo.active_branch, 'master')
+        self.assertEqual(self.nk_repo.active_branch, 'main')
 
     def test_is_active_branch(self):
-        self.assertTrue(self.nk_repo.is_active_branch('master'))
+        self.assertTrue(self.nk_repo.is_active_branch('main'))
         self.assertFalse(self.nk_repo.is_active_branch('some/other/branch'))
 
     def test_checkout_branch(self):
         with self.nk_repo.change_branch('a/branch'):
             pass
-        self.assertTrue(self.nk_repo.is_active_branch('master'))
+        self.assertTrue(self.nk_repo.is_active_branch('main'))
         self.nk_repo.checkout_branch('a/branch')
         self.assertTrue(self.nk_repo.is_active_branch('a/branch'))
 
@@ -73,16 +73,16 @@ class TestNetkanRepo(TestRepo):
         new_clone = Repo.init(Path(self.tmpdir.name, 'push_pull'))
         new_clone.create_remote('origin', self.upstream.as_posix())
         new_repo = NetkanRepo(new_clone)
-        new_repo.pull_remote_branch('master')
+        new_repo.pull_remote_branch('main')
         Path(new_repo.nk_dir, 'test_pushpull_file').write_text('I can haz cheezburger')
         new_repo.commit(new_repo.git_repo.untracked_files, 'Pls')
-        new_repo.push_remote_branch('master')
+        new_repo.push_remote_branch('main')
         self.assertFalse(Path(self.nk_repo.nk_dir, 'test_pushpull_file').exists())
-        self.nk_repo.pull_remote_branch('master')
+        self.nk_repo.pull_remote_branch('main')
         self.assertTrue(Path(self.nk_repo.nk_dir, 'test_pushpull_file').exists())
 
     def test_change_branch(self):
-        self.assertTrue(self.nk_repo.is_active_branch('master'))
+        self.assertTrue(self.nk_repo.is_active_branch('main'))
         staged = Path(self.nk_repo.nk_dir, 'StagedMod.netkan')
         self.assertFalse(staged.exists())
         with self.nk_repo.change_branch('some/other/branch'):

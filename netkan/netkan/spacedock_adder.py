@@ -40,9 +40,9 @@ class SpaceDockAdder:
                 VisibilityTimeout=self.timeout,
             )
             if messages:
-                self.nk_repo.git_repo.heads.master.checkout()
+                self.nk_repo.git_repo.heads.main.checkout()
                 self.nk_repo.git_repo.remotes.origin.pull(
-                    'master', strategy_option='ours')
+                    'main', strategy_option='ours')
 
                 # Start processing the messages
                 to_delete = []
@@ -76,7 +76,7 @@ class SpaceDockAdder:
                 getattr(  # type: ignore[arg-type]
                     self.nk_repo.git_repo.remotes.origin.refs,
                     branch_name,
-                    self.nk_repo.git_repo.remotes.origin.refs.master
+                    self.nk_repo.git_repo.remotes.origin.refs.main
                 )
             )
         # Checkout branch
