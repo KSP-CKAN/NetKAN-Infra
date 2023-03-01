@@ -23,13 +23,15 @@ BOT_FQDN = 'netkan.ksp-ckan.space'
 EMAIL = 'domains@ksp-ckan.space'
 PARAM_NAMESPACE = '/NetKAN/Indexer/'
 NETKAN_REMOTE = 'git@github.com:KSP-CKAN/NetKAN.git'
+KSP2_NETKAN_REMOTE = 'git@github.com:KSP-CKAN/KSP2-NetKAN.git'
 NETKAN_USER = 'KSP-CKAN'
 NETKAN_REPO = 'NetKAN'
+KSP2_NETKAN_REPO = 'KSP2-NetKAN'
 CKANMETA_REMOTE = 'git@github.com:KSP-CKAN/CKAN-meta.git'
+KSP2_CKANMETA_REMOTE = 'git@github.com:KSP-CKAN/KSP2-CKAN-meta.git'
 CKANMETA_USER = 'KSP-CKAN'
 CKANMETA_REPO = 'CKAN-meta'
-NETKAN_USER = 'KSP-CKAN'
-NETKAN_REPO = 'NetKAN'
+KSP2_CKANMETA_REPO = 'KSP2-CKAN-meta'
 STATUS_BUCKET = 'status.ksp-ckan.space'
 status_key = 'status/netkan.json'
 
@@ -60,9 +62,26 @@ mirrorqueue = t.add_resource(Queue("Mirroring",
                                    QueueName="Mirroring.fifo",
                                    ReceiveMessageWaitTimeSeconds=20,
                                    FifoQueue=True))
+ksp2_inbound = t.add_resource(Queue("KSP2-NetKANInbound",
+                                    QueueName="KSP2-Inbound.fifo",
+                                    ReceiveMessageWaitTimeSeconds=20,
+                                    FifoQueue=True))
+ksp2_outbound = t.add_resource(Queue("KSP2-NetKANOutbound",
+                                     QueueName="KSP2-Outbound.fifo",
+                                     ReceiveMessageWaitTimeSeconds=20,
+                                     FifoQueue=True))
+ksp2_addqueue = t.add_resource(Queue("KSP2-Adding",
+                                     QueueName="KSP2-Adding.fifo",
+                                     ReceiveMessageWaitTimeSeconds=20,
+                                     FifoQueue=True))
+ksp2_mirrorqueue = t.add_resource(Queue("KSP2-Mirroring",
+                                        QueueName="KSP2-Mirroring.fifo",
+                                        ReceiveMessageWaitTimeSeconds=20,
+                                        FifoQueue=True))
 
 
-for queue in [inbound, outbound, addqueue, mirrorqueue]:
+for queue in [inbound, outbound, addqueue, mirrorqueue,
+              ksp2_inbound, ksp2_outbound, ksp2_addqueue, ksp2_mirrorqueue]:
     t.add_output([
         Output(
             "{}QueueURL".format(queue.title),
@@ -154,6 +173,10 @@ netkan_role = t.add_resource(Role(
                             GetAtt(outbound, "Arn"),
                             GetAtt(addqueue, "Arn"),
                             GetAtt(mirrorqueue, "Arn"),
+                            GetAtt(ksp2_inbound, "Arn"),
+                            GetAtt(ksp2_outbound, "Arn"),
+                            GetAtt(ksp2_addqueue, "Arn"),
+                            GetAtt(ksp2_mirrorqueue, "Arn"),
                         ]
                     },
                     {
@@ -350,7 +373,8 @@ scheduler_resources = []
 for task in [
         'Scheduler', 'SchedulerWebhooksPass', 'CertBot', 'StatusDumper',
         'DownloadCounter', 'TicketCloser', 'AutoFreezer', 'RestartWebhooks',
-        'CleanCache']:
+        'CleanCache',
+        'KSP2-Scheduler', 'KSP2-DownloadCounter']:
     scheduler_resources.append(Sub(
         'arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBot${Task}:*',
         Task=task
@@ -411,7 +435,8 @@ netkan_scheduler_role = t.add_resource(Role(
 # redeployment of services.
 ksp_builder_group = t.add_resource(Group("KspCkanBuilderGroup"))
 builder_services = []
-for service in ['Indexer', 'Inflator', 'Webhooks', 'Adder', 'Mirrorer']:
+for service in ['Indexer', 'Inflator', 'Webhooks', 'Adder', 'Mirrorer',
+                'KSP2-Indexer', 'KSP2-Inflator', 'KSP2-Adder', 'KSP2-Mirrorer']:
     builder_services.append(
         Sub(
             'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/NetKANCluster/${service}',
@@ -501,6 +526,7 @@ t.add_resource(PolicyType(
                 ],
                 "Resource": [
                     GetAtt(inbound, "Arn"),
+                    GetAtt(ksp2_inbound, "Arn"),
                 ]
             },
             {
@@ -698,6 +724,25 @@ services = [
         'linux_parameters': LinuxParameters(InitProcessEnabled=True),
     },
     {
+        'name': 'KSP2-Indexer',
+        'command': 'indexer',
+        'memory': '256',
+        'secrets': [
+            'SSH_KEY', 'GH_Token',
+        ],
+        'env': [
+            ('CKANMETA_REMOTE', KSP2_CKANMETA_REMOTE),
+            ('CKAN_USER', CKANMETA_USER),
+            ('CKAN_REPO', KSP2_CKANMETA_REPO),
+            ('SQS_QUEUE', GetAtt(ksp2_outbound, 'QueueName')),
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+        ],
+        'volumes': [
+            ('ckan_cache', '/home/netkan/ckan_cache'),
+        ],
+        'linux_parameters': LinuxParameters(InitProcessEnabled=True),
+    },
+    {
         'name': 'Scheduler',
         'command': 'scheduler',
         'memory': '156',
@@ -706,6 +751,19 @@ services = [
             ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
             ('NETKAN_REMOTE', NETKAN_REMOTE),
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+        ],
+        'schedule': 'rate(30 minutes)',
+    },
+    {
+        'name': 'KSP2-Scheduler',
+        'command': 'scheduler',
+        'memory': '156',
+        'secrets': ['SSH_KEY', 'GH_Token'],
+        'env': [
+            ('SQS_QUEUE', GetAtt(ksp2_inbound, 'QueueName')),
+            ('NETKAN_REMOTE', KSP2_NETKAN_REMOTE),
+            ('CKANMETA_REMOTE', KSP2_CKANMETA_REMOTE),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'schedule': 'rate(30 minutes)',
@@ -746,11 +804,32 @@ services = [
         'memory': '256',
         'secrets': ['GH_Token'],
         'env': [
+            ('GAME', 'KSP'),
             (
                 'QUEUES', Sub(
                     '${Inbound},${Outbound}',
                     Inbound=GetAtt(inbound, 'QueueName'),
                     Outbound=GetAtt(outbound, 'QueueName')
+                )
+            ),
+            ('AWS_REGION', Sub('${AWS::Region}')),
+        ],
+        'volumes': [
+            ('ckan_cache', '/home/netkan/ckan_cache')
+        ]
+    },
+    {
+        'name': 'KSP2-Inflator',
+        'image': 'kspckan/inflator',
+        'memory': '256',
+        'secrets': ['GH_Token'],
+        'env': [
+            ('GAME', 'KSP2'),
+            (
+                'QUEUES', Sub(
+                    '${Inbound},${Outbound}',
+                    Inbound=GetAtt(ksp2_inbound, 'QueueName'),
+                    Outbound=GetAtt(ksp2_outbound, 'QueueName')
                 )
             ),
             ('AWS_REGION', Sub('${AWS::Region}')),
@@ -779,6 +858,19 @@ services = [
         'env': [
             ('NETKAN_REMOTE', NETKAN_REMOTE),
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),
+        ],
+        'schedule': 'rate(1 day)',
+    },
+    {
+        'name': 'KSP2-DownloadCounter',
+        'command': 'download-counter',
+        'memory': '156',
+        'secrets': [
+            'SSH_KEY', 'GH_Token',
+        ],
+        'env': [
+            ('NETKAN_REMOTE', KSP2_NETKAN_REMOTE),
+            ('CKANMETA_REMOTE', KSP2_CKANMETA_REMOTE),
         ],
         'schedule': 'rate(1 day)',
     },
@@ -877,6 +969,18 @@ services = [
         ],
     },
     {
+        'name': 'KSP2-Adder',
+        'command': 'spacedock-adder',
+        'secrets': ['GH_Token', 'SSH_KEY'],
+        'env': [
+            ('SQS_QUEUE', GetAtt(ksp2_addqueue, 'QueueName')),
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+            ('NETKAN_REMOTE', KSP2_NETKAN_REMOTE),
+            ('CKAN_USER', NETKAN_USER),
+            ('CKAN_REPO', KSP2_NETKAN_REPO),
+        ],
+    },
+    {
         'name': 'Mirrorer',
         'command': 'mirrorer',
         'secrets': [
@@ -886,6 +990,22 @@ services = [
             ('CKANMETA_REMOTE', CKANMETA_REMOTE),
             ('IA_collection', 'kspckanmods'),
             ('SQS_QUEUE', GetAtt(mirrorqueue, 'QueueName')),
+            ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
+        ],
+        'volumes': [
+            ('ckan_cache', '/home/netkan/ckan_cache'),
+        ],
+    },
+    {
+        'name': 'KSP2-Mirrorer',
+        'command': 'mirrorer',
+        'secrets': [
+            'IA_access', 'IA_secret', 'SSH_KEY', 'GH_Token'
+        ],
+        'env': [
+            ('CKANMETA_REMOTE', KSP2_CKANMETA_REMOTE),
+            ('IA_collection', 'kspckanmods'),
+            ('SQS_QUEUE', GetAtt(ksp2_mirrorqueue, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'volumes': [

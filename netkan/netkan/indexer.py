@@ -196,7 +196,7 @@ class MessageHandler:
             self.github_pr
         )
         if not ckan.Staged:
-            self.mamainster.append(ckan)
+            self.main.append(ckan)
         else:
             self.staged.append(ckan)
 
