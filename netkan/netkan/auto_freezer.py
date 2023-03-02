@@ -26,7 +26,7 @@ class AutoFreezer:
                         self._add_freezee(ident)
                     else:
                         logging.info('Already froze %s', ident)
-                self._submit_pr(self.BRANCH_NAME, days_limit, idle_mods)
+            self._submit_pr(self.BRANCH_NAME, days_limit, idle_mods)
 
     def mark_frozen_mods(self) -> None:
         with ModStatus.batch_write() as batch:
@@ -96,7 +96,6 @@ class AutoFreezer:
     def _submit_pr(self, branch_name: str, days: int, idle_mods: List[Tuple[str, datetime]]) -> None:
         if self.github_pr:
             logging.info('Submitting pull request for %s', branch_name)
-            self.nk_repo.git_repo.remotes.origin.push(f'{branch_name}:{branch_name}')
             self.github_pr.create_pull_request(
                 branch=branch_name,
                 title='Freeze idle mods',
