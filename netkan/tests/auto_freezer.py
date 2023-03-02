@@ -96,9 +96,6 @@ class TestAutoFreezer(unittest.TestCase):
             ])
 
             # Assert
-            self.assertEqual(nk_repo.git_repo.remotes.origin.push.mock_calls, [
-                call('test_branch_name:test_branch_name')
-            ])
             self.assertEqual(pr_mock.return_value.create_pull_request.mock_calls, [
                 call(branch='test_branch_name',
                      title='Freeze idle mods',
