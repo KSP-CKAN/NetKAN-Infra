@@ -1,11 +1,10 @@
 import logging
 
-import boto3
 import click
 
 from .common import common_options, pass_state, SharedArgs
 
-from ..indexer import MessageHandler
+from ..indexer import QueueHandler
 from ..scheduler import NetkanScheduler
 from ..spacedock_adder import SpaceDockAdder
 from ..mirrorer import Mirrorer
@@ -15,24 +14,7 @@ from ..mirrorer import Mirrorer
 @common_options
 @pass_state
 def indexer(common: SharedArgs) -> None:
-    sqs = boto3.resource('sqs')
-    queue = sqs.get_queue_by_name(QueueName=common.queue)
-
-    while True:
-        messages = queue.receive_messages(
-            MaxNumberOfMessages=10,
-            MessageAttributeNames=['All'],
-            VisibilityTimeout=common.timeout
-        )
-        if not messages:
-            continue
-        with MessageHandler(common.ckanmeta_repo, common.github_pr) as handler:
-            for message in messages:
-                handler.append(message)
-            handler.process_ckans()
-            queue.delete_messages(
-                Entries=handler.sqs_delete_entries()
-            )
+    QueueHandler(common).run()
 
 
 @click.command()

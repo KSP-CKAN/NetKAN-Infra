@@ -29,14 +29,16 @@ _COMMON_OPTIONS = [
     click.option('--deep-clone', is_flag=True, default=False, expose_value=False,
                  help='Perform a deep clone of the git repos', callback=ctx_callback),
     click.option('--ckanmeta-remote', envvar='CKANMETA_REMOTE', expose_value=False,
-                 help='Path/URL/SSH to Metadata Repo', callback=ctx_callback),
+                 help='game=Path/URL/SSH to Metadata Repos, ie ksp=http://gihub.com',
+                 multiple=True, callback=ctx_callback),
     click.option('--netkan-remote', envvar='NETKAN_REMOTE', expose_value=False,
-                 help='Path/URL/SSH to the Stub Metadata Repo', callback=ctx_callback),
+                 help='game=Path/URL/SSH to the Stub Metadata Repos, ie ksp=git@github.com',
+                 multiple=True, callback=ctx_callback),
     click.option('--token', envvar='GH_Token', expose_value=False,
                  help='GitHub Token for PRs', callback=ctx_callback),
     click.option('--repo', envvar='CKAN_REPO', expose_value=False,
                  help='GitHub repo to raise PR against (Org Repo: CKAN-meta/NetKAN)',
-                 callback=ctx_callback),
+                 multiple=True, callback=ctx_callback),
     click.option('--user', envvar='CKAN_USER', expose_value=False,
                  help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
                  callback=ctx_callback),
@@ -49,26 +51,86 @@ _COMMON_OPTIONS = [
     click.option('--ia-secret', envvar='IA_secret', expose_value=False,
                  help='Credentials for Internet Archive', callback=ctx_callback),
     click.option('--ia-collection', envvar='IA_collection', expose_value=False,
-                 help='Collection to put mirrored mods in on Internet Archive',
-                 callback=ctx_callback),
+                 help='game=Collection, for mirroring mods in on Internet Archive',
+                 multiple=True, callback=ctx_callback),
 ]
 
 
+class Game:
+    name: str
+    shared: 'SharedArgs'
+    _ckanmeta_repo: CkanMetaRepo
+    _ckanmeta_remote: str
+    _netkan_repo: NetkanRepo
+    _netkan_remote: str
+    _github_pr: GitHubPR
+
+    def __init__(self, name: str, shared: 'SharedArgs') -> None:
+        self.name = name
+        self.shared = shared
+
+    def args(self, arg: str) -> str:
+        result = [x.split('=')[1] for x in getattr(
+            self.shared, arg) if x.split('=')[0] == self.name][0]
+        if not result:
+            logging.fatal(
+                "Expecting attribute '%s' to be set for '%s'; exiting disgracefully!",
+                arg, self.name
+            )
+            sys.exit(1)
+        return result
+
+    @property
+    def ckanmeta_repo(self) -> CkanMetaRepo:
+        if getattr(self, '_ckanmeta_repo', None) is None:
+            self._ckanmeta_repo = CkanMetaRepo(
+                init_repo(self.ckanmeta_remote, '/tmp/CKAN-meta', self.shared.deep_clone))
+        return self._ckanmeta_repo
+
+    @property
+    def ckanmeta_remote(self) -> str:
+        if getattr(self, '_ckanmeta_remote', None) is None:
+            self._ckanmeta_remote = self.args('ckanmeta_remote')
+        return self._ckanmeta_remote
+
+    @property
+    def netkan_repo(self) -> NetkanRepo:
+        if getattr(self, '_netkan_repo', None) is None:
+            self._netkan_repo = NetkanRepo(
+                init_repo(self.netkan_remote, '/tmp/NetKAN', self.shared.deep_clone))
+        return self._netkan_repo
+
+    @property
+    def netkan_remote(self) -> str:
+        if getattr(self, '_netkan_remote', None) is None:
+            self._netkan_remote = self.args('netkan_remote')
+        return self._netkan_remote
+
+    @property
+    def github_pr(self) -> GitHubPR:
+        if getattr(self, '_github_pr', None) is None:
+            self._github_pr = GitHubPR(
+                self.shared.token, self.args('repo'), self.shared.user)
+        return self._github_pr
+
+
 class SharedArgs:
+    token: str
+    user: str
+    deep_clone: bool
+    queue: str
+    timeout: int
+    _debug: bool
+    _ssh_key: str
 
     def __init__(self) -> None:
         self._environment_data = None
-        self._debug: Optional[bool] = None
-        self._ssh_key: Optional[str] = None
-        self._ckanmeta_repo: Optional[CkanMetaRepo] = None
-        self._netkan_repo: Optional[NetkanRepo] = None
-        self._github_pr: Optional[GitHubPR] = None
-        self.deep_clone = False
 
     def __getattribute__(self, name: str) -> Any:
         attr = super().__getattribute__(name)
         if not name.startswith('_') and attr is None:
-            logging.fatal("Expecting attribute '%s' to be set; exiting disgracefully!", name)
+            logging.fatal(
+                "Expecting attribute '%s' to be set; exiting disgracefully!", name)
             sys.exit(1)
         return attr
 
@@ -95,44 +157,14 @@ class SharedArgs:
         init_ssh(value, Path(Path.home(), '.ssh'))
         self._ssh_key = value
 
-    @property
-    def ckanmeta_repo(self) -> CkanMetaRepo:
-        if not self._ckanmeta_repo:
-            self._ckanmeta_repo = CkanMetaRepo(
-                init_repo(self._ckanmeta_remote, '/tmp/CKAN-meta', self.deep_clone))
-        return self._ckanmeta_repo
-
-    @property
-    def ckanmeta_remote(self) -> str:
-        return self._ckanmeta_remote
-
-    @ckanmeta_remote.setter
-    def ckanmeta_remote(self, value: str) -> None:
-        self._ckanmeta_remote = value
-
-    @property
-    def netkan_repo(self) -> NetkanRepo:
-        if not self._netkan_repo:
-            self._netkan_repo = NetkanRepo(
-                init_repo(self._netkan_remote, '/tmp/NetKAN', self.deep_clone))
-        return self._netkan_repo
-
-    @property
-    def netkan_remote(self) -> str:
-        return self._netkan_remote
-
-    @netkan_remote.setter
-    def netkan_remote(self, value: str) -> None:
-        self._netkan_remote = value
-
-    @property
-    def github_pr(self) -> GitHubPR:
-        if not self._github_pr:
-            self._github_pr = GitHubPR(self.token, self.repo, self.user)
-        return self._github_pr
+    def game(self, game: str) -> Game:
+        if getattr(self, f'_game_{game}', None) is None:
+            setattr(self, f'_game_{game}', Game(game, self))
+        return getattr(self, f'_game_{game}')
 
 
-pass_state = click.make_pass_decorator(SharedArgs, ensure=True)  # pylint: disable=invalid-name
+pass_state = click.make_pass_decorator(
+    SharedArgs, ensure=True)  # pylint: disable=invalid-name
 
 
 def common_options(func: Callable[..., Any]) -> Callable[..., Any]:

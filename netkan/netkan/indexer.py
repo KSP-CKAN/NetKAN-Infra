@@ -6,10 +6,11 @@ from datetime import datetime, timezone
 from typing import List, Optional, Type, Dict, Any, Deque
 from types import TracebackType
 
-import boto3  # pylint: disable=unused-import
+import boto3
 from dateutil.parser import parse
 from git.objects.commit import Commit
 
+from .cli.common import SharedArgs
 from .metadata import Ckan
 from .repos import CkanMetaRepo
 from .status import ModStatus
@@ -218,3 +219,53 @@ class MessageHandler:
             self.ckm_repo.pull_remote_branch('master')
             self.ckm_repo.push_remote_branch('master')
         self._process_queue(self.staged)
+
+
+class QueueHandler:
+    common: SharedArgs
+    _game_handlers: Dict[str, MessageHandler]
+
+    def __init__(self, common: SharedArgs) -> None:
+        self.common = common
+
+    @property
+    def game_handlers(self) -> Dict[str, MessageHandler]:
+        if getattr(self, '_game_handlers', None) is None:
+            self._game_handlers = {}
+        return self._game_handlers
+
+    def game_handler(self, game: str) -> MessageHandler:
+        if self.game_handlers.get(game, None) is None:
+            self.game_handlers.update({
+                game: MessageHandler(
+                    repo=self.common.game(game).ckanmeta_repo,
+                    github_pr=self.common.game(game).github_pr,
+                )
+            })
+        return self.game_handlers[game]
+
+    def append_message(self, game: str, message: 'boto3.resources.factory.sqs.Message') -> None:
+        self.game_handler(game).append(message)
+
+    def run(self) -> None:
+        sqs = boto3.resource('sqs')
+        queue = sqs.get_queue_by_name(QueueName=self.common.queue)
+        while True:
+            messages = queue.receive_messages(
+                MaxNumberOfMessages=10,
+                MessageAttributeNames=['All'],
+                VisibilityTimeout=self.common.timeout
+            )
+            if not messages:
+                continue
+            for message in messages:
+                game = message.message_attributes.get(
+                    'GameId').get('StringValue')
+                self.append_message(game, message)
+
+            for _, handler in self.game_handlers.items():
+                with handler:
+                    handler.process_ckans()
+                queue.delete_messages(
+                    Entries=handler.sqs_delete_entries()
+                )
