@@ -20,9 +20,10 @@ else:
 
 class NetkanScheduler:
 
-    def __init__(self, common: SharedArgs, queue: str, github_token: str,
+    def __init__(self, common: SharedArgs, queue: str, github_token: str, game: str,
                  nonhooks_group: bool = False, webhooks_group: bool = False) -> None:
         self.common = common
+        self.game = game
         self.nonhooks_group = nonhooks_group
         self.webhooks_group = webhooks_group
         self.github_token = github_token
@@ -37,11 +38,11 @@ class NetkanScheduler:
 
     @property
     def nk_repo(self) -> NetkanRepo:
-        return self.common.netkan_repo
+        return self.common.game(self.game).netkan_repo
 
     @property
     def ckm_repo(self) -> CkanMetaRepo:
-        return self.common.ckanmeta_repo
+        return self.common.game(self.game).ckanmeta_repo
 
     def sqs_batch_attrs(self, batch: List[SendMessageBatchRequestEntryTypeDef]) -> Dict[str, Any]:
         return {

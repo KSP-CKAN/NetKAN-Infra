@@ -121,6 +121,7 @@ class Game:
 class SharedArgs:
     ckanmeta_remote: str
     deep_clone: bool
+    dev: bool
     netkan_remote: str
     queue: str
     repo: str
