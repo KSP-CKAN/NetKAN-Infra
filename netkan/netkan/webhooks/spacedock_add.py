@@ -1,10 +1,15 @@
 from hashlib import md5
 import json
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, TYPE_CHECKING
 from flask import Blueprint, current_app, request
 
 from ..common import sqs_batch_entries
 from .config import current_config
+
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.type_defs import SendMessageBatchRequestEntryTypeDef
+else:
+    SendMessageBatchRequestEntryTypeDef = object
 
 spacedock_add = Blueprint('spacedock_add', __name__)  # pylint: disable=invalid-name
 
@@ -37,7 +42,7 @@ def add_hook() -> Tuple[str, int]:
     return '', 204
 
 
-def batch_message(raw: Dict[str, Any]) -> Dict[str, Any]:
+def batch_message(raw: Dict[str, Any]) -> SendMessageBatchRequestEntryTypeDef:
     body = json.dumps(raw)
     return {
         'Id':                     '1',

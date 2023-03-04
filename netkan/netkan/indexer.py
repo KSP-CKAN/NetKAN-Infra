@@ -3,7 +3,7 @@ import logging
 from pathlib import Path, PurePath
 from collections import deque
 from datetime import datetime, timezone
-from typing import List, Optional, Type, Dict, Any, Deque
+from typing import List, Optional, Type, Dict, Any, Deque, TYPE_CHECKING
 from types import TracebackType
 
 import boto3
@@ -17,9 +17,19 @@ from .status import ModStatus
 from .github_pr import GitHubPR
 
 
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.service_resource import Message
+    from mypy_boto3_sqs.type_defs import DeleteMessageBatchRequestEntryTypeDef
+else:
+    Message = object
+    DeleteMessageBatchRequestEntryTypeDef = object
+
+USER_AGENT = 'Mozilla/5.0 (compatible; Netkanbot/1.0; CKAN; +https://github.com/KSP-CKAN/NetKAN-Infra)'
+
+
 class CkanMessage:
 
-    def __init__(self, msg: 'boto3.resources.factory.sqs.Message',
+    def __init__(self, msg: Message,
                  ckm_repo: CkanMetaRepo, github_pr: Optional[GitHubPR] = None) -> None:
         self.body = msg.body
         self.ckan = Ckan(contents=self.body)
@@ -35,7 +45,7 @@ class CkanMessage:
         self.indexed = False
         for item in msg.message_attributes.items():
             attr_type = f'{item[1]["DataType"]}Value'
-            content = item[1][attr_type]
+            content = item[1][attr_type]  # type: ignore[literal-required]
             if content.lower() in ['true', 'false']:
                 content = content.lower() == 'true'
             if item[0] == 'FileName':
@@ -155,7 +165,7 @@ class CkanMessage:
         self._process_ckan()
 
     @property
-    def delete_attrs(self) -> Dict[str, Any]:
+    def delete_attrs(self) -> DeleteMessageBatchRequestEntryTypeDef:
         return {
             'Id': self.message_id,
             'ReceiptHandle': self.receipt_handle
@@ -190,7 +200,7 @@ class MessageHandler:
                  exc_value: BaseException, traceback: TracebackType) -> None:
         self.ckm_repo.close_repo()
 
-    def append(self, message: 'boto3.resources.factory.sqs.Message') -> None:
+    def append(self, message: Message) -> None:
         ckan = CkanMessage(
             message,
             self.ckm_repo,
@@ -207,7 +217,7 @@ class MessageHandler:
             ckan.process_ckan()
             self.processed.append(ckan)
 
-    def sqs_delete_entries(self) -> List[Dict[str, Any]]:
+    def sqs_delete_entries(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
         return [c.delete_attrs for c in self.processed]
 
     # Currently we intermingle Staged/Master commits
@@ -244,7 +254,7 @@ class QueueHandler:
             })
         return self.game_handlers[game]
 
-    def append_message(self, game: str, message: 'boto3.resources.factory.sqs.Message') -> None:
+    def append_message(self, game: str, message: Message) -> None:
         self.game_handler(game).append(message)
 
     def run(self) -> None:
@@ -259,8 +269,11 @@ class QueueHandler:
             if not messages:
                 continue
             for message in messages:
-                game = message.message_attributes.get(
-                    'GameId').get('StringValue')
+                game = message.message_attributes.get(  # type: ignore[union-attr,call-overload]
+                    'GameId', {}).get('StringValue', None)
+                if game is None:
+                    logging.error('GameId missing from MessageAttributes')
+                    continue
                 self.append_message(game, message)
 
             for _, handler in self.game_handlers.items():

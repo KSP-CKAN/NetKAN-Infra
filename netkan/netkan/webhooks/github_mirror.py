@@ -1,13 +1,17 @@
 import re
 from pathlib import Path
 from hashlib import md5
-from typing import Tuple, List, Iterable, Dict, Any, Set, Union
+from typing import Tuple, List, Iterable, Dict, Any, Set, Union, TYPE_CHECKING
 from flask import Blueprint, current_app, request, jsonify, Response
 
 from .github_utils import signature_required
 from ..common import sqs_batch_entries
 from .config import current_config
 
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.type_defs import SendMessageBatchRequestEntryTypeDef
+else:
+    SendMessageBatchRequestEntryTypeDef = object
 
 github_mirror = Blueprint('github_mirror', __name__)  # pylint: disable=invalid-name
 
@@ -50,7 +54,7 @@ def mirror_hook() -> Tuple[Union[Response, str], int]:
 forbidden_id_chars = re.compile('[^-_A-Za-z0-9]')  # pylint: disable=invalid-name
 
 
-def batch_message(path: Path) -> Dict[str, Any]:
+def batch_message(path: Path) -> SendMessageBatchRequestEntryTypeDef:
     body = path.as_posix()
     return {
         'Id':                     forbidden_id_chars.sub('_', body)[-80:],

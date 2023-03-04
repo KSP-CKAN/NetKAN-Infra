@@ -5,11 +5,16 @@ from pathlib import Path
 from hashlib import sha1
 import uuid
 import urllib.parse
-from typing import Optional, List, Tuple, Union, Any, Dict
+from typing import Optional, List, Tuple, Union, Any, Dict, TYPE_CHECKING
 from ruamel.yaml import YAML
 import dateutil.parser
 
 from .csharp_compat import csharp_uri_tostring
+
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.type_defs import SendMessageBatchRequestEntryTypeDef
+else:
+    SendMessageBatchRequestEntryTypeDef = object
 
 
 class Netkan:
@@ -90,7 +95,8 @@ class Netkan:
             attribs['HighestVersion'] = self.string_attrib(high_ver.string)
         return attribs
 
-    def sqs_message(self, high_ver: Optional['Ckan.Version'] = None) -> Dict[str, Any]:
+    def sqs_message(
+            self, high_ver: Optional['Ckan.Version'] = None) -> SendMessageBatchRequestEntryTypeDef:
         hex_id = uuid.uuid4().hex
         return {
             'Id': hex_id,

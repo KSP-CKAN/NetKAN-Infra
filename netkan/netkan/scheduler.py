@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, TYPE_CHECKING
 
 import boto3
 import requests
@@ -9,6 +9,13 @@ from .repos import NetkanRepo, CkanMetaRepo
 from .metadata import Netkan
 from .common import sqs_batch_entries, github_limit_remaining
 from .cli.common import SharedArgs
+
+if TYPE_CHECKING:
+    from mypy_boto3_cloudwatch.client import CloudWatchClient
+    from mypy_boto3_sqs.type_defs import SendMessageBatchRequestEntryTypeDef
+else:
+    CloudWatchClient = object
+    SendMessageBatchRequestEntryTypeDef = object
 
 
 class NetkanScheduler:
@@ -36,7 +43,7 @@ class NetkanScheduler:
     def ckm_repo(self) -> CkanMetaRepo:
         return self.common.ckanmeta_repo
 
-    def sqs_batch_attrs(self, batch: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def sqs_batch_attrs(self, batch: List[SendMessageBatchRequestEntryTypeDef]) -> Dict[str, Any]:
         return {
             'QueueUrl': self.queue_url,
             'Entries': batch
@@ -52,7 +59,7 @@ class NetkanScheduler:
             self.client.send_message_batch(**self.sqs_batch_attrs(batch))
 
     @staticmethod
-    def cpu_credits(cloudwatch: 'boto3.CloudWatch.Client', instance_id: str,
+    def cpu_credits(cloudwatch: CloudWatchClient, instance_id: str,
                     start: datetime.datetime, end: datetime.datetime) -> int:
         stats = cloudwatch.get_metric_statistics(
             Dimensions=[{'Name': 'InstanceId', 'Value': instance_id}],
@@ -68,13 +75,13 @@ class NetkanScheduler:
         # check, but useful to avoid DoS'ing the service when we're doing high CPU operations.
         creds = 0
         try:
-            creds = stats['Datapoints'][0]['Average']
+            creds = int(stats['Datapoints'][0]['Average'])
         except IndexError:
             logging.error("Couldn't acquire CPU Credit Stats")
-        return int(creds)
+        return creds
 
     @staticmethod
-    def volume_credits_percent(cloudwatch: 'boto3.CloudWatch.Client', instance_id: str,
+    def volume_credits_percent(cloudwatch: CloudWatchClient, instance_id: str,
                                start: datetime.datetime, end: datetime.datetime) -> int:
         client = boto3.client('ec2')
         response = client.describe_volumes(
@@ -97,10 +104,10 @@ class NetkanScheduler:
         )
         creds = 0
         try:
-            creds = stats['Datapoints'][0]['Average']
+            creds = int(stats['Datapoints'][0]['Average'])
         except IndexError:
             logging.error("Couldn't acquire Volume Credit Stats")
-        return int(creds)
+        return creds
 
     def can_schedule(self, max_queued: int, dev: bool = False,
                      min_cpu: int = 50, min_io: int = 70, min_gh: int = 1500) -> bool:
