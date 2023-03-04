@@ -70,9 +70,13 @@ class Game:
         self.shared = shared
 
     def args(self, arg: str) -> str:
-        result = [x.split('=')[1] for x in getattr(
-            self.shared, arg) if x.split('=')[0] == self.name][0]
-        if not result:
+        result = None
+        try:
+            result = [x.split('=')[1] for x in getattr(
+                self.shared, arg) if x.split('=')[0] == self.name][0]
+        except IndexError:
+            pass
+        if result is None:
             logging.fatal(
                 "Expecting attribute '%s' to be set for '%s'; exiting disgracefully!",
                 arg, self.name
