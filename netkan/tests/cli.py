@@ -1,18 +1,21 @@
-import unittest
+import sys
 from time import time
 from os import utime
 from pathlib import Path, PurePath
 from shutil import copy2
 from tempfile import TemporaryDirectory
+from unittest import TestCase, mock
+
 from click.testing import CliRunner
 from git import Repo
 
 from netkan.cli import clean_cache
+from netkan.cli.common import SharedArgs, Game
 from netkan.repos import NetkanRepo
 
 
 # This file is intended to test the commands in cli.py, running them directly via click.testing.CliRunner().invoke().
-class TestCleanCache(unittest.TestCase):
+class TestCleanCache(TestCase):
 
     cache_path = TemporaryDirectory()
     testdata_path = Path(PurePath(__file__).parent, 'testdata/NetKAN/')
@@ -44,8 +47,68 @@ class TestCleanCache(unittest.TestCase):
 
     def test_clean_all(self):
 
-        result = self.runner.invoke(clean_cache, ['--days', '42', '--cache', self.cache_path.name])
+        result = self.runner.invoke(
+            clean_cache, ['--days', '42', '--cache', self.cache_path.name])
 
         self.assertEqual(result.exit_code, 0)
         self.assertFalse(Path.exists(self.target_file_1))
         self.assertTrue(Path.exists(self.target_file_2))
+
+
+class TestSharedArgs(TestCase):
+
+    def test_debug_unset(self):
+        shared = SharedArgs()
+        with mock.patch.object(sys, 'argv', ['group', 'command']):
+            setattr(shared, 'debug', None)
+            self.assertFalse(shared.debug)
+
+    def test_shared_unset_arg_exits(self):
+        shared = SharedArgs()
+        with self.assertRaises(SystemExit) as error:
+            shared.ckanmeta_remote  # pylint: disable=pointless-statement
+        self.assertEqual(error.exception.code, 1)
+
+
+class TestGame(TestCase):
+
+    def setUp(self):
+        self.shared_args = SharedArgs()
+        attributes = [
+            ('ckanmeta_remote',
+             ('ksp=github/KSP-CKAN/CKAN-Meta', 'ksp2=github/KSP-CKAN/KSP2-CKAN-Meta')),
+            ('netkan_remote',
+             ('ksp=github/KSP-CKAN/NetKAN', 'ksp2=github/KSP-CKAN/KSP2-NetKAN')),
+        ]
+        for attr, val in attributes:
+            setattr(self.shared_args, attr, val)
+
+    def test_game_unset_var_exits(self):
+        game = Game('unknown', self.shared_args)
+        with self.assertRaises(SystemExit) as error:
+            game.ckanmeta_remote  # pylint: disable=pointless-statement
+        self.assertEqual(error.exception.code, 1)
+
+    def test_shared_args_game_ksp(self):
+        self.assertEqual(self.shared_args.game('ksp').name, 'ksp')
+        self.assertIsInstance(self.shared_args.game('ksp'), Game)
+
+    def test_ckanmeta_remote_ksp(self):
+        self.assertEqual(
+            Game('ksp', self.shared_args).ckanmeta_remote, 'github/KSP-CKAN/CKAN-Meta')
+
+    def test_netkan_remote_ksp(self):
+        self.assertEqual(
+            Game('ksp', self.shared_args).netkan_remote, 'github/KSP-CKAN/NetKAN')
+
+    def test_shared_args_game_ksp2(self):
+        self.assertEqual(self.shared_args.game('ksp2').name, 'ksp2')
+        self.assertIsInstance(self.shared_args.game('ksp'), Game)
+
+    def test_ckanmeta_remote_ksp2(self):
+        self.assertEqual(
+            Game('ksp2', self.shared_args).ckanmeta_remote, 'github/KSP-CKAN/KSP2-CKAN-Meta')
+
+    def test_netkan_remote_ksp2(self):
+        self.assertEqual(
+            Game('ksp2', self.shared_args).netkan_remote, 'github/KSP-CKAN/KSP2-NetKAN')
