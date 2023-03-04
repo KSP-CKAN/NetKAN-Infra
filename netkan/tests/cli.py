@@ -13,6 +13,8 @@ from netkan.cli import clean_cache
 from netkan.cli.common import SharedArgs, Game
 from netkan.repos import NetkanRepo
 
+from .common import SharedArgsHarness
+
 
 # This file is intended to test the commands in cli.py, running them directly via click.testing.CliRunner().invoke().
 class TestCleanCache(TestCase):
@@ -70,18 +72,7 @@ class TestSharedArgs(TestCase):
         self.assertEqual(error.exception.code, 1)
 
 
-class TestGame(TestCase):
-
-    def setUp(self):
-        self.shared_args = SharedArgs()
-        attributes = [
-            ('ckanmeta_remote',
-             ('ksp=github/KSP-CKAN/CKAN-Meta', 'ksp2=github/KSP-CKAN/KSP2-CKAN-Meta')),
-            ('netkan_remote',
-             ('ksp=github/KSP-CKAN/NetKAN', 'ksp2=github/KSP-CKAN/KSP2-NetKAN')),
-        ]
-        for attr, val in attributes:
-            setattr(self.shared_args, attr, val)
+class TestGame(SharedArgsHarness):
 
     def test_game_unset_var_exits(self):
         game = Game('unknown', self.shared_args)
@@ -94,21 +85,25 @@ class TestGame(TestCase):
         self.assertIsInstance(self.shared_args.game('ksp'), Game)
 
     def test_ckanmeta_remote_ksp(self):
+        path = f'{self.tmpdir.name}/upstream/ckan'
         self.assertEqual(
-            Game('ksp', self.shared_args).ckanmeta_remote, 'github/KSP-CKAN/CKAN-Meta')
+            Game('ksp', self.shared_args).ckanmeta_remote, path)
 
     def test_netkan_remote_ksp(self):
+        path = f'{self.tmpdir.name}/upstream/netkan'
         self.assertEqual(
-            Game('ksp', self.shared_args).netkan_remote, 'github/KSP-CKAN/NetKAN')
+            Game('ksp', self.shared_args).netkan_remote, path)
 
     def test_shared_args_game_ksp2(self):
         self.assertEqual(self.shared_args.game('ksp2').name, 'ksp2')
         self.assertIsInstance(self.shared_args.game('ksp'), Game)
 
     def test_ckanmeta_remote_ksp2(self):
+        path = f'{self.tmpdir.name}/upstream/ckan'
         self.assertEqual(
-            Game('ksp2', self.shared_args).ckanmeta_remote, 'github/KSP-CKAN/KSP2-CKAN-Meta')
+            Game('ksp2', self.shared_args).ckanmeta_remote, path)
 
     def test_netkan_remote_ksp2(self):
+        path = f'{self.tmpdir.name}/upstream/netkan'
         self.assertEqual(
-            Game('ksp2', self.shared_args).netkan_remote, 'github/KSP-CKAN/KSP2-NetKAN')
+            Game('ksp2', self.shared_args).netkan_remote, path)

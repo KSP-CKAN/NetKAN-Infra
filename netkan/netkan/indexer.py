@@ -231,7 +231,7 @@ class MessageHandler:
         self._process_queue(self.staged)
 
 
-class QueueHandler:
+class IndexerQueueHandler:
     common: SharedArgs
     _game_handlers: Dict[str, MessageHandler]
 

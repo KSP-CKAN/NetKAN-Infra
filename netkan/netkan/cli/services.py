@@ -4,7 +4,7 @@ import click
 
 from .common import common_options, pass_state, SharedArgs
 
-from ..indexer import QueueHandler
+from ..indexer import IndexerQueueHandler
 from ..scheduler import NetkanScheduler
 from ..spacedock_adder import SpaceDockAdder
 from ..mirrorer import Mirrorer
@@ -14,7 +14,7 @@ from ..mirrorer import Mirrorer
 @common_options
 @pass_state
 def indexer(common: SharedArgs) -> None:
-    QueueHandler(common).run()
+    IndexerQueueHandler(common).run()
 
 
 @click.command()

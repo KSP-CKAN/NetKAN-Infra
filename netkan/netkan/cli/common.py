@@ -59,6 +59,7 @@ _COMMON_OPTIONS = [
 class Game:
     name: str
     shared: 'SharedArgs'
+    clone_base: str = '/tmp'
     _ckanmeta_repo: CkanMetaRepo
     _ckanmeta_remote: str
     _netkan_repo: NetkanRepo
@@ -84,11 +85,19 @@ class Game:
             sys.exit(1)
         return result
 
+    def repo_base_path(self, path: str) -> str:
+        return f'{self.clone_base}/{self.name}/{path}'
+
     @property
     def ckanmeta_repo(self) -> CkanMetaRepo:
         if getattr(self, '_ckanmeta_repo', None) is None:
             self._ckanmeta_repo = CkanMetaRepo(
-                init_repo(self.ckanmeta_remote, '/tmp/CKAN-meta', self.shared.deep_clone))
+                init_repo(
+                    self.ckanmeta_remote,
+                    self.repo_base_path('CKAN-meta'),
+                    self.shared.deep_clone
+                )
+            )
         return self._ckanmeta_repo
 
     @property
@@ -101,7 +110,12 @@ class Game:
     def netkan_repo(self) -> NetkanRepo:
         if getattr(self, '_netkan_repo', None) is None:
             self._netkan_repo = NetkanRepo(
-                init_repo(self.netkan_remote, '/tmp/NetKAN', self.shared.deep_clone))
+                init_repo(
+                    self.netkan_remote,
+                    self.repo_base_path('NetKAN'),
+                    self.shared.deep_clone
+                )
+            )
         return self._netkan_repo
 
     @property
