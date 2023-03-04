@@ -119,11 +119,14 @@ class Game:
 
 
 class SharedArgs:
+    ckanmeta_remote: str
+    deep_clone: bool
+    netkan_remote: str
+    queue: str
+    repo: str
+    timeout: int
     token: str
     user: str
-    deep_clone: bool
-    queue: str
-    timeout: int
     _debug: bool
     _ssh_key: str
 
@@ -131,7 +134,11 @@ class SharedArgs:
         self._environment_data = None
 
     def __getattribute__(self, name: str) -> Any:
-        attr = super().__getattribute__(name)
+        attr = None
+        try:
+            attr = super().__getattribute__(name)
+        except AttributeError:
+            pass
         if not name.startswith('_') and attr is None:
             logging.fatal(
                 "Expecting attribute '%s' to be set; exiting disgracefully!", name)
