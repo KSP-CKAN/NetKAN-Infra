@@ -1,0 +1,7 @@
+[report]
+include =
+    netkan/*
+
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
