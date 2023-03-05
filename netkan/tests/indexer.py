@@ -253,10 +253,7 @@ class TestMessageHandler(SharedArgsHarness):
 
     def setUp(self):
         super().setUp()
-        self.handler = MessageHandler(
-            repo=self.shared_args.game('ksp').ckanmeta_repo,
-            github_pr=self.shared_args.game('ksp').github_pr,
-        )
+        self.handler = MessageHandler(game=self.shared_args.game('ksp'))
 
     def test_class_string(self):
         self.handler.append(self.mocked_message())
@@ -293,24 +290,21 @@ class TestMessageHandler(SharedArgsHarness):
             self.assertTrue(repo.is_active_branch('test_branch'))
         repo.checkout_branch('test_branch')
         self.assertTrue(repo.is_active_branch('test_branch'))
-        with MessageHandler(
-            repo=repo,
-            github_pr=self.shared_args.game('ksp').github_pr,
-        ) as handler:
+        with MessageHandler(game=self.shared_args.game('ksp')) as handler:
             self.assertTrue(repo.is_active_branch('master'))
 
     @ mock.patch('netkan.indexer.CkanMessage.process_ckan')
     def test_process_ckans(self, mocked_process):
         self.handler.append(self.mocked_message())
         self.handler.append(self.mocked_message(staged=True))
-        self.handler.process_ckans()
+        self.handler.process_messages()
         self.assertEqual(len(self.handler.processed), 2)
 
     @ mock.patch('netkan.indexer.CkanMessage.process_ckan')
     def test_delete_attrs(self, mocked_process):
         self.handler.append(self.mocked_message())
         self.handler.append(self.mocked_message(staged=True))
-        self.handler.process_ckans()
+        self.handler.process_messages()
         attrs = [{'Id': 'MessageMcMessageFace', 'ReceiptHandle': 'HandleMcHandleFace'}, {
             'Id': 'MessageMcMessageFace', 'ReceiptHandle': 'HandleMcHandleFace'}]
         self.assertEqual(self.handler.sqs_delete_entries(), attrs)

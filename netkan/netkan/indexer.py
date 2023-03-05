@@ -3,14 +3,12 @@ import logging
 from pathlib import Path, PurePath
 from collections import deque
 from datetime import datetime, timezone
-from typing import List, Optional, Type, Dict, Any, Deque, TYPE_CHECKING
-from types import TracebackType
+from typing import List, Optional, Dict, Any, Deque, Type, TYPE_CHECKING
 
-import boto3
 from dateutil.parser import parse
 from git.objects.commit import Commit
 
-from .cli.common import SharedArgs
+from .common import BaseMessageHandler, QueueHandler
 from .metadata import Ckan
 from .repos import CkanMetaRepo
 from .status import ModStatus
@@ -172,14 +170,10 @@ class CkanMessage:
         }
 
 
-class MessageHandler:
-
-    def __init__(self, repo: CkanMetaRepo, github_pr: Optional[GitHubPR] = None) -> None:
-        self.ckm_repo = repo
-        self.github_pr = github_pr
-        self.master: Deque[CkanMessage] = deque()
-        self.staged: Deque[CkanMessage] = deque()
-        self.processed: List[CkanMessage] = []
+class MessageHandler(BaseMessageHandler):
+    _master: Deque[CkanMessage]
+    _staged: Deque[CkanMessage]
+    _processed: List[CkanMessage]
 
     def __str__(self) -> str:
         return str(' '.join([str(x) for x in self.master + self.staged]))
@@ -187,18 +181,27 @@ class MessageHandler:
     def __len__(self) -> int:
         return len(self.master + self.staged)
 
-    # Apparently gitpython can be leaky on long running processes
-    # we can ensure we call close on it and run our handler inside
-    # a context manager
-    def __enter__(self) -> 'MessageHandler':
-        if not self.ckm_repo.is_active_branch('master'):
-            self.ckm_repo.checkout_branch('master')
-        self.ckm_repo.pull_remote_branch('master')
-        return self
+    @property
+    def github_pr(self) -> GitHubPR:
+        return self.game.github_pr
 
-    def __exit__(self, exc_type: Type[BaseException],
-                 exc_value: BaseException, traceback: TracebackType) -> None:
-        self.ckm_repo.close_repo()
+    @property
+    def master(self) -> Deque[CkanMessage]:
+        if getattr(self, '_master', None) is None:
+            self._master = deque()
+        return self._master
+
+    @property
+    def staged(self) -> Deque[CkanMessage]:
+        if getattr(self, '_staged', None) is None:
+            self._staged = deque()
+        return self._staged
+
+    @property
+    def processed(self) -> List[CkanMessage]:
+        if getattr(self, '_processed', None) is None:
+            self._processed = []
+        return self._processed
 
     def append(self, message: Message) -> None:
         ckan = CkanMessage(
@@ -223,7 +226,7 @@ class MessageHandler:
     # Currently we intermingle Staged/Master commits
     # separating them out will be a little more efficient
     # with our push/pull traffic.
-    def process_ckans(self) -> None:
+    def process_messages(self) -> None:
         self._process_queue(self.master)
         if any(ckan.indexed for ckan in self.processed):
             self.ckm_repo.pull_remote_branch('master')
@@ -231,54 +234,5 @@ class MessageHandler:
         self._process_queue(self.staged)
 
 
-class IndexerQueueHandler:
-    common: SharedArgs
-    _game_handlers: Dict[str, MessageHandler]
-
-    def __init__(self, common: SharedArgs) -> None:
-        self.common = common
-
-    @property
-    def game_handlers(self) -> Dict[str, MessageHandler]:
-        if getattr(self, '_game_handlers', None) is None:
-            self._game_handlers = {}
-        return self._game_handlers
-
-    def game_handler(self, game: str) -> MessageHandler:
-        if self.game_handlers.get(game, None) is None:
-            self.game_handlers.update({
-                game: MessageHandler(
-                    repo=self.common.game(game).ckanmeta_repo,
-                    github_pr=self.common.game(game).github_pr,
-                )
-            })
-        return self.game_handlers[game]
-
-    def append_message(self, game: str, message: Message) -> None:
-        self.game_handler(game).append(message)
-
-    def run(self) -> None:
-        sqs = boto3.resource('sqs')
-        queue = sqs.get_queue_by_name(QueueName=self.common.queue)
-        while True:
-            messages = queue.receive_messages(
-                MaxNumberOfMessages=10,
-                MessageAttributeNames=['All'],
-                VisibilityTimeout=self.common.timeout
-            )
-            if not messages:
-                continue
-            for message in messages:
-                game = message.message_attributes.get(  # type: ignore[union-attr,call-overload]
-                    'GameId', {}).get('StringValue', None)
-                if game is None:
-                    logging.error('GameId missing from MessageAttributes')
-                    continue
-                self.append_message(game, message)
-
-            for _, handler in self.game_handlers.items():
-                with handler:
-                    handler.process_ckans()
-                queue.delete_messages(
-                    Entries=handler.sqs_delete_entries()
-                )
+class IndexerQueueHandler(QueueHandler):
+    _handler_class: Type[BaseMessageHandler] = MessageHandler
