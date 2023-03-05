@@ -182,7 +182,7 @@ class MessageHandler:
         self.processed: List[CkanMessage] = []
 
     def __str__(self) -> str:
-        return str(self.master + self.staged)
+        return str(' '.join([str(x) for x in self.master + self.staged]))
 
     def __len__(self) -> int:
         return len(self.master + self.staged)
