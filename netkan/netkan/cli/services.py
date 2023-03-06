@@ -62,9 +62,11 @@ def scheduler(
 @common_options
 @pass_state
 def mirrorer(common: SharedArgs) -> None:
+    # We need at least 50 mods for a collection for ksp2, keeping
+    # to just ksp for now
     Mirrorer(
-        common.ckanmeta_repo, common.ia_access, common.ia_secret,
-        common.ia_collection, common.token
+        common.game('ksp').ckanmeta_repo, common.ia_access, common.ia_secret,
+        common.game('ksp').ia_collection, common.token
     ).process_queue(common.queue, common.timeout)
 
 

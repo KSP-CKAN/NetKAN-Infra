@@ -58,6 +58,8 @@ class SharedArgsHarness(TestCase):
              (f'ksp={netkan_upstream}', f'ksp2={netkan_upstream}')),
             ('repo',
              ('ksp=Test/KSP', 'ksp2=Test/KSP2')),
+            ('ia_collection',
+             ('ksp=kspckanmods'))
         ]
         for attr, val in attributes:
             setattr(self.shared_args, attr, val)

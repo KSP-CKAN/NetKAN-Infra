@@ -65,6 +65,7 @@ class Game:
     _netkan_repo: NetkanRepo
     _netkan_remote: str
     _github_pr: GitHubPR
+    _ia_collection: str
 
     def __init__(self, name: str, shared: 'SharedArgs') -> None:
         self.name = name
@@ -131,6 +132,12 @@ class Game:
                 self.shared.token, self.args('repo'), self.shared.user)
         return self._github_pr
 
+    @property
+    def ia_collection(self) -> str:
+        if getattr(self, '_ia_collection', None) is None:
+            self._ia_collection = self.args('netkan_remote')
+        return self._ia_collection
+
 
 class SharedArgs:
     ckanmeta_remote: str
@@ -138,6 +145,8 @@ class SharedArgs:
     dev: bool
     netkan_remote: str
     queue: str
+    ia_access: str
+    ia_secret: str
     repo: str
     timeout: int
     token: str
