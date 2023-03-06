@@ -3,60 +3,49 @@ import re
 import io
 from importlib.resources import read_text
 from string import Template
-from collections import defaultdict
+from collections import defaultdict, deque
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Deque, Any, List, Optional, Type, TYPE_CHECKING
 import git
-import boto3
 from ruamel.yaml import YAML
 
 from .github_pr import GitHubPR
 from .mod_analyzer import ModAnalyzer
-from .common import deletion_msg
-
+from .common import BaseMessageHandler, QueueHandler
 from .repos import NetkanRepo
+
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.service_resource import Message
+    from mypy_boto3_sqs.type_defs import DeleteMessageBatchRequestEntryTypeDef
+else:
+    Message = object
+    DeleteMessageBatchRequestEntryTypeDef = object
 
 
 # https://github.com/KSP-SpaceDock/SpaceDock/blob/master/KerbalStuff/ckan.py
 class SpaceDockAdder:
-
     PR_BODY_TEMPLATE = Template(read_text('netkan', 'pr_body_template.md'))
     USER_TEMPLATE = Template('[$username]($user_url)')
+    _info: Dict[str, Any]
 
-    def __init__(self, queue: str, timeout: int, nk_repo: NetkanRepo, github_pr: Optional[GitHubPR] = None) -> None:
-        sqs = boto3.resource('sqs')
-        self.sqs_client = boto3.client('sqs')
-        self.queue = sqs.get_queue_by_name(QueueName=queue)
-        self.timeout = timeout
+    def __init__(self, message: Message, nk_repo: NetkanRepo, github_pr: Optional[GitHubPR] = None) -> None:
+        self.message = message
         self.nk_repo = nk_repo
         self.github_pr = github_pr
         self.yaml = YAML()
         self.yaml.indent(mapping=2, sequence=4, offset=2)
 
-    def run(self) -> None:
-        while True:
-            messages = self.queue.receive_messages(
-                MaxNumberOfMessages=10,
-                MessageAttributeNames=['All'],
-                VisibilityTimeout=self.timeout,
-            )
-            if messages:
-                self.nk_repo.git_repo.heads.master.checkout()
-                self.nk_repo.git_repo.remotes.origin.pull(
-                    'master', strategy_option='ours')
+    def __str__(self) -> str:
+        return f"{self.info.get('name', '')}"
 
-                # Start processing the messages
-                to_delete = []
-                for msg in messages:
-                    if self.try_add(json.loads(msg.body)):
-                        # Successfully handled -> OK to delete
-                        to_delete.append(deletion_msg(msg))
-                self.queue.delete_messages(Entries=to_delete)
-                # Clean up GitPython's lingering file handles between batches
-                self.nk_repo.git_repo.close()
+    @property
+    def info(self) -> Dict[str, Any]:
+        if getattr(self, '_info', None) is None:
+            self._info = json.loads(self.message.body)
+        return self._info
 
-    def try_add(self, info: Dict[str, Any]) -> bool:
-        netkan = self.make_netkan(info)
+    def try_add(self) -> bool:
+        netkan = self.make_netkan(self.info)
 
         # Create .netkan file or quit if already there
         netkan_path = self.nk_repo.nk_path(netkan.get('identifier', ''))
@@ -92,10 +81,10 @@ class SpaceDockAdder:
         # Commit
         self.nk_repo.git_repo.index.commit(
             (
-                f"Add {info.get('name')} from {info.get('site_name')}"
-                f"\n\nThis is an automated commit on behalf of {info.get('username')}"
+                f"Add {self.info.get('name')} from {self.info.get('site_name')}"
+                f"\n\nThis is an automated commit on behalf of {self.info.get('username')}"
             ),
-            author=git.Actor(info.get('username'), info.get('email'))
+            author=git.Actor(self.info.get('username'), self.info.get('email'))
         )
 
         # Push branch
@@ -105,10 +94,12 @@ class SpaceDockAdder:
         # Create pull request
         if self.github_pr:
             self.github_pr.create_pull_request(
-                title=f"Add {info.get('name')} from {info.get('site_name')}",
+                title=f"Add {self.info.get('name')} from {self.info.get('site_name')}",
                 branch=branch_name,
-                body=SpaceDockAdder._pr_body(info),
-                labels=['Pull request', 'Mod request'])
+                body=self.PR_BODY_TEMPLATE.safe_substitute(
+                    defaultdict(lambda: '', self.info)),
+                labels=['Pull request', 'Mod-request'],
+            )
         return True
 
     @staticmethod
@@ -149,3 +140,65 @@ class SpaceDockAdder:
             **(props),
             'x_via': f"Automated {info.get('site_name')} CKAN submission"
         }
+
+    @property
+    def delete_attrs(self) -> DeleteMessageBatchRequestEntryTypeDef:
+        return {
+            'Id': self.message.message_id,
+            'ReceiptHandle': self.message.receipt_handle
+        }
+
+
+class SpaceDockMessageHandler(BaseMessageHandler):
+    _queued: Deque[SpaceDockAdder]
+    _processed: List[SpaceDockAdder]
+
+    def __str__(self) -> str:
+        return str(' '.join([str(x) for x in self.queued]))
+
+    def __len__(self) -> int:
+        return len(self.queued)
+
+    @property
+    def repo(self) -> NetkanRepo:
+        return self.game.netkan_repo
+
+    @property
+    def github_pr(self) -> GitHubPR:
+        return self.game.github_pr
+
+    @property
+    def queued(self) -> Deque[SpaceDockAdder]:
+        if getattr(self, '_queued', None) is None:
+            self._queued = deque()
+        return self._queued
+
+    @property
+    def processed(self) -> List[SpaceDockAdder]:
+        if getattr(self, '_processed', None) is None:
+            self._processed = []
+        return self._processed
+
+    def append(self, message: Message) -> None:
+        netkan = SpaceDockAdder(
+            message,
+            self.repo,
+            self.github_pr
+        )
+        self.queued.append(netkan)
+
+    def _process_queue(self, queue: Deque[SpaceDockAdder]) -> None:
+        while queue:
+            netkan = queue.popleft()
+            if netkan.try_add():
+                self.processed.append(netkan)
+
+    def sqs_delete_entries(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
+        return [c.delete_attrs for c in self.processed]
+
+    def process_messages(self) -> None:
+        self._process_queue(self.queued)
+
+
+class SpaceDockAdderQueueHandler(QueueHandler):
+    _handler_class: Type[BaseMessageHandler] = SpaceDockMessageHandler

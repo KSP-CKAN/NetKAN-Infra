@@ -78,11 +78,11 @@ class SharedArgsHarness(TestCase):
         mock.patch.stopall()
 
     @staticmethod
-    def mocked_message(staged=False):
+    def mocked_message(staged=False, filename='DogeCoinFlag-v1.02.ckan'):
         msg = mock.Mock()
         msg.body = Path(
             PurePath(__file__).parent,
-            'testdata/DogeCoinFlag-v1.02.ckan'
+            'testdata/', filename
         ).read_text('utf-8')
         msg.message_attributes = {
             'CheckTime': {
@@ -92,7 +92,7 @@ class SharedArgsHarness(TestCase):
             'Staged': {'StringValue': str(staged), 'DataType': 'String'},
             'Success': {'StringValue': 'True', 'DataType': 'String'},
             'FileName': {
-                'StringValue': './DogeCoinFlag-v1.02.ckan',
+                'StringValue': f'./{filename}',
                 'DataType': 'String'
             }
         }

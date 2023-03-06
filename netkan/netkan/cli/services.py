@@ -6,7 +6,7 @@ from .common import common_options, pass_state, SharedArgs
 
 from ..indexer import IndexerQueueHandler
 from ..scheduler import NetkanScheduler
-from ..spacedock_adder import SpaceDockAdder
+from ..spacedock_adder import SpaceDockAdderQueueHandler
 from ..mirrorer import Mirrorer
 
 
@@ -74,10 +74,4 @@ def mirrorer(common: SharedArgs) -> None:
 @common_options
 @pass_state
 def spacedock_adder(common: SharedArgs) -> None:
-    sd_adder = SpaceDockAdder(
-        common.queue,
-        common.timeout,
-        common.netkan_repo,
-        common.github_pr,
-    )
-    sd_adder.run()
+    SpaceDockAdderQueueHandler(common).run()
