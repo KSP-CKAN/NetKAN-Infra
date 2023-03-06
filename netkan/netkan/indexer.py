@@ -182,6 +182,10 @@ class MessageHandler(BaseMessageHandler):
         return len(self.master + self.staged)
 
     @property
+    def repo(self) -> CkanMetaRepo:
+        return self.game.ckanmeta_repo
+
+    @property
     def github_pr(self) -> GitHubPR:
         return self.game.github_pr
 
@@ -206,7 +210,7 @@ class MessageHandler(BaseMessageHandler):
     def append(self, message: Message) -> None:
         ckan = CkanMessage(
             message,
-            self.ckm_repo,
+            self.repo,
             self.github_pr
         )
         if not ckan.Staged:
@@ -229,8 +233,8 @@ class MessageHandler(BaseMessageHandler):
     def process_messages(self) -> None:
         self._process_queue(self.master)
         if any(ckan.indexed for ckan in self.processed):
-            self.ckm_repo.pull_remote_branch('master')
-            self.ckm_repo.push_remote_branch('master')
+            self.repo.pull_remote_branch('master')
+            self.repo.push_remote_branch('master')
         self._process_queue(self.staged)
 
 

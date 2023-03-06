@@ -1,6 +1,6 @@
 import logging
 
-from typing import Dict, List, Iterable, IO, Type, TYPE_CHECKING
+from typing import Dict, List, Iterable, IO, Type, TYPE_CHECKING, Union
 from types import TracebackType
 
 import boto3
@@ -73,6 +73,7 @@ def download_stream_to_file(download_url: str, dest_file: IO[bytes]) -> None:
 
 
 class BaseMessageHandler:
+    STRATEGY_OPTION = 'ours'
     game: Game
 
     def __init__(self, game: Game) -> None:
@@ -82,18 +83,19 @@ class BaseMessageHandler:
     # we can ensure we call close on it and run our handler inside
     # a context manager
     def __enter__(self) -> 'BaseMessageHandler':
-        if not self.ckm_repo.is_active_branch('master'):
-            self.ckm_repo.checkout_branch('master')
-        self.ckm_repo.pull_remote_branch('master')
+        if not self.repo.is_active_branch('master'):
+            self.repo.checkout_branch('master')
+        self.repo.pull_remote_branch(
+            'master', strategy_option=self.STRATEGY_OPTION)
         return self
 
     def __exit__(self, exc_type: Type[BaseException],
                  exc_value: BaseException, traceback: TracebackType) -> None:
-        self.ckm_repo.close_repo()
+        self.repo.close_repo()
 
     @property
-    def ckm_repo(self) -> CkanMetaRepo:
-        return self.game.ckanmeta_repo
+    def repo(self) -> Union[CkanMetaRepo, NetkanRepo]:
+        raise NotImplementedError
 
     def append(self, message: Message) -> None:
         raise NotImplementedError
