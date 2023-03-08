@@ -1,7 +1,7 @@
 import sys
 import logging
 from pathlib import Path
-from typing import Union, Callable, Any, Optional
+from typing import Union, Callable, Any, List, Optional, Tuple
 
 import click
 from git import Repo
@@ -145,10 +145,10 @@ class Game:
 
 
 class SharedArgs:
-    ckanmeta_remote: str
+    ckanmeta_remote: Tuple[str, ...]
     deep_clone: bool
     dev: bool
-    netkan_remote: str
+    netkan_remote: Tuple[str, ...]
     queue: str
     ia_access: str
     ia_secret: str
