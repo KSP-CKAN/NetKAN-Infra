@@ -98,7 +98,8 @@ class Game:
                     self.ckanmeta_remote,
                     self.repo_base_path('CKAN-meta'),
                     self.shared.deep_clone
-                )
+                ),
+                game_id=self.name
             )
         return self._ckanmeta_repo
 
@@ -116,7 +117,8 @@ class Game:
                     self.netkan_remote,
                     self.repo_base_path('NetKAN'),
                     self.shared.deep_clone
-                )
+                ),
+                game_id=self.name
             )
         return self._netkan_repo
 

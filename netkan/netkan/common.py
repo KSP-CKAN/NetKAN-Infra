@@ -29,9 +29,9 @@ else:
 USER_AGENT = 'Mozilla/5.0 (compatible; Netkanbot/1.0; CKAN; +https://github.com/KSP-CKAN/NetKAN-Infra)'
 
 
-def netkans(path: str, ids: Iterable[str]) -> Iterable[Netkan]:
+def netkans(path: str, ids: Iterable[str], game_id: str) -> Iterable[Netkan]:
     repo = NetkanRepo(Repo(path))
-    return (Netkan(p) for p in repo.nk_paths(ids))
+    return (Netkan(p, game_id=game_id) for p in repo.nk_paths(ids))
 
 
 def sqs_batch_entries(messages: Iterable[SendMessageBatchRequestEntryTypeDef],
