@@ -32,14 +32,6 @@ def mirror_hook() -> Tuple[Union[Response, str], int]:
     if not commits:
         current_app.logger.info('No commits received')
         return jsonify({'message': 'No commits received'}), 200
-    # Make sure it's not from the crawler
-    sender = raw.get('sender')  # type: ignore[union-attr]
-    if sender:
-        login = sender.get('login')
-        if login:
-            if login == 'kspckan-crawler':
-                current_app.logger.info('Commits sent by crawler, skipping on demand mirror')
-                return '', 204
     # Submit mirroring requests to queue in batches of <=10
     messages = (batch_message(p) for p in paths_from_commits(commits))
     for batch in sqs_batch_entries(messages):
