@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Union, Callable, Any, Optional
 
 import click
+from git import Repo
 
 from ..repos import NetkanRepo, CkanMetaRepo
 from ..utils import init_repo, init_ssh
@@ -118,6 +119,10 @@ class Game:
                 )
             )
         return self._netkan_repo
+
+    @property
+    def repos(self) -> List[Repo]:
+        return [self.ckanmeta_repo.git_repo, self.netkan_repo.git_repo]
 
     @property
     def netkan_remote(self) -> str:
