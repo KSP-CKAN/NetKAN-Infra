@@ -21,7 +21,7 @@ class TestCleanCache(TestCase):
 
     cache_path = TemporaryDirectory()
     testdata_path = Path(PurePath(__file__).parent, 'testdata/NetKAN/')
-    repo = NetkanRepo(Repo.init(testdata_path))
+    repo = NetkanRepo(Repo.init(testdata_path), 'ksp')
 
     source_file_1 = repo.nk_path('DogeCoinFlag')
     source_file_2 = repo.nk_path('FlagCoinDoge')

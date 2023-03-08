@@ -162,9 +162,9 @@ class CkanMetaRepo(XkanRepo):
     def identifiers(self) -> Iterable[str]:
         return (path.stem for path in self.ckm_dir.iterdir()
                 if path.is_dir()
-                   and self.IDENTIFIER_PATTERN.fullmatch(path.stem)
-                   and any(child.match('*.ckan')
-                           for child in path.iterdir()))
+                and self.IDENTIFIER_PATTERN.fullmatch(path.stem)
+                and any(child.match('*.ckan')
+                        for child in path.iterdir()))
 
     def all_latest_modules(self) -> Iterable[Ckan]:
         return filter(None,

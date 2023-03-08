@@ -33,12 +33,12 @@ class NetkanWebhooks(Flask):
 def create_app() -> NetkanWebhooks:
     # Set config values for other modules to retrieve
     current_config.setup(
-        os.environ.get('SSH_KEY', ''),
-        os.environ.get('XKAN_GHSECRET', ''),
-        os.environ.get('NETKAN_REMOTE', ''), '/tmp/NetKAN',
-        os.environ.get('CKANMETA_REMOTE', ''), '/tmp/CKAN-meta',
-        os.environ.get('INFLATION_SQS_QUEUE', ''),
-        os.environ.get('ADD_SQS_QUEUE', ''),
-        os.environ.get('MIRROR_SQS_QUEUE', '')
+        ssh_key=os.environ.get('SSH_KEY', ''),
+        secret=os.environ.get('XKAN_GHSECRET', ''),
+        netkan_remote=os.environ.get('NETKAN_REMOTE', ''),
+        ckanmeta_remote=os.environ.get('CKANMETA_REMOTE', ''),
+        inf_queue_name=os.environ.get('INFLATION_SQS_QUEUE', ''),
+        add_queue_name=os.environ.get('ADD_SQS_QUEUE', ''),
+        mir_queue_name=os.environ.get('MIRROR_SQS_QUEUE', '')
     )
     return NetkanWebhooks()

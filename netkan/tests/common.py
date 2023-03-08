@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 
+from abc import ABC
 from unittest import TestCase, mock
 from pathlib import Path, PurePath
 
@@ -10,19 +11,23 @@ from gitdb.exc import BadName
 from netkan.cli.common import SharedArgs
 
 
-class SharedArgsHarness(TestCase):
+class SharedArgsMixin(ABC):
+    _cls_tmpdir: tempfile.TemporaryDirectory
     repos = ['ckan', 'netkan']
     ckan_data = Path(PurePath(__file__).parent, 'testdata/CKAN-meta')
     netkan_data = Path(PurePath(__file__).parent, 'testdata/NetKAN')
-    tmpdir: tempfile.TemporaryDirectory
 
     @classmethod
-    def setUpClass(cls):
-        super(SharedArgsHarness, cls).setUpClass()
-        cls.tmpdir = tempfile.TemporaryDirectory()
+    def _tmpdir(cls) -> tempfile.TemporaryDirectory:
+        if getattr(cls, '_cls_tmpdir', None) is None:
+            cls._cls_tmpdir = tempfile.TemporaryDirectory()
+        return cls._cls_tmpdir
+
+    @classmethod
+    def configure_repos(cls) -> None:
         for repo in cls.repos:
-            working = Path(cls.tmpdir.name, 'working', repo)
-            upstream = Path(cls.tmpdir.name, 'upstream', repo)
+            working = Path(cls._tmpdir().name, 'working', repo)
+            upstream = Path(cls._tmpdir().name, 'upstream', repo)
             upstream.mkdir(parents=True)
             Repo.init(upstream, bare=True)
             shutil.copytree(getattr(cls, f'{repo}_data'), working)
@@ -37,9 +42,25 @@ class SharedArgsHarness(TestCase):
             setattr(cls, f'{repo}_upstream', upstream)
 
     @classmethod
+    def cleanup(cls) -> None:
+        cls._tmpdir().cleanup()
+
+    @property
+    def tmpdir(self) -> tempfile.TemporaryDirectory:
+        return self._tmpdir()
+
+
+class SharedArgsHarness(TestCase, SharedArgsMixin):
+
+    @classmethod
+    def setUpClass(cls):
+        super(SharedArgsHarness, cls).setUpClass()
+        cls.configure_repos()
+
+    @classmethod
     def tearDownClass(cls):
         super(SharedArgsHarness, cls).tearDownClass()
-        cls.tmpdir.cleanup()
+        cls.cleanup()
 
     def setUp(self):
         patch = mock.patch(
