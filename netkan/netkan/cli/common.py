@@ -69,7 +69,7 @@ class Game:
     _ia_collection: str
 
     def __init__(self, name: str, shared: 'SharedArgs') -> None:
-        self.name = name
+        self.name = name.lower()
         self.shared = shared
 
     def args(self, arg: str) -> str:
@@ -200,9 +200,10 @@ class SharedArgs:
         self._ssh_key = value
 
     def game(self, game: str) -> Game:
-        if getattr(self, f'_game_{game}', None) is None:
-            setattr(self, f'_game_{game}', Game(game, self))
-        return getattr(self, f'_game_{game}')
+        game_id = game.lower()
+        if getattr(self, f'_game_{game_id}', None) is None:
+            setattr(self, f'_game_{game_id}', Game(game_id, self))
+        return getattr(self, f'_game_{game_id}')
 
 
 pass_state = click.make_pass_decorator(
