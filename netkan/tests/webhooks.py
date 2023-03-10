@@ -9,6 +9,12 @@ from netkan.webhooks import create_app
 from .common import SharedArgsMixin
 
 
+def inflation_queue(_, game: str) -> MagicMock:
+    queue = MagicMock()
+    queue.url = f'{game}.queue.url'
+    return queue
+
+
 class WebhooksHarness(TestCase, SharedArgsMixin):
 
     @classmethod
@@ -58,10 +64,8 @@ class TestWebhookGitHubInflate(WebhooksHarness):
 
     def setUp(self) -> None:
         super().setUp()
-        queue = MagicMock()
-        queue.url = 'some.queue.url'
         queue_url = mock.patch(
-            'netkan.webhooks.config.WebhooksConfig.inflation_queue', queue)
+            'netkan.webhooks.config.WebhooksConfig.inflation_queue', inflation_queue)
         queue_url.start()
 
     @staticmethod
@@ -92,6 +96,7 @@ class TestWebhookGitHubInflate(WebhooksHarness):
                 'GameId').get('StringValue'),
             'ksp',
         )
+        self.assertEqual(call[2].get('QueueUrl'), 'ksp.queue.url')
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
@@ -106,6 +111,7 @@ class TestWebhookGitHubInflate(WebhooksHarness):
                 'GameId').get('StringValue'),
             'ksp',
         )
+        self.assertEqual(call[2].get('QueueUrl'), 'ksp.queue.url')
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
@@ -120,6 +126,7 @@ class TestWebhookGitHubInflate(WebhooksHarness):
                 'GameId').get('StringValue'),
             'ksp2',
         )
+        self.assertEqual(call[2].get('QueueUrl'), 'ksp2.queue.url')
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     def test_inflate_ksp_wrong_branch(self, sig: MagicMock):
@@ -310,10 +317,8 @@ class TestWebhookInflate(WebhooksHarness):
 
     def setUp(self) -> None:
         super().setUp()
-        queue = MagicMock()
-        queue.url = 'some.queue.url'
         queue_url = mock.patch(
-            'netkan.webhooks.config.WebhooksConfig.inflation_queue', queue)
+            'netkan.webhooks.config.WebhooksConfig.inflation_queue', inflation_queue)
         queue_url.start()
 
     @staticmethod
@@ -333,6 +338,7 @@ class TestWebhookInflate(WebhooksHarness):
                 'GameId').get('StringValue'),
             'ksp',
         )
+        self.assertEqual(call[2].get('QueueUrl'), 'ksp.queue.url')
 
     @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
     def test_inflate_ksp(self, queued: MagicMock):
@@ -345,6 +351,7 @@ class TestWebhookInflate(WebhooksHarness):
                 'GameId').get('StringValue'),
             'ksp',
         )
+        self.assertEqual(call[2].get('QueueUrl'), 'ksp.queue.url')
 
     @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
     def test_inflate_ksp2(self, queued: MagicMock):
@@ -357,6 +364,7 @@ class TestWebhookInflate(WebhooksHarness):
                 'GameId').get('StringValue'),
             'ksp2',
         )
+        self.assertEqual(call[2].get('QueueUrl'), 'ksp2.queue.url')
 
     def test_inflate_ksp_no_identifiers(self):
         data = self.mock_netkan_hook()

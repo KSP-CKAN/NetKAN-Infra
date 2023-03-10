@@ -15,7 +15,6 @@ else:
 
 class WebhooksConfig:
     _client: SQSClient
-    _inflation_queue: Queue
     _add_queue: Queue
     _mirror_queue: Queue
 
@@ -31,8 +30,8 @@ class WebhooksConfig:
         self.secret = secret
         self.common = SharedArgs()
         self.common.ssh_key = ssh_key
-        self.common.ckanmeta_remote = tuple(ckanmeta_remote.split(' '))
-        self.common.netkan_remote = tuple(netkan_remote.split(' '))
+        self.common.ckanmeta_remotes = tuple(ckanmeta_remote.split(' '))
+        self.common.netkan_remotes = tuple(netkan_remote.split(' '))
         self.common.deep_clone = False
         self._inf_queue_name = inf_queue_name
         self._add_queue_name = add_queue_name
@@ -44,13 +43,13 @@ class WebhooksConfig:
             self._client = boto3.client('sqs')
         return self._client
 
-    @property
-    def inflation_queue(self) -> Queue:
-        if getattr(self, '_inflation_queue', None) is None:
+    def inflation_queue(self, game: str) -> Queue:
+        game_id = game.lower()
+        if getattr(self, f'_{game_id}_inflation_queue', None) is None:
             sqs = boto3.resource('sqs')
-            self._inflation_queue = sqs.get_queue_by_name(
-                QueueName=self._inf_queue_name)
-        return self._inflation_queue
+            setattr(self, f'_{game_id}_inflation_queue', sqs.get_queue_by_name(
+                QueueName=self._inf_queue_name))
+        return getattr(self, f'_{game_id}_inflation_queue')
 
     @property
     def add_queue(self) -> Queue:

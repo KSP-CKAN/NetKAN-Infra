@@ -70,7 +70,7 @@ def inflate(ids: Iterable[str], game_id: str) -> None:
                     for nk in netkans(str(game.netkan_repo.git_repo.working_dir), ids, game_id))
         for batch in sqs_batch_entries(messages):
             current_config.client.send_message_batch(
-                QueueUrl=current_config.inflation_queue.url,
+                QueueUrl=current_config.inflation_queue(game_id).url,
                 Entries=batch
             )
 

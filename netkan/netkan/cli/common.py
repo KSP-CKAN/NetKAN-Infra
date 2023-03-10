@@ -25,20 +25,23 @@ _COMMON_OPTIONS = [
                  help='Enable debug logging', callback=ctx_callback),
     click.option('--queue', envvar='SQS_QUEUE', expose_value=False,
                  help='SQS Queue to poll for metadata', callback=ctx_callback),
+    click.option('--inflation-queues', envvar='INFLATION_QUEUES', expose_value=False,
+                 help='SQS Queues to publish inflation tasks', multiple=True,
+                 callback=ctx_callback),
     click.option('--ssh-key', envvar='SSH_KEY', expose_value=False,
                  help='SSH key for accessing repositories', callback=ctx_callback),
     click.option('--deep-clone', is_flag=True, default=False, expose_value=False,
                  help='Perform a deep clone of the git repos', callback=ctx_callback),
-    click.option('--ckanmeta-remote', envvar='CKANMETA_REMOTE', expose_value=False,
+    click.option('--ckanmeta-remotes', envvar='CKANMETA_REMOTES', expose_value=False,
                  help='game=Path/URL/SSH to Metadata Repos, ie ksp=http://gihub.com',
                  multiple=True, callback=ctx_callback),
-    click.option('--netkan-remote', envvar='NETKAN_REMOTE', expose_value=False,
+    click.option('--netkan-remotes', envvar='NETKAN_REMOTES', expose_value=False,
                  help='game=Path/URL/SSH to the Stub Metadata Repos, ie ksp=git@github.com',
                  multiple=True, callback=ctx_callback),
     click.option('--token', envvar='GH_Token', expose_value=False,
                  help='GitHub Token for PRs', callback=ctx_callback),
-    click.option('--repo', envvar='CKAN_REPO', expose_value=False,
-                 help='GitHub repo to raise PR against (Org Repo: CKAN-meta/NetKAN)',
+    click.option('--repos', envvar='CKAN_REPOS', expose_value=False,
+                 help='GitHub repos to raise PR against (Org Repo: ksp=CKAN-meta/NetKAN)',
                  multiple=True, callback=ctx_callback),
     click.option('--user', envvar='CKAN_USER', expose_value=False,
                  help='GitHub user/org repo resides under (Org User: KSP-CKAN)',
@@ -51,9 +54,11 @@ _COMMON_OPTIONS = [
                  help='Credentials for Internet Archive', callback=ctx_callback),
     click.option('--ia-secret', envvar='IA_secret', expose_value=False,
                  help='Credentials for Internet Archive', callback=ctx_callback),
-    click.option('--ia-collection', envvar='IA_collection', expose_value=False,
+    click.option('--ia-collections', envvar='IA_COLLECTIONS', expose_value=False,
                  help='game=Collection, for mirroring mods in on Internet Archive',
                  multiple=True, callback=ctx_callback),
+    click.option('--game-id', envvar='GAME_ID', help='Game ID for this task',
+                 expose_value=False, callback=ctx_callback)
 ]
 
 
@@ -67,6 +72,7 @@ class Game:
     _netkan_remote: str
     _github_pr: GitHubPR
     _ia_collection: str
+    _infaltion_queue: str
 
     def __init__(self, name: str, shared: 'SharedArgs') -> None:
         self.name = name.lower()
@@ -106,7 +112,7 @@ class Game:
     @property
     def ckanmeta_remote(self) -> str:
         if getattr(self, '_ckanmeta_remote', None) is None:
-            self._ckanmeta_remote = self.args('ckanmeta_remote')
+            self._ckanmeta_remote = self.args('ckanmeta_remotes')
         return self._ckanmeta_remote
 
     @property
@@ -129,32 +135,41 @@ class Game:
     @property
     def netkan_remote(self) -> str:
         if getattr(self, '_netkan_remote', None) is None:
-            self._netkan_remote = self.args('netkan_remote')
+            self._netkan_remote = self.args('netkan_remotes')
         return self._netkan_remote
 
     @property
     def github_pr(self) -> GitHubPR:
         if getattr(self, '_github_pr', None) is None:
             self._github_pr = GitHubPR(
-                self.shared.token, self.args('repo'), self.shared.user)
+                self.shared.token, self.args('repos'), self.shared.user)
         return self._github_pr
 
     @property
     def ia_collection(self) -> str:
         if getattr(self, '_ia_collection', None) is None:
-            self._ia_collection = self.args('netkan_remote')
+            self._ia_collection = self.args('ia_collections')
         return self._ia_collection
+
+    @property
+    def inflation_queue(self) -> str:
+        if getattr(self, '_inflation_queue', None) is None:
+            self._infaltion_queue = self.args('inflation_queues')
+        return self._infaltion_queue
 
 
 class SharedArgs:
-    ckanmeta_remote: Tuple[str, ...]
+    ckanmeta_remotes: Tuple[str, ...]
     deep_clone: bool
     dev: bool
-    netkan_remote: Tuple[str, ...]
+    game_id: str
+    inflation_queues: Tuple[str, ...]
+    netkan_remotes: Tuple[str, ...]
     queue: str
     ia_access: str
     ia_secret: str
-    repo: str
+    ia_collections: Tuple[str, ...]
+    repos: Tuple[str, ...]
     timeout: int
     token: str
     user: str

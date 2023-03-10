@@ -50,7 +50,7 @@ def inflate_hook(game_id: str) -> Tuple[str, int]:
             for nk in nks)
         for batch in sqs_batch_entries(messages):
             current_config.client.send_message_batch(
-                QueueUrl=current_config.inflation_queue.url,
+                QueueUrl=current_config.inflation_queue(game_id).url,
                 Entries=batch
             )
         return '', 204

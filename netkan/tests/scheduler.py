@@ -38,9 +38,9 @@ class TestScheduler(SharedArgsHarness):
         self.assertEqual(len(attrs['Entries']), 10)
 
     def test_sqs_batching_ten(self):
-        setattr(self.shared_args, 'netkan_remote',
+        setattr(self.shared_args, 'netkan_remotes',
                 (f'count={getattr(self, "countkan_upstream")}',))
-        setattr(self.shared_args, 'ckanmeta_remote',
+        setattr(self.shared_args, 'ckanmeta_remotes',
                 (f'count={getattr(self, "ckan_upstream")}',))
         scheduler = NetkanScheduler(
             self.shared_args, 'TestyMcTestFace', 'token', 'count')

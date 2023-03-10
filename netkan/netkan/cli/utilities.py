@@ -30,8 +30,8 @@ from ..mirrorer import Mirrorer
 @pass_state
 def auto_freezer(common: SharedArgs, days_limit: int, days_till_ignore: int) -> None:
     afr = AutoFreezer(
-        common.netkan_repo,
-        common.github_pr,
+        common.game(common.game_id).netkan_repo,
+        common.game(common.game_id).github_pr,
     )
     afr.freeze_idle_mods(days_limit, days_till_ignore)
     afr.mark_frozen_mods()
@@ -43,7 +43,7 @@ def auto_freezer(common: SharedArgs, days_limit: int, days_till_ignore: int) -> 
 def download_counter(common: SharedArgs) -> None:
     logging.info('Starting Download Count Calculation...')
     DownloadCounter(
-        common.ckanmeta_repo,
+        common.game(common.game_id).ckanmeta_repo,
         common.token
     ).update_counts()
     logging.info('Download Counter completed!')
@@ -93,7 +93,7 @@ def restore_status(filename: str) -> None:
 @common_options
 @pass_state
 def recover_status_timestamps(common: SharedArgs) -> None:
-    ModStatus.recover_timestamps(common.ckanmeta_repo)
+    ModStatus.recover_timestamps(common.game(common.game_id).ckanmeta_repo)
 
 
 @click.command()
@@ -175,6 +175,6 @@ def clean_cache(days: int, cache: str) -> None:
 @pass_state
 def mirror_purge_epochs(common: SharedArgs, dry_run: bool) -> None:
     Mirrorer(
-        common.ckanmeta_repo, common.ia_access,
-        common.ia_secret, common.ia_collection
+        common.game(common.game_id).ckanmeta_repo, common.ia_access,
+        common.ia_secret, common.game(common.game_id).ia_collection
     ).purge_epochs(dry_run)

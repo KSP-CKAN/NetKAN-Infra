@@ -29,7 +29,7 @@ def inflate_hook(game_id: str) -> Tuple[str, int]:
         current_app.logger.info(
             f'Queueing inflation request batch: {batch}')
         current_config.client.send_message_batch(
-            QueueUrl=current_config.inflation_queue.url,
+            QueueUrl=current_config.inflation_queue(game_id).url,
             Entries=batch
         )
     return '', 204

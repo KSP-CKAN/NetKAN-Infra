@@ -28,9 +28,6 @@ def indexer(common: SharedArgs) -> None:
     help='Which mods to schedule',
 )
 @click.option(
-    '--game', help='Which Game to Schedule for Inflation',
-)
-@click.option(
     '--min-cpu', default=200,
     help='Only schedule if we have at least this many CPU credits remaining',
 )
@@ -44,18 +41,18 @@ def scheduler(
     common: SharedArgs,
     max_queued: int,
     group: str,
-    game: str,
     min_cpu: int,
     min_io: int
 ) -> None:
+    game = common.game(common.game_id)
     sched = NetkanScheduler(
-        common, common.queue, common.token, game,
+        common, game.inflation_queue, common.token, game.name,
         nonhooks_group=(group in ('all', 'nonhooks')),
         webhooks_group=(group in ('all', 'webhooks')),
     )
     if sched.can_schedule(max_queued, common.dev, min_cpu, min_io):
         sched.schedule_all_netkans()
-        logging.info("NetKANs submitted to %s", common.queue)
+        logging.info("NetKANs submitted to %s", game.inflation_queue)
 
 
 @click.command()
