@@ -48,6 +48,10 @@ inbound = t.add_resource(Queue("NetKANInbound",
                                QueueName="Inbound.fifo",
                                ReceiveMessageWaitTimeSeconds=20,
                                FifoQueue=True))
+inbound2 = t.add_resource(Queue("NetKANKSP2Inbound",
+                                QueueName="InboundKsp2.fifo",
+                                ReceiveMessageWaitTimeSeconds=20,
+                                FifoQueue=True))
 outbound = t.add_resource(Queue("NetKANOutbound",
                                 QueueName="Outbound.fifo",
                                 ReceiveMessageWaitTimeSeconds=20,
@@ -62,7 +66,7 @@ mirrorqueue = t.add_resource(Queue("Mirroring",
                                    FifoQueue=True))
 
 
-for queue in [inbound, outbound, addqueue, mirrorqueue]:
+for queue in [inbound, inbound2, outbound, addqueue, mirrorqueue]:
     t.add_output([
         Output(
             "{}QueueURL".format(queue.title),
@@ -151,6 +155,7 @@ netkan_role = t.add_resource(Role(
                         ],
                         "Resource": [
                             GetAtt(inbound, "Arn"),
+                            GetAtt(inbound2, "Arn"),
                             GetAtt(outbound, "Arn"),
                             GetAtt(addqueue, "Arn"),
                             GetAtt(mirrorqueue, "Arn"),
@@ -501,6 +506,7 @@ t.add_resource(PolicyType(
                 ],
                 "Resource": [
                     GetAtt(inbound, "Arn"),
+                    GetAtt(inbound2, "Arn"),
                 ]
             },
             {
@@ -741,7 +747,7 @@ services = [
         'schedule': 'rate(1 day)',
     },
     {
-        'name': 'Inflator',
+        'name': 'InflatorKsp',
         'image': 'kspckan/inflator',
         'memory': '256',
         'secrets': ['GH_Token'],
@@ -754,6 +760,27 @@ services = [
                 )
             ),
             ('AWS_REGION', Sub('${AWS::Region}')),
+            ('GAME', 'KSP')
+        ],
+        'volumes': [
+            ('ckan_cache', '/home/netkan/ckan_cache')
+        ]
+    },
+    {
+        'name': 'InflatorKsp2',
+        'image': 'kspckan/inflator',
+        'memory': '256',
+        'secrets': ['GH_Token'],
+        'env': [
+            (
+                'QUEUES', Sub(
+                    '${Inbound},${Outbound}',
+                    Inbound=GetAtt(inbound2, 'QueueName'),
+                    Outbound=GetAtt(outbound, 'QueueName')
+                )
+            ),
+            ('AWS_REGION', Sub('${AWS::Region}')),
+            ('GAME', 'KSP2')
         ],
         'volumes': [
             ('ckan_cache', '/home/netkan/ckan_cache')
