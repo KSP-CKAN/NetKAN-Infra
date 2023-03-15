@@ -102,7 +102,7 @@ class XkanRepo:
                 pass
             self.git_repo.remotes.origin.push(
                 f'{branch_name}:{branch_name}'
-            )
+            ).raise_if_error()
             self.checkout_branch(active_branch)
 
 
