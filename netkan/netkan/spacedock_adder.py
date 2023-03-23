@@ -21,6 +21,7 @@ from .repos import NetkanRepo
 class SpaceDockAdder:
 
     PR_BODY_TEMPLATE = Template(read_text('netkan', 'pr_body_template.md'))
+    USER_TEMPLATE = Template('[$username]($user_url)')
 
     def __init__(self, queue: str, timeout: int, nk_repo: NetkanRepo, github_pr: Optional[GitHubPR] = None) -> None:
         sqs = boto3.resource('sqs')
@@ -106,11 +107,17 @@ class SpaceDockAdder:
             self.github_pr.create_pull_request(
                 title=f"Add {info.get('name')} from {info.get('site_name')}",
                 branch=branch_name,
-                body=self.PR_BODY_TEMPLATE.safe_substitute(
-                    defaultdict(lambda: '', info)),
-                labels=['Pull request', 'Mod-request'],
-            )
+                body=SpaceDockAdder._pr_body(info),
+                labels=['Pull request', 'Mod request'])
         return True
+
+    @staticmethod
+    def _pr_body(info: Dict[str, Any]) -> str:
+        return SpaceDockAdder.PR_BODY_TEMPLATE.safe_substitute(
+            defaultdict(lambda: '',
+                        {**info,
+                         'all_authors_md': ', '.join(SpaceDockAdder.USER_TEMPLATE.safe_substitute(defaultdict(lambda: '', a))
+                                                     for a in [info, *info.get('shared_authors', [])])}))
 
     def yaml_dump(self, obj: Dict[str, Any]) -> str:
         sio = io.StringIO()
