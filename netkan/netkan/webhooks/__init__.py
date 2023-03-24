@@ -35,9 +35,9 @@ def create_app() -> NetkanWebhooks:
     current_config.setup(
         ssh_key=os.environ.get('SSH_KEY', ''),
         secret=os.environ.get('XKAN_GHSECRET', ''),
-        netkan_remote=os.environ.get('NETKAN_REMOTE', ''),
-        ckanmeta_remote=os.environ.get('CKANMETA_REMOTE', ''),
-        inf_queue_name=os.environ.get('INFLATION_SQS_QUEUE', ''),
+        netkan_remote=os.environ.get('NETKAN_REMOTES', ''),
+        ckanmeta_remote=os.environ.get('CKANMETA_REMOTES', ''),
+        inf_queue_name=os.environ.get('INFLATION_SQS_QUEUES', ''),
         add_queue_name=os.environ.get('ADD_SQS_QUEUE', ''),
         mir_queue_name=os.environ.get('MIRROR_SQS_QUEUE', '')
     )

@@ -32,8 +32,8 @@ class WebhooksConfig:
         self.common.ssh_key = ssh_key
         self.common.ckanmeta_remotes = tuple(ckanmeta_remote.split(' '))
         self.common.netkan_remotes = tuple(netkan_remote.split(' '))
+        self.common.inflation_queues = tuple(inf_queue_name.split(' '))
         self.common.deep_clone = False
-        self._inf_queue_name = inf_queue_name
         self._add_queue_name = add_queue_name
         self._mir_queue_name = mir_queue_name
 
@@ -48,7 +48,7 @@ class WebhooksConfig:
         if getattr(self, f'_{game_id}_inflation_queue', None) is None:
             sqs = boto3.resource('sqs')
             setattr(self, f'_{game_id}_inflation_queue', sqs.get_queue_by_name(
-                QueueName=self._inf_queue_name))
+                QueueName=self.common.game(game_id).inflation_queue))
         return getattr(self, f'_{game_id}_inflation_queue')
 
     @property
