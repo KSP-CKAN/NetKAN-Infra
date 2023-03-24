@@ -30,7 +30,6 @@ spacedock_add = Blueprint(
 #     user_url:          https://spacedock.info/profile/ModAuthor1
 #     mod_url:           https://spacedock.info/mod/12345
 #     site_name:         SpaceDock
-@spacedock_add.route('/add', methods=['POST'], defaults={'game_id': 'ksp'})
 @spacedock_add.route('/add/<game_id>', methods=['POST'])
 def add_hook(game_id: str) -> Tuple[str, int]:
     # Submit add requests to queue in batches of <=10

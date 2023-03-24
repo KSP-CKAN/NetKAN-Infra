@@ -11,7 +11,6 @@ inflate = Blueprint('inflate', __name__)  # pylint: disable=invalid-name
 # For SpaceDock's trigger when new versions are uploaded
 # Handles: https://netkan.ksp-ckan.space/inflate
 # Payload: { "identifiers": [ "Id1", "Id2", ... ] }
-@inflate.route('/inflate', methods=['POST'], defaults={'game_id': 'ksp'})
 @inflate.route('/inflate/<game_id>', methods=['POST'])
 def inflate_hook(game_id: str) -> Tuple[str, int]:
     # SpaceDock doesn't set the `Content-Type: application/json` header

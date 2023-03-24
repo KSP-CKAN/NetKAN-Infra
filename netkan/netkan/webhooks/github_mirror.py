@@ -19,7 +19,6 @@ github_mirror = Blueprint(
 
 # For after-commit hook in CKAN-meta repo
 # Handles: https://netkan.ksp-ckan.space/gh/mirror
-@github_mirror.route('/mirror', methods=['POST'], defaults={'game_id': 'ksp'})
 @github_mirror.route('/mirror/<game_id>', methods=['POST'])
 @signature_required
 def mirror_hook(game_id: str) -> Tuple[Union[Response, str], int]:

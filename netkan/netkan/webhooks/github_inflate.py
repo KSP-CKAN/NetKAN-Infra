@@ -15,7 +15,6 @@ github_inflate = Blueprint(
 
 # For after-commit hook in NetKAN repo
 # Handles: https://netkan.ksp-ckan.space/gh/inflate
-@github_inflate.route('/inflate', methods=['POST'], defaults={'game_id': 'ksp'})
 @github_inflate.route('/inflate/<game_id>', methods=['POST'])
 @signature_required
 def inflate_hook(game_id: str) -> Tuple[Union[Response, str], int]:
@@ -38,7 +37,6 @@ def inflate_hook(game_id: str) -> Tuple[Union[Response, str], int]:
 # Handles: https://netkan.ksp-ckan.space/gh/release?identifier=AwesomeMod
 # Putting this here instead of in a github_release.py file
 # because it's small and quite similar to inflate
-@github_inflate.route('/release', methods=['POST'], defaults={'game_id': 'ksp'})
 @github_inflate.route('/release/<game_id>', methods=['POST'])
 @signature_required
 def release_hook(game_id: str) -> Tuple[str, int]:

@@ -17,7 +17,6 @@ spacedock_inflate = Blueprint(
 #     event_type: update         - New version of mod was uploaded
 #                 version-update - Default version changed
 #                 delete         - Mod was deleted from SpaceDock
-@spacedock_inflate.route('/inflate', methods=['POST'], defaults={'game_id': 'ksp'})
 @spacedock_inflate.route('/inflate/<game_id>', methods=['POST'])
 def inflate_hook(game_id: str) -> Tuple[str, int]:
     # Make sure our NetKAN and CKAN-meta repos are up to date

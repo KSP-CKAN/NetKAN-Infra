@@ -35,8 +35,8 @@ class WebhooksHarness(TestCase, SharedArgsMixin):
             {
                 'LC_ALL': os.environ.get('LC_ALL', 'C.UTF-8'),
                 'LANG': os.environ.get('LANG', 'C.UTF-8'),
-                'NETKAN_REMOTE': f'ksp={netkan} ksp2={netkan}',
-                'CKANMETA_REMOTE': f'ksp={ckan} ksp2={ckan}',
+                'NETKAN_REMOTES': f'ksp={netkan} ksp2={netkan}',
+                'CKANMETA_REMOTES': f'ksp={ckan} ksp2={ckan}',
                 'SSH_KEY': '12345'
             },
             clear=True,
@@ -82,21 +82,6 @@ class TestWebhookGitHubInflate(WebhooksHarness):
                 }
             ]
         }
-
-    @mock.patch('netkan.webhooks.github_utils.sig_match')
-    @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
-    def test_inflate_default(self, queued: MagicMock, sig: MagicMock):
-        sig.return_value = True
-        response = self.client.post(
-            '/gh/inflate', json=self.mock_netkan_hook())
-        self.assertEqual(response.status_code, 204)
-        call = queued.method_calls.pop().call_list().pop()
-        self.assertEqual(
-            call[2].get('Entries')[0].get('MessageAttributes').get(
-                'GameId').get('StringValue'),
-            'ksp',
-        )
-        self.assertEqual(call[2].get('QueueUrl'), 'ksp.queue.url')
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
@@ -232,20 +217,6 @@ class TestWebhookGitHubMirror(WebhooksHarness):
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
-    def test_inflate_default(self, queued: MagicMock, sig: MagicMock):
-        sig.return_value = True
-        response = self.client.post(
-            '/gh/mirror', json=self.mock_netkan_hook())
-        self.assertEqual(response.status_code, 204)
-        call = queued.method_calls.pop().call_list().pop()
-        self.assertEqual(
-            call[2].get('Entries')[0].get('MessageAttributes').get(
-                'GameId').get('StringValue'),
-            'ksp',
-        )
-
-    @mock.patch('netkan.webhooks.github_utils.sig_match')
-    @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
     def test_inflate_ksp(self, queued: MagicMock, sig: MagicMock):
         sig.return_value = True
         response = self.client.post(
@@ -328,19 +299,6 @@ class TestWebhookInflate(WebhooksHarness):
         }
 
     @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
-    def test_inflate_default(self, queued: MagicMock):
-        response = self.client.post(
-            '/inflate', json=self.mock_netkan_hook())
-        self.assertEqual(response.status_code, 204)
-        call = queued.method_calls.pop().call_list().pop()
-        self.assertEqual(
-            call[2].get('Entries')[0].get('MessageAttributes').get(
-                'GameId').get('StringValue'),
-            'ksp',
-        )
-        self.assertEqual(call[2].get('QueueUrl'), 'ksp.queue.url')
-
-    @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
     def test_inflate_ksp(self, queued: MagicMock):
         response = self.client.post(
             '/inflate/ksp', json=self.mock_netkan_hook(), follow_redirects=True)
@@ -399,18 +357,6 @@ class TestWebhookSpaceDockInflate(WebhooksHarness):
             'mod_id': '777',
             'event_type': 'update',
         }
-
-    @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
-    def test_inflate_default(self, queued: MagicMock):
-        response = self.client.post(
-            '/sd/inflate', data=self.mock_netkan_hook())
-        self.assertEqual(response.status_code, 204)
-        call = queued.method_calls.pop().call_list().pop()
-        self.assertEqual(
-            call[2].get('Entries')[0].get('MessageAttributes').get(
-                'GameId').get('StringValue'),
-            'ksp',
-        )
 
     @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
     def test_inflate_ksp(self, queued: MagicMock):
@@ -496,18 +442,6 @@ class TestWebhookSpaceDockAdd(WebhooksHarness):
             'description': 'A mod that you should definitely install, and so on and so on',
             'site_name': 'SpaceDock',
         }
-
-    @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
-    def test_add_default(self, queued: MagicMock):
-        response = self.client.post(
-            '/sd/add', data=self.mock_netkan_hook())
-        self.assertEqual(response.status_code, 204)
-        call = queued.method_calls.pop().call_list().pop()
-        self.assertEqual(
-            call[2].get('Entries')[0].get('MessageAttributes').get(
-                'GameId').get('StringValue'),
-            'ksp',
-        )
 
     @mock.patch('netkan.webhooks.config.WebhooksConfig.client')
     def test_inflate_ksp(self, queued: MagicMock):
