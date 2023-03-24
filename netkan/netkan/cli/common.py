@@ -72,7 +72,7 @@ class Game:
     _netkan_remote: str
     _github_pr: GitHubPR
     _ia_collection: str
-    _infaltion_queue: str
+    _inflation_queue: str
 
     def __init__(self, name: str, shared: 'SharedArgs') -> None:
         self.name = name.lower()
@@ -154,8 +154,8 @@ class Game:
     @property
     def inflation_queue(self) -> str:
         if getattr(self, '_inflation_queue', None) is None:
-            self._infaltion_queue = self.args('inflation_queues')
-        return self._infaltion_queue
+            self._inflation_queue = self.args('inflation_queues')
+        return self._inflation_queue
 
 
 class SharedArgs:
