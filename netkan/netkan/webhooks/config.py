@@ -24,15 +24,15 @@ class WebhooksConfig:
     # import a reference to our global config object before we set
     # its properties, and that requires a temporary 'empty' state.
     def setup(self, ssh_key: str, secret: str,
-              netkan_remote: str, ckanmeta_remote: str,
-              inf_queue_name: str, add_queue_name: str, mir_queue_name: str) -> None:
+              netkan_remotes: str, ckanmeta_remotes: str,
+              inf_queue_names: str, add_queue_name: str, mir_queue_name: str) -> None:
 
         self.secret = secret
         self.common = SharedArgs()
         self.common.ssh_key = ssh_key
-        self.common.ckanmeta_remotes = tuple(ckanmeta_remote.split(' '))
-        self.common.netkan_remotes = tuple(netkan_remote.split(' '))
-        self.common.inflation_queues = tuple(inf_queue_name.split(' '))
+        self.common.ckanmeta_remotes = tuple(ckanmeta_remotes.split(' '))
+        self.common.netkan_remotes = tuple(netkan_remotes.split(' '))
+        self.common.inflation_queues = tuple(inf_queue_names.split(' '))
         self.common.deep_clone = False
         self._add_queue_name = add_queue_name
         self._mir_queue_name = mir_queue_name
