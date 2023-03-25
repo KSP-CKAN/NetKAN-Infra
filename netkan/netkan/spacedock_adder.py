@@ -25,13 +25,16 @@ else:
 
 # https://github.com/KSP-SpaceDock/SpaceDock/blob/master/KerbalStuff/ckan.py
 class SpaceDockAdder:
-    PR_BODY_TEMPLATE = Template(read_text('netkan', 'pr_body_template.md'))
+    COMMIT_TEMPLATE = Template(read_text('netkan', 'sd_adder_commit_template.md'))
+    PR_BODY_TEMPLATE = Template(read_text('netkan', 'sd_adder_pr_body_template.md'))
     USER_TEMPLATE = Template('[$username]($user_url)')
+    TITLE_TEMPLATE = Template('Add $name from $site_name')
     _info: Dict[str, Any]
 
-    def __init__(self, message: Message, nk_repo: NetkanRepo, github_pr: Optional[GitHubPR] = None) -> None:
+    def __init__(self, message: Message, nk_repo: NetkanRepo, game: Game, github_pr: Optional[GitHubPR] = None) -> None:
         self.message = message
         self.nk_repo = nk_repo
+        self.game = game
         self.github_pr = github_pr
         self.yaml = YAML()
         self.yaml.indent(mapping=2, sequence=4, offset=2)
@@ -54,53 +57,28 @@ class SpaceDockAdder:
             # Already exists, we are done
             return True
 
-        # Create branch
+        # Create and checkout branch
         branch_name = f"add/{netkan.get('identifier')}"
-        try:
-            self.nk_repo.git_repo.remotes.origin.fetch(branch_name)
-        except git.GitCommandError:
-            # *Shrug*
-            pass
-        if branch_name not in self.nk_repo.git_repo.heads:
-            self.nk_repo.git_repo.create_head(
-                branch_name,
-                getattr(  # type: ignore[arg-type]
-                    self.nk_repo.git_repo.remotes.origin.refs,
-                    branch_name,
-                    self.nk_repo.git_repo.remotes.origin.refs.master
-                )
-            )
-        # Checkout branch
-        self.nk_repo.git_repo.heads[branch_name].checkout()
+        with self.nk_repo.change_branch(branch_name):
+            # Create file
+            netkan_path.write_text(self.yaml_dump(netkan))
 
-        # Create file
-        netkan_path.write_text(self.yaml_dump(netkan))
+            # Add netkan to branch
+            self.nk_repo.git_repo.index.add([netkan_path.as_posix()])
 
-        # Add netkan to branch
-        self.nk_repo.git_repo.index.add([netkan_path.as_posix()])
-
-        # Commit
-        self.nk_repo.git_repo.index.commit(
-            (
-                f"Add {self.info.get('name')} from {self.info.get('site_name')}"
-                f"\n\nThis is an automated commit on behalf of {self.info.get('username')}"
-            ),
-            author=git.Actor(self.info.get('username'), self.info.get('email'))
-        )
-
-        # Push branch
-        self.nk_repo.git_repo.remotes.origin.push(
-            '{mod}:{mod}'.format(mod=branch_name))
+            # Commit
+            self.nk_repo.git_repo.index.commit(
+                self.COMMIT_TEMPLATE.safe_substitute(
+                    defaultdict(lambda: '', self.info)),
+                author=git.Actor(self.info.get('username'), self.info.get('email')))
 
         # Create pull request
         if self.github_pr:
             self.github_pr.create_pull_request(
-                title=f"Add {self.info.get('name')} from {self.info.get('site_name')}",
+                title=self.TITLE_TEMPLATE.safe_substitute(defaultdict(lambda: '', self.info)),
                 branch=branch_name,
-                body=self.PR_BODY_TEMPLATE.safe_substitute(
-                    defaultdict(lambda: '', self.info)),
-                labels=['Pull request', 'Mod-request'],
-            )
+                body=SpaceDockAdder._pr_body(self.info),
+                labels=['Mod request'])
         return True
 
     @staticmethod
@@ -120,19 +98,18 @@ class SpaceDockAdder:
     def sd_download_url(info: Dict[str, Any]) -> str:
         return f"https://spacedock.info/mod/{info.get('id', '')}/{info.get('name', '')}/download"
 
-    @classmethod
-    def make_netkan(cls, info: Dict[str, Any]) -> Dict[str, Any]:
+    def make_netkan(self, info: Dict[str, Any]) -> Dict[str, Any]:
         ident = re.sub(r'[\W_]+', '', info.get('name', ''))
         mod: Optional[ModAnalyzer] = None
         props: Dict[str, Any] = {}
         url = SpaceDockAdder.sd_download_url(info)
         try:
-            mod = ModAnalyzer(ident, url)
+            mod = ModAnalyzer(ident, url, self.game)
             props = mod.get_netkan_properties() if mod else {}
         except Exception as exc:  # pylint: disable=broad-except
             # Tell Discord about the problem and move on
             logging.error('%s failed to analyze %s from %s',
-                          cls.__name__, ident, url, exc_info=exc)
+                          self.__class__.__name__, ident, url, exc_info=exc)
         return {
             'spec_version': 'v1.18',
             'identifier': ident,
@@ -174,12 +151,8 @@ class SpaceDockMessageHandler(BaseMessageHandler):
         return self.game.github_pr
 
     def append(self, message: Message) -> None:
-        netkan = SpaceDockAdder(
-            message,
-            self.repo,
-            self.github_pr
-        )
-        self.queued.append(netkan)
+        self.queued.append(
+            SpaceDockAdder(message, self.repo, self.game, self.github_pr))
 
     def _process_queue(self, queue: Deque[SpaceDockAdder]) -> None:
         while queue:

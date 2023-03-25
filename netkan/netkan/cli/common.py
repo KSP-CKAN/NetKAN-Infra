@@ -1,7 +1,7 @@
 import sys
 import logging
 from pathlib import Path
-from typing import Union, Callable, Any, List, Optional, Tuple
+from typing import Union, Callable, Any, List, Optional, Tuple, Dict
 
 import click
 from git import Repo
@@ -73,6 +73,10 @@ class Game:
     _github_pr: GitHubPR
     _ia_collection: str
     _inflation_queue: str
+    MOD_ROOTS: Dict[str, str] = {
+        'ksp':  'GameData',
+        'ksp2': 'BepInEx/plugins',
+    }
 
     def __init__(self, name: str, shared: 'SharedArgs') -> None:
         self.name = name.lower()
@@ -156,6 +160,10 @@ class Game:
         if getattr(self, '_inflation_queue', None) is None:
             self._inflation_queue = self.args('inflation_queues')
         return self._inflation_queue
+
+    @property
+    def mod_root(self) -> str:
+        return self.MOD_ROOTS[self.name]
 
 
 class SharedArgs:
