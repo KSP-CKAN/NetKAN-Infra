@@ -22,12 +22,12 @@ ZONE_ID = os.environ.get('CKAN_ZONEID', False)
 BOT_FQDN = 'netkan.ksp-ckan.space'
 EMAIL = 'domains@ksp-ckan.space'
 PARAM_NAMESPACE = '/NetKAN/Indexer/'
-NETKAN_REMOTES = 'ksp=git@github.com:KSP-CKAN/NetKAN.git'
+NETKAN_REMOTES = 'ksp=git@github.com:KSP-CKAN/NetKAN.git ksp2=git@github.com:KSP-CKAN/KSP2-NetKAN.git'
 NETKAN_USER = 'KSP-CKAN'
-NETKAN_REPOS = 'ksp=NetKAN'
-CKANMETA_REMOTES = 'ksp=git@github.com:KSP-CKAN/CKAN-meta.git'
+NETKAN_REPOS = 'ksp=NetKAN ksp2=KSP2-NetKAN'
+CKANMETA_REMOTES = 'ksp=git@github.com:KSP-CKAN/CKAN-meta.git ksp2=git@github.com:KSP-CKAN/KSP2-CKAN-meta.git'
 CKANMETA_USER = 'KSP-CKAN'
-CKANMETA_REPOS = 'ksp=CKAN-meta'
+CKANMETA_REPOS = 'ksp=CKAN-meta ksp2=KSP2-CKAN-meta'
 NETKAN_USER = 'KSP-CKAN'
 STATUS_BUCKET = 'status.ksp-ckan.space'
 status_key = 'status/netkan.json'
@@ -704,7 +704,7 @@ services = [
         'linux_parameters': LinuxParameters(InitProcessEnabled=True),
     },
     {
-        'name': 'SchedulerKsp',
+        'name': 'Scheduler',
         'command': 'scheduler',
         'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
@@ -717,7 +717,7 @@ services = [
         'schedule': 'rate(30 minutes)',
     },
     {
-        'name': 'SchedulerKspWebhooksPass',
+        'name': 'SchedulerWebhooksPass',
         'command': [
             'scheduler', '--group', 'webhooks',
                 '--max-queued', '2000',
@@ -797,7 +797,7 @@ services = [
         'schedule': 'rate(5 minutes)',
     },
     {
-        'name': 'DownloadCounterKsp',
+        'name': 'DownloadCounter',
         'command': 'download-counter',
         'memory': '156',
         'secrets': [
