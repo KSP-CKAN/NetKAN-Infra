@@ -44,15 +44,16 @@ def scheduler(
     min_cpu: int,
     min_io: int
 ) -> None:
-    game = common.game(common.game_id)
-    sched = NetkanScheduler(
-        common, game.inflation_queue, common.token, game.name,
-        nonhooks_group=(group in ('all', 'nonhooks')),
-        webhooks_group=(group in ('all', 'webhooks')),
-    )
-    if sched.can_schedule(max_queued, common.dev, min_cpu, min_io):
-        sched.schedule_all_netkans()
-        logging.info("NetKANs submitted to %s", game.inflation_queue)
+    for game_id in common.game_ids:
+        game = common.game(game_id)
+        sched = NetkanScheduler(
+            common, game.inflation_queue, common.token, game.name,
+            nonhooks_group=(group in ('all', 'nonhooks')),
+            webhooks_group=(group in ('all', 'webhooks')),
+        )
+        if sched.can_schedule(max_queued, common.dev, min_cpu, min_io):
+            sched.schedule_all_netkans()
+            logging.info("NetKANs submitted to %s", game.inflation_queue)
 
 
 @click.command()

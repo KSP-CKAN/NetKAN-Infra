@@ -709,7 +709,6 @@ services = [
         'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
-            ('GAME_ID', 'ksp'),
             ('INFLATION_QUEUES', INFLATION_QUEUES),
             ('NETKAN_REMOTES', NETKAN_REMOTES),
             ('CKANMETA_REMOTES', CKANMETA_REMOTES),
@@ -728,7 +727,6 @@ services = [
         'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
-            ('GAME_ID', 'ksp'),
             ('INFLATION_QUEUES', INFLATION_QUEUES),
             ('NETKAN_REMOTES', NETKAN_REMOTES),
             ('CKANMETA_REMOTES', CKANMETA_REMOTES),
@@ -806,7 +804,6 @@ services = [
             'SSH_KEY', 'GH_Token',
         ],
         'env': [
-            ('GAME_ID', 'ksp'),
             ('NETKAN_REMOTES', NETKAN_REMOTES),
             ('CKANMETA_REMOTES', CKANMETA_REMOTES),
         ],
@@ -850,7 +847,6 @@ services = [
         'name': 'AutoFreezer',
         'command': 'auto-freezer',
         'env': [
-            ('GAME_ID', 'ksp'),
             ('NETKAN_REMOTES', NETKAN_REMOTES),
             ('CKAN_USER', NETKAN_USER),
             ('CKAN_REPOS', NETKAN_REPOS),
