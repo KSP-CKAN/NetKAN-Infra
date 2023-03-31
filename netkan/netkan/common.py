@@ -121,15 +121,15 @@ class QueueHandler:
             self._game_handlers = {}
         return self._game_handlers
 
-    def game_handler(self, game: str) -> BaseMessageHandler:
-        if self.game_handlers.get(game, None) is None:
+    def game_handler(self, game_id: str) -> BaseMessageHandler:
+        if self.game_handlers.get(game_id, None) is None:
             self.game_handlers.update({
-                game: self._handler_class(self.common.game(game))
+                game_id: self._handler_class(self.common.game(game_id))
             })
-        return self.game_handlers[game]
+        return self.game_handlers[game_id]
 
-    def append_message(self, game: str, message: Message) -> None:
-        self.game_handler(game).append(message)
+    def append_message(self, game_id: str, message: Message) -> None:
+        self.game_handler(game_id).append(message)
 
     def run(self) -> None:
         sqs = boto3.resource('sqs')
@@ -143,12 +143,12 @@ class QueueHandler:
             if not messages:
                 continue
             for message in messages:
-                game = message.message_attributes.get(  # type: ignore[union-attr,call-overload]
+                game_id = message.message_attributes.get(  # type: ignore[union-attr,call-overload]
                     'GameId', {}).get('StringValue', None)
-                if game is None:
+                if game_id is None:
                     logging.error('GameId missing from MessageAttributes')
                     continue
-                self.append_message(game, message)
+                self.append_message(game_id, message)
 
             for _, handler in self.game_handlers.items():
                 with handler:
