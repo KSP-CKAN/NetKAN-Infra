@@ -11,7 +11,7 @@ from ruamel.yaml import YAML
 
 from .github_pr import GitHubPR
 from .mod_analyzer import ModAnalyzer
-from .common import BaseMessageHandler, QueueHandler
+from .queue_handler import BaseMessageHandler, QueueHandler
 from .repos import NetkanRepo
 
 if TYPE_CHECKING:

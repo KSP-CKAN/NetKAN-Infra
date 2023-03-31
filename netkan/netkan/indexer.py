@@ -8,8 +8,8 @@ from typing import List, Optional, Dict, Any, Deque, Type, TYPE_CHECKING
 from dateutil.parser import parse
 from git.objects.commit import Commit
 
-from .common import BaseMessageHandler, QueueHandler
 from .metadata import Ckan
+from .queue_handler import BaseMessageHandler, QueueHandler
 from .repos import CkanMetaRepo
 from .status import ModStatus
 from .github_pr import GitHubPR
