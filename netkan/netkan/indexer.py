@@ -8,6 +8,7 @@ from typing import List, Optional, Dict, Any, Deque, Type, TYPE_CHECKING
 from dateutil.parser import parse
 from git.objects.commit import Commit
 
+from .cli.common import Game
 from .metadata import Ckan
 from .queue_handler import BaseMessageHandler, QueueHandler
 from .repos import CkanMetaRepo
@@ -171,9 +172,15 @@ class CkanMessage:
 
 
 class MessageHandler(BaseMessageHandler):
-    _master: Deque[CkanMessage]
-    _staged: Deque[CkanMessage]
-    _processed: List[CkanMessage]
+    master: Deque[CkanMessage]
+    staged: Deque[CkanMessage]
+    processed: List[CkanMessage]
+
+    def __init__(self, game: Game) -> None:
+        super().__init__(game)
+        self.master = deque()
+        self.staged = deque()
+        self.processed = []
 
     def __str__(self) -> str:
         return str(' '.join([str(x) for x in self.master + self.staged]))
@@ -188,24 +195,6 @@ class MessageHandler(BaseMessageHandler):
     @property
     def github_pr(self) -> GitHubPR:
         return self.game.github_pr
-
-    @property
-    def master(self) -> Deque[CkanMessage]:
-        if getattr(self, '_master', None) is None:
-            self._master = deque()
-        return self._master
-
-    @property
-    def staged(self) -> Deque[CkanMessage]:
-        if getattr(self, '_staged', None) is None:
-            self._staged = deque()
-        return self._staged
-
-    @property
-    def processed(self) -> List[CkanMessage]:
-        if getattr(self, '_processed', None) is None:
-            self._processed = []
-        return self._processed
 
     def append(self, message: Message) -> None:
         ckan = CkanMessage(

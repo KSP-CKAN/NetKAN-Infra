@@ -9,6 +9,7 @@ from typing import Dict, Deque, Any, List, Optional, Type, TYPE_CHECKING
 import git
 from ruamel.yaml import YAML
 
+from .cli.common import Game
 from .github_pr import GitHubPR
 from .mod_analyzer import ModAnalyzer
 from .queue_handler import BaseMessageHandler, QueueHandler
@@ -150,8 +151,13 @@ class SpaceDockAdder:
 
 
 class SpaceDockMessageHandler(BaseMessageHandler):
-    _queued: Deque[SpaceDockAdder]
-    _processed: List[SpaceDockAdder]
+    queued: Deque[SpaceDockAdder]
+    processed: List[SpaceDockAdder]
+
+    def __init__(self, game: Game) -> None:
+        super().__init__(game)
+        self.queued = deque()
+        self.processed = []
 
     def __str__(self) -> str:
         return str(' '.join([str(x) for x in self.queued]))
@@ -166,18 +172,6 @@ class SpaceDockMessageHandler(BaseMessageHandler):
     @property
     def github_pr(self) -> GitHubPR:
         return self.game.github_pr
-
-    @property
-    def queued(self) -> Deque[SpaceDockAdder]:
-        if getattr(self, '_queued', None) is None:
-            self._queued = deque()
-        return self._queued
-
-    @property
-    def processed(self) -> List[SpaceDockAdder]:
-        if getattr(self, '_processed', None) is None:
-            self._processed = []
-        return self._processed
 
     def append(self, message: Message) -> None:
         netkan = SpaceDockAdder(
