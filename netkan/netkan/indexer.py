@@ -214,7 +214,9 @@ class MessageHandler(BaseMessageHandler):
             self.processed.append(ckan)
 
     def sqs_delete_entries(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
-        return [c.delete_attrs for c in self.processed]
+        entries = [c.delete_attrs for c in self.processed]
+        self.processed = []
+        return entries
 
     # Currently we intermingle Staged/Master commits
     # separating them out will be a little more efficient
