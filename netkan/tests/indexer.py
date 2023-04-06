@@ -10,8 +10,10 @@ from git import Repo
 from datetime import datetime
 from gitdb.exc import BadName
 
-from netkan.indexer import CkanMessage
+from netkan.indexer import CkanMessage, MessageHandler, IndexerQueueHandler
 from netkan.repos import CkanMetaRepo
+
+from .common import SharedArgsHarness
 
 
 class TestCkan(unittest.TestCase):
@@ -72,6 +74,10 @@ class TestCkan(unittest.TestCase):
     def test_ckan_message_changed(self):
         self.assertFalse(self.message.metadata_changed())
 
+    def test_ckan_message_str(self):
+        self.assertEqual('DogeCoinFlag: 2019-06-24T19:06:14',
+                         str(self.message))
+
     def test_ckan_message_mod_version(self):
         self.assertEqual('DogeCoinFlag-v1.02', self.message.mod_version)
 
@@ -86,6 +92,10 @@ class TestCkan(unittest.TestCase):
 
     def test_ckan_message_stage(self):
         self.assertFalse(self.message.Staged)
+
+    def test_ckan_message_stage_name(self):
+        self.assertEqual('add/DogeCoinFlag-v1.02',
+                         self.message.staging_branch_name)
 
     def test_ckan_message_delete_attrs(self):
         self.assertEqual(
@@ -237,3 +247,82 @@ class TestFailedCkan(TestCkan):
         )
         with self.assertRaises(KeyError):
             attrs['last_indexed']
+
+
+class TestMessageHandler(SharedArgsHarness):
+
+    def setUp(self):
+        super().setUp()
+        self.handler = MessageHandler(game=self.shared_args.game('ksp'))
+
+    def test_class_string(self):
+        self.handler.append(self.mocked_message())
+        self.handler.append(self.mocked_message(staged=True))
+        self.assertEqual(str(
+            self.handler), 'DogeCoinFlag: 2019-06-24T19:06:14 DogeCoinFlag: 2019-06-24T19:06:14')
+
+    def test_add_primary(self):
+        self.handler.append(self.mocked_message())
+        self.assertEqual(len(self.handler), 1)
+        self.assertEqual(
+            self.handler.master[0].ckan.name,
+            'Dogecoin Flag'
+        )
+
+    def test_add_staged(self):
+        self.handler.append(self.mocked_message(staged=True))
+        self.assertEqual(len(self.handler), 1)
+        self.assertEqual(
+            self.handler.staged[0].ckan.name,
+            'Dogecoin Flag'
+        )
+
+    def test_add_both(self):
+        self.handler.append(self.mocked_message())
+        self.handler.append(self.mocked_message(staged=True))
+        self.assertEqual(len(self.handler), 2)
+        self.assertEqual(len(self.handler.master), 1)
+        self.assertEqual(len(self.handler.staged), 1)
+
+    def test_branch_checkout_primary_on_enter(self):
+        repo = self.shared_args.game('ksp').ckanmeta_repo
+        with repo.change_branch('test_branch'):
+            self.assertTrue(repo.is_active_branch('test_branch'))
+        repo.checkout_branch('test_branch')
+        self.assertTrue(repo.is_active_branch('test_branch'))
+        with MessageHandler(game=self.shared_args.game('ksp')) as handler:
+            self.assertTrue(repo.is_active_branch('master'))
+
+    @ mock.patch('netkan.indexer.CkanMessage.process_ckan')
+    def test_process_ckans(self, mocked_process):
+        self.handler.append(self.mocked_message())
+        self.handler.append(self.mocked_message(staged=True))
+        self.handler.process_messages()
+        self.assertEqual(len(self.handler.processed), 2)
+
+    @ mock.patch('netkan.indexer.CkanMessage.process_ckan')
+    def test_delete_attrs(self, mocked_process):
+        self.handler.append(self.mocked_message())
+        self.handler.append(self.mocked_message(staged=True))
+        self.handler.process_messages()
+        attrs = [{'Id': 'MessageMcMessageFace', 'ReceiptHandle': 'HandleMcHandleFace'}, {
+            'Id': 'MessageMcMessageFace', 'ReceiptHandle': 'HandleMcHandleFace'}]
+        self.assertEqual(self.handler.sqs_delete_entries(), attrs)
+
+
+class TestIndexerQueueHandler(SharedArgsHarness):
+
+    def test_ksp_message_append(self):
+        indexer = IndexerQueueHandler(self.shared_args)
+        indexer.append_message('ksp', self.mocked_message())
+        self.assertTrue('ksp' in indexer.game_handlers)
+
+    def test_ksp_message_no_ksp2(self):
+        indexer = IndexerQueueHandler(self.shared_args)
+        indexer.append_message('ksp', self.mocked_message())
+        self.assertFalse('ksp2' in indexer.game_handlers)
+
+    def test_ksp2_message_append(self):
+        indexer = IndexerQueueHandler(self.shared_args)
+        indexer.append_message('ksp2', self.mocked_message())
+        self.assertTrue('ksp2' in indexer.game_handlers)

@@ -1,13 +1,12 @@
 import logging
 
-import boto3
 import click
 
 from .common import common_options, pass_state, SharedArgs
 
-from ..indexer import MessageHandler
+from ..indexer import IndexerQueueHandler
 from ..scheduler import NetkanScheduler
-from ..spacedock_adder import SpaceDockAdder
+from ..spacedock_adder import SpaceDockAdderQueueHandler
 from ..mirrorer import Mirrorer
 
 
@@ -15,24 +14,7 @@ from ..mirrorer import Mirrorer
 @common_options
 @pass_state
 def indexer(common: SharedArgs) -> None:
-    sqs = boto3.resource('sqs')
-    queue = sqs.get_queue_by_name(QueueName=common.queue)
-
-    while True:
-        messages = queue.receive_messages(
-            MaxNumberOfMessages=10,
-            MessageAttributeNames=['All'],
-            VisibilityTimeout=common.timeout
-        )
-        if not messages:
-            continue
-        with MessageHandler(common.ckanmeta_repo, common.github_pr) as handler:
-            for message in messages:
-                handler.append(message)
-            handler.process_ckans()
-            queue.delete_messages(
-                Entries=handler.sqs_delete_entries()
-            )
+    IndexerQueueHandler(common).run()
 
 
 @click.command()
@@ -55,24 +37,33 @@ def indexer(common: SharedArgs) -> None:
 )
 @common_options
 @pass_state
-def scheduler(common: SharedArgs, max_queued: int, group: str, min_cpu: int, min_io: int) -> None:
+def scheduler(
+    common: SharedArgs,
+    max_queued: int,
+    group: str,
+    min_cpu: int,
+    min_io: int
+) -> None:
+    game = common.game(common.game_id)
     sched = NetkanScheduler(
-        common, common.queue, common.token,
+        common, game.inflation_queue, common.token, game.name,
         nonhooks_group=(group in ('all', 'nonhooks')),
         webhooks_group=(group in ('all', 'webhooks')),
     )
     if sched.can_schedule(max_queued, common.dev, min_cpu, min_io):
         sched.schedule_all_netkans()
-        logging.info("NetKANs submitted to %s", common.queue)
+        logging.info("NetKANs submitted to %s", game.inflation_queue)
 
 
 @click.command()
 @common_options
 @pass_state
 def mirrorer(common: SharedArgs) -> None:
+    # We need at least 50 mods for a collection for ksp2, keeping
+    # to just ksp for now
     Mirrorer(
-        common.ckanmeta_repo, common.ia_access, common.ia_secret,
-        common.ia_collection, common.token
+        common.game('ksp').ckanmeta_repo, common.ia_access, common.ia_secret,
+        common.game('ksp').ia_collection, common.token
     ).process_queue(common.queue, common.timeout)
 
 
@@ -80,10 +71,4 @@ def mirrorer(common: SharedArgs) -> None:
 @common_options
 @pass_state
 def spacedock_adder(common: SharedArgs) -> None:
-    sd_adder = SpaceDockAdder(
-        common.queue,
-        common.timeout,
-        common.netkan_repo,
-        common.github_pr,
-    )
-    sd_adder.run()
+    SpaceDockAdderQueueHandler(common).run()

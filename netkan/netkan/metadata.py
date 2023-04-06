@@ -5,23 +5,34 @@ from pathlib import Path
 from hashlib import sha1
 import uuid
 import urllib.parse
-from typing import Optional, List, Tuple, Union, Any, Dict
+from typing import Optional, List, Tuple, Union, Any, Dict, TYPE_CHECKING
 from ruamel.yaml import YAML
 import dateutil.parser
 
 from .csharp_compat import csharp_uri_tostring
+
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.type_defs import SendMessageBatchRequestEntryTypeDef
+else:
+    SendMessageBatchRequestEntryTypeDef = object
 
 
 class Netkan:
 
     KREF_PATTERN = re.compile('^#/ckan/([^/]+)/(.+)$')
 
-    def __init__(self, filename: Optional[Union[str, Path]] = None, contents: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        filename: Optional[Union[str, Path]] = None,
+        contents: Optional[str] = None,
+        game_id: Optional[str] = None,
+    ) -> None:
         if filename:
             self.filename = Path(filename)
             self.contents = self.filename.read_text(encoding='UTF-8')
         elif contents:
             self.contents = contents
+        self.game_id = game_id
         yaml = YAML(typ='safe')
         # YAML parser doesn't allow tabs, so replace with spaces
         self._raw = yaml.load(self.contents.replace('\t', '    '))
@@ -85,12 +96,15 @@ class Netkan:
         }
 
     def sqs_message_attribs(self, high_ver: Optional['Ckan.Version'] = None) -> Dict[str, Any]:
-        attribs = {}
+        attribs: Dict[str, Any] = {
+            'GameId': self.string_attrib(self.game_id or 'ksp')
+        }
         if high_ver and not getattr(self, 'x_netkan_allow_out_of_order', False):
             attribs['HighestVersion'] = self.string_attrib(high_ver.string)
         return attribs
 
-    def sqs_message(self, high_ver: Optional['Ckan.Version'] = None) -> Dict[str, Any]:
+    def sqs_message(
+            self, high_ver: Optional['Ckan.Version'] = None) -> SendMessageBatchRequestEntryTypeDef:
         hex_id = uuid.uuid4().hex
         return {
             'Id': hex_id,

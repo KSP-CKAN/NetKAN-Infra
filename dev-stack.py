@@ -20,10 +20,14 @@ t = Template()
 
 t.set_description("Generate NetKAN Infrastructure CF Template")
 
-inbound = t.add_resource(Queue("InboundDev",
-                               QueueName="InboundDev.fifo",
-                               ReceiveMessageWaitTimeSeconds=20,
-                               FifoQueue=True))
+inbound_ksp = t.add_resource(Queue("InboundDevKsp",
+                                   QueueName="InboundDevKsp.fifo",
+                                   ReceiveMessageWaitTimeSeconds=20,
+                                   FifoQueue=True))
+inbound_ksp2 = t.add_resource(Queue("InboundDevKsp2",
+                                    QueueName="InboundDevKsp2.fifo",
+                                    ReceiveMessageWaitTimeSeconds=20,
+                                    FifoQueue=True))
 outbound = t.add_resource(Queue("OutboundDev",
                                 QueueName="OutboundDev.fifo",
                                 ReceiveMessageWaitTimeSeconds=20,
@@ -56,7 +60,8 @@ t.add_resource(PolicyType(
                     "sqs:GetQueueAttributes",
                 ],
                 "Resource": [
-                    GetAtt(inbound, "Arn"),
+                    GetAtt(inbound_ksp, "Arn"),
+                    GetAtt(inbound_ksp2, "Arn"),
                     GetAtt(outbound, "Arn"),
                     GetAtt(addqueue, "Arn"),
                     GetAtt(mirrorqueue, "Arn"),
@@ -71,7 +76,7 @@ t.add_resource(PolicyType(
     }
 ))
 
-for queue in [inbound, outbound, addqueue, mirrorqueue]:
+for queue in [inbound_ksp, inbound_ksp2, outbound, addqueue, mirrorqueue]:
     t.add_output([
         Output(
             "{}QueueURL".format(queue.title),

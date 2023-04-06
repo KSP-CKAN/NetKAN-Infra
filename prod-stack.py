@@ -22,14 +22,13 @@ ZONE_ID = os.environ.get('CKAN_ZONEID', False)
 BOT_FQDN = 'netkan.ksp-ckan.space'
 EMAIL = 'domains@ksp-ckan.space'
 PARAM_NAMESPACE = '/NetKAN/Indexer/'
-NETKAN_REMOTE = 'git@github.com:KSP-CKAN/NetKAN.git'
+NETKAN_REMOTES = 'ksp=git@github.com:KSP-CKAN/NetKAN.git'
 NETKAN_USER = 'KSP-CKAN'
-NETKAN_REPO = 'NetKAN'
-CKANMETA_REMOTE = 'git@github.com:KSP-CKAN/CKAN-meta.git'
+NETKAN_REPOS = 'ksp=NetKAN'
+CKANMETA_REMOTES = 'ksp=git@github.com:KSP-CKAN/CKAN-meta.git'
 CKANMETA_USER = 'KSP-CKAN'
-CKANMETA_REPO = 'CKAN-meta'
+CKANMETA_REPOS = 'ksp=CKAN-meta'
 NETKAN_USER = 'KSP-CKAN'
-NETKAN_REPO = 'NetKAN'
 STATUS_BUCKET = 'status.ksp-ckan.space'
 status_key = 'status/netkan.json'
 
@@ -80,6 +79,7 @@ for queue in [inbound, inbound2, outbound, addqueue, mirrorqueue]:
         ),
     ])
 
+INFLATION_QUEUES = Sub('ksp=${ksp}', ksp=GetAtt(inbound, 'QueueName'))
 
 # DyanamoDB: NetKAN Status
 netkan_db = t.add_resource(Table(
@@ -692,9 +692,9 @@ services = [
             'SSH_KEY', 'GH_Token',
         ],
         'env': [
-            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
+            ('CKANMETA_REMOTES', CKANMETA_REMOTES),
             ('CKAN_USER', CKANMETA_USER),
-            ('CKAN_REPO', CKANMETA_REPO),
+            ('CKAN_REPOS', CKANMETA_REPOS),
             ('SQS_QUEUE', GetAtt(outbound, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
@@ -704,20 +704,21 @@ services = [
         'linux_parameters': LinuxParameters(InitProcessEnabled=True),
     },
     {
-        'name': 'Scheduler',
+        'name': 'SchedulerKsp',
         'command': 'scheduler',
         'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
-            ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
-            ('NETKAN_REMOTE', NETKAN_REMOTE),
-            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
+            ('GAME_ID', 'ksp'),
+            ('INFLATION_QUEUES', INFLATION_QUEUES),
+            ('NETKAN_REMOTES', NETKAN_REMOTES),
+            ('CKANMETA_REMOTES', CKANMETA_REMOTES),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'schedule': 'rate(30 minutes)',
     },
     {
-        'name': 'SchedulerWebhooksPass',
+        'name': 'SchedulerKspWebhooksPass',
         'command': [
             'scheduler', '--group', 'webhooks',
                 '--max-queued', '2000',
@@ -727,9 +728,10 @@ services = [
         'memory': '156',
         'secrets': ['SSH_KEY', 'GH_Token'],
         'env': [
-            ('SQS_QUEUE', GetAtt(inbound, 'QueueName')),
-            ('NETKAN_REMOTE', NETKAN_REMOTE),
-            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
+            ('GAME_ID', 'ksp'),
+            ('INFLATION_QUEUES', INFLATION_QUEUES),
+            ('NETKAN_REMOTES', NETKAN_REMOTES),
+            ('CKANMETA_REMOTES', CKANMETA_REMOTES),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
         'schedule': 'rate(1 day)',
@@ -797,15 +799,16 @@ services = [
         'schedule': 'rate(5 minutes)',
     },
     {
-        'name': 'DownloadCounter',
+        'name': 'DownloadCounterKsp',
         'command': 'download-counter',
         'memory': '156',
         'secrets': [
             'SSH_KEY', 'GH_Token',
         ],
         'env': [
-            ('NETKAN_REMOTE', NETKAN_REMOTE),
-            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
+            ('GAME_ID', 'ksp'),
+            ('NETKAN_REMOTES', NETKAN_REMOTES),
+            ('CKANMETA_REMOTES', CKANMETA_REMOTES),
         ],
         'schedule': 'rate(1 day)',
     },
@@ -847,9 +850,10 @@ services = [
         'name': 'AutoFreezer',
         'command': 'auto-freezer',
         'env': [
-            ('NETKAN_REMOTE', NETKAN_REMOTE),
+            ('GAME_ID', 'ksp'),
+            ('NETKAN_REMOTES', NETKAN_REMOTES),
             ('CKAN_USER', NETKAN_USER),
-            ('CKAN_REPO', NETKAN_REPO),
+            ('CKAN_REPOS', NETKAN_REPOS),
         ],
         'secrets': [
             'SSH_KEY', 'GH_Token',
@@ -871,10 +875,10 @@ services = [
                     'XKAN_GHSECRET', 'SSH_KEY',
                 ],
                 'env': [
-                    ('NETKAN_REMOTE', NETKAN_REMOTE),
-                    ('CKANMETA_REMOTE', CKANMETA_REMOTE),
+                    ('NETKAN_REMOTES', NETKAN_REMOTES),
+                    ('CKANMETA_REMOTES', CKANMETA_REMOTES),
                     ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
-                    ('INFLATION_SQS_QUEUE', GetAtt(inbound, 'QueueName')),
+                    ('INFLATION_SQS_QUEUES', INFLATION_QUEUES),
                     ('ADD_SQS_QUEUE', GetAtt(addqueue, 'QueueName')),
                     ('MIRROR_SQS_QUEUE', GetAtt(mirrorqueue, 'QueueName')),
                 ],
@@ -898,9 +902,9 @@ services = [
         'env': [
             ('SQS_QUEUE', GetAtt(addqueue, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
-            ('NETKAN_REMOTE', NETKAN_REMOTE),
+            ('NETKAN_REMOTES', NETKAN_REMOTES),
             ('CKAN_USER', NETKAN_USER),
-            ('CKAN_REPO', NETKAN_REPO),
+            ('CKAN_REPOS', NETKAN_REPOS),
         ],
     },
     {
@@ -910,8 +914,8 @@ services = [
             'IA_access', 'IA_secret', 'SSH_KEY', 'GH_Token'
         ],
         'env': [
-            ('CKANMETA_REMOTE', CKANMETA_REMOTE),
-            ('IA_collection', 'kspckanmods'),
+            ('CKANMETA_REMOTES', CKANMETA_REMOTES),
+            ('IA_COLLECTIONS', 'ksp=kspckanmods'),
             ('SQS_QUEUE', GetAtt(mirrorqueue, 'QueueName')),
             ('AWS_DEFAULT_REGION', Sub('${AWS::Region}')),
         ],
@@ -969,7 +973,8 @@ for service in services:
             Links=[],
         )
         if entrypoint:
-            entrypoint = entrypoint if isinstance(entrypoint, list) else [entrypoint]
+            entrypoint = entrypoint if isinstance(
+                entrypoint, list) else [entrypoint]
             definition.EntryPoint = entrypoint
         if command:
             command = command if isinstance(command, list) else [command]

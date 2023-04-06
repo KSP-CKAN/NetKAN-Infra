@@ -1,22 +1,21 @@
-import unittest
-from unittest.mock import Mock
 from pathlib import Path, PurePath
-from git import Repo
 
 from netkan.common import sqs_batch_entries
-from netkan.repos import CkanMetaRepo, NetkanRepo
 from netkan.scheduler import NetkanScheduler
 
+from .common import SharedArgsHarness
 
-class TestScheduler(unittest.TestCase):
-    test_data = PurePath(__file__).parent.joinpath('testdata', 'NetKAN')
-    ckm_root = PurePath(__file__).parent.joinpath('testdata', 'CKAN-meta')
+
+class TestScheduler(SharedArgsHarness):
+    repos = ['ckan', 'netkan', 'countkan']
+    netkan_data = Path(PurePath(__file__).parent, 'testdata', 'NetKAN')
+    ckan_data = Path(PurePath(__file__).parent, 'testdata', 'CKAN-meta')
+    countkan_data = Path(PurePath(__file__).parent, 'testdata', 'NetTEN')
 
     def setUp(self):
-        common = Mock()
-        common.netkan_repo = NetkanRepo(Repo.init(self.test_data))
-        common.ckanmeta_repo = CkanMetaRepo(Repo.init(self.ckm_root))
-        self.scheduler = NetkanScheduler(common, 'TestyMcTestFace', 'token')
+        super().setUp()
+        self.scheduler = NetkanScheduler(
+            self.shared_args, 'TestyMcTestFace', 'token', 'ksp')
         self.messages = (nk.sqs_message(self.scheduler.ckm_repo.highest_version(nk.identifier))
                          for nk in self.scheduler.nk_repo.netkans())
 
@@ -39,10 +38,12 @@ class TestScheduler(unittest.TestCase):
         self.assertEqual(len(attrs['Entries']), 10)
 
     def test_sqs_batching_ten(self):
-        common = Mock()
-        common.netkan_repo = NetkanRepo(Repo.init(Path(PurePath(__file__).parent, 'testdata/NetTEN')))
-        common.ckanmeta_repo = CkanMetaRepo(Repo.init(self.ckm_root))
-        scheduler = NetkanScheduler(common, 'TestyMcTestFace', 'token')
+        setattr(self.shared_args, 'netkan_remotes',
+                (f'count={getattr(self, "countkan_upstream")}',))
+        setattr(self.shared_args, 'ckanmeta_remotes',
+                (f'count={getattr(self, "ckan_upstream")}',))
+        scheduler = NetkanScheduler(
+            self.shared_args, 'TestyMcTestFace', 'token', 'count')
         messages = (nk.sqs_message(scheduler.ckm_repo.highest_version(nk.identifier))
                     for nk in scheduler.nk_repo.netkans())
 

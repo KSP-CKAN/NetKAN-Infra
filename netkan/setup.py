@@ -37,6 +37,8 @@ setup(
         'development': [
             'ptvsd',
             'autopep8',
+            'boto3-stubs[essential,cloudwatch]',
+            'coverage',
             'troposphere',
             'pytest',
             'pytest-mypy',
@@ -50,6 +52,8 @@ setup(
             'types-Jinja2',
         ],
         'test': [
+            'boto3-stubs[essential,cloudwatch]',
+            'coverage',
             'pytest',
             'pytest-mypy',
             'mypy',

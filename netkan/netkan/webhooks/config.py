@@ -1,11 +1,22 @@
-from pathlib import Path
+from typing import TYPE_CHECKING
+
 import boto3
 
-from ..repos import NetkanRepo, CkanMetaRepo
-from ..utils import init_repo, init_ssh
+from ..cli.common import SharedArgs
+
+
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.client import SQSClient
+    from mypy_boto3_sqs.service_resource import Queue
+else:
+    SQSClient = object
+    Queue = object
 
 
 class WebhooksConfig:
+    _client: SQSClient
+    _add_queue: Queue
+    _mirror_queue: Queue
 
     # pylint: disable=attribute-defined-outside-init
 
@@ -13,24 +24,48 @@ class WebhooksConfig:
     # import a reference to our global config object before we set
     # its properties, and that requires a temporary 'empty' state.
     def setup(self, ssh_key: str, secret: str,
-              netkan_remote: str, netkan_path: str,
-              ckanmeta_remote: str, ckanmeta_path: str,
-              inf_queue_name: str, add_queue_name: str, mir_queue_name: str) -> None:
+              netkan_remotes: str, ckanmeta_remotes: str,
+              inf_queue_names: str, add_queue_name: str, mir_queue_name: str) -> None:
 
         self.secret = secret
-        # Cloning the repos requires an SSH key set up in our home dir
-        init_ssh(ssh_key, Path(Path.home(), '.ssh'))
+        self.common = SharedArgs()
+        self.common.ssh_key = ssh_key
+        self.common.ckanmeta_remotes = tuple(ckanmeta_remotes.split(' '))
+        self.common.netkan_remotes = tuple(netkan_remotes.split(' '))
+        self.common.inflation_queues = tuple(inf_queue_names.split(' '))
+        self.common.deep_clone = False
+        self._add_queue_name = add_queue_name
+        self._mir_queue_name = mir_queue_name
 
-        self.nk_repo = NetkanRepo(init_repo(netkan_remote, netkan_path, False))
-        self.ckm_repo = CkanMetaRepo(init_repo(ckanmeta_remote, ckanmeta_path, False))
-        self.repos = [self.nk_repo.git_repo, self.ckm_repo.git_repo]
+    @property
+    def client(self) -> SQSClient:
+        if getattr(self, '_client', None) is None:
+            self._client = boto3.client('sqs')
+        return self._client
 
-        if inf_queue_name or add_queue_name or mir_queue_name:
-            self.client = boto3.client('sqs')
+    def inflation_queue(self, game: str) -> Queue:
+        game_id = game.lower()
+        if getattr(self, f'_{game_id}_inflation_queue', None) is None:
             sqs = boto3.resource('sqs')
-            self.inflation_queue = sqs.get_queue_by_name(QueueName=inf_queue_name)
-            self.add_queue = sqs.get_queue_by_name(QueueName=add_queue_name)
-            self.mirror_queue = sqs.get_queue_by_name(QueueName=mir_queue_name)
+            setattr(self, f'_{game_id}_inflation_queue', sqs.get_queue_by_name(
+                QueueName=self.common.game(game_id).inflation_queue))
+        return getattr(self, f'_{game_id}_inflation_queue')
+
+    @property
+    def add_queue(self) -> Queue:
+        if getattr(self, '_add_queue', None) is None:
+            sqs = boto3.resource('sqs')
+            self._add_queue = sqs.get_queue_by_name(
+                QueueName=self._add_queue_name)
+        return self._add_queue
+
+    @property
+    def mirror_queue(self) -> Queue:
+        if getattr(self, '_mirror_queue', None) is None:
+            sqs = boto3.resource('sqs')
+            self._mirror_queue = sqs.get_queue_by_name(
+                QueueName=self._mir_queue_name)
+        return self._mirror_queue
 
 
 # Provide the active config to other modules

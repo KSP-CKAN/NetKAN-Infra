@@ -3,22 +3,32 @@ import logging
 from pathlib import Path, PurePath
 from collections import deque
 from datetime import datetime, timezone
-from typing import List, Optional, Type, Dict, Any, Deque
-from types import TracebackType
+from typing import List, Optional, Dict, Any, Deque, Type, TYPE_CHECKING
 
-import boto3  # pylint: disable=unused-import
 from dateutil.parser import parse
 from git.objects.commit import Commit
 
+from .cli.common import Game
 from .metadata import Ckan
+from .queue_handler import BaseMessageHandler, QueueHandler
 from .repos import CkanMetaRepo
 from .status import ModStatus
 from .github_pr import GitHubPR
 
 
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.service_resource import Message
+    from mypy_boto3_sqs.type_defs import DeleteMessageBatchRequestEntryTypeDef
+else:
+    Message = object
+    DeleteMessageBatchRequestEntryTypeDef = object
+
+USER_AGENT = 'Mozilla/5.0 (compatible; Netkanbot/1.0; CKAN; +https://github.com/KSP-CKAN/NetKAN-Infra)'
+
+
 class CkanMessage:
 
-    def __init__(self, msg: 'boto3.resources.factory.sqs.Message',
+    def __init__(self, msg: Message,
                  ckm_repo: CkanMetaRepo, github_pr: Optional[GitHubPR] = None) -> None:
         self.body = msg.body
         self.ckan = Ckan(contents=self.body)
@@ -34,7 +44,7 @@ class CkanMessage:
         self.indexed = False
         for item in msg.message_attributes.items():
             attr_type = f'{item[1]["DataType"]}Value'
-            content = item[1][attr_type]
+            content = item[1][attr_type]  # type: ignore[literal-required]
             if content.lower() in ['true', 'false']:
                 content = content.lower() == 'true'
             if item[0] == 'FileName':
@@ -154,45 +164,42 @@ class CkanMessage:
         self._process_ckan()
 
     @property
-    def delete_attrs(self) -> Dict[str, Any]:
+    def delete_attrs(self) -> DeleteMessageBatchRequestEntryTypeDef:
         return {
             'Id': self.message_id,
             'ReceiptHandle': self.receipt_handle
         }
 
 
-class MessageHandler:
+class MessageHandler(BaseMessageHandler):
+    master: Deque[CkanMessage]
+    staged: Deque[CkanMessage]
+    processed: List[CkanMessage]
 
-    def __init__(self, repo: CkanMetaRepo, github_pr: Optional[GitHubPR] = None) -> None:
-        self.ckm_repo = repo
-        self.github_pr = github_pr
-        self.master: Deque[CkanMessage] = deque()
-        self.staged: Deque[CkanMessage] = deque()
-        self.processed: List[CkanMessage] = []
+    def __init__(self, game: Game) -> None:
+        super().__init__(game)
+        self.master = deque()
+        self.staged = deque()
+        self.processed = []
 
     def __str__(self) -> str:
-        return str(self.master + self.staged)
+        return str(' '.join([str(x) for x in self.master + self.staged]))
 
     def __len__(self) -> int:
         return len(self.master + self.staged)
 
-    # Apparently gitpython can be leaky on long running processes
-    # we can ensure we call close on it and run our handler inside
-    # a context manager
-    def __enter__(self) -> 'MessageHandler':
-        if not self.ckm_repo.is_active_branch('master'):
-            self.ckm_repo.checkout_branch('master')
-        self.ckm_repo.pull_remote_branch('master')
-        return self
+    @property
+    def repo(self) -> CkanMetaRepo:
+        return self.game.ckanmeta_repo
 
-    def __exit__(self, exc_type: Type[BaseException],
-                 exc_value: BaseException, traceback: TracebackType) -> None:
-        self.ckm_repo.close_repo()
+    @property
+    def github_pr(self) -> GitHubPR:
+        return self.game.github_pr
 
-    def append(self, message: 'boto3.resources.factory.sqs.Message') -> None:
+    def append(self, message: Message) -> None:
         ckan = CkanMessage(
             message,
-            self.ckm_repo,
+            self.repo,
             self.github_pr
         )
         if not ckan.Staged:
@@ -206,15 +213,19 @@ class MessageHandler:
             ckan.process_ckan()
             self.processed.append(ckan)
 
-    def sqs_delete_entries(self) -> List[Dict[str, Any]]:
+    def sqs_delete_entries(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
         return [c.delete_attrs for c in self.processed]
 
     # Currently we intermingle Staged/Master commits
     # separating them out will be a little more efficient
     # with our push/pull traffic.
-    def process_ckans(self) -> None:
+    def process_messages(self) -> None:
         self._process_queue(self.master)
         if any(ckan.indexed for ckan in self.processed):
-            self.ckm_repo.pull_remote_branch('master')
-            self.ckm_repo.push_remote_branch('master')
+            self.repo.pull_remote_branch('master')
+            self.repo.push_remote_branch('master')
         self._process_queue(self.staged)
+
+
+class IndexerQueueHandler(QueueHandler):
+    _handler_class: Type[BaseMessageHandler] = MessageHandler

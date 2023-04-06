@@ -10,7 +10,8 @@ from netkan.repos import NetkanRepo, CkanMetaRepo
 
 
 class TestNetKAN(unittest.TestCase):
-    nk_repo = NetkanRepo(Repo(Path(PurePath(__file__).parent, 'testdata/NetKAN')))
+    nk_repo = NetkanRepo(
+        Repo(Path(PurePath(__file__).parent, 'testdata/NetKAN')), 'ksp')
 
     def test_netkan_message(self):
         dogecoinflag = self.nk_repo.nk_path('DogeCoinFlag')

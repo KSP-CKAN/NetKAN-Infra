@@ -7,7 +7,7 @@ import logging
 import shutil
 from pathlib import Path
 from importlib.resources import read_text
-from typing import Optional, List, Union, Iterable, BinaryIO, Dict, Any
+from typing import Optional, List, Union, Iterable, BinaryIO, Dict, Any, TYPE_CHECKING
 import boto3
 import github
 import internetarchive
@@ -17,10 +17,16 @@ from .metadata import Ckan
 from .repos import CkanMetaRepo
 from .common import deletion_msg, download_stream_to_file, USER_AGENT
 
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.type_defs import DeleteMessageBatchRequestEntryTypeDef
+else:
+    DeleteMessageBatchRequestEntryTypeDef = object
+
 
 class CkanMirror(Ckan):
 
-    DESCRIPTION_TEMPLATE = Template(read_text('netkan', 'mirror_description_template.jinja2'))
+    DESCRIPTION_TEMPLATE = Template(
+        read_text('netkan', 'mirror_description_template.jinja2'))
 
     REDISTRIBUTABLE_LICENSES = {
         "public-domain",
@@ -310,7 +316,7 @@ class Mirrorer:
                 self.ckm_repo.git_repo.heads.master.checkout()
                 self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs')
                 # Start processing the messages
-                to_delete = []
+                to_delete: List[DeleteMessageBatchRequestEntryTypeDef] = []
                 for msg in messages:
                     # Check if archive.org is overloaded before each upload
                     if self.ia_session.s3_is_overloaded(access_key=self.ia_access):

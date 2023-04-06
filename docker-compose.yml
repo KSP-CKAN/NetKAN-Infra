@@ -10,9 +10,9 @@ services:
       target: dev
     environment:
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
-      CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
+      CKANMETA_REMOTES: ${CKAN_METADATA_PATHS}
       CKANMETA_USER: ${CKAN_METADATA_USER}
-      CKANMETA_REPO: ${CKAN_METADATA_REPO}
+      CKANMETA_REPOS: ${CKAN_METADATA_REPOS}
       AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
@@ -30,13 +30,33 @@ services:
       context: netkan/.
       target: dev
     environment:
-      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
+      NETKAN_REMOTES: ${NETKAN_METADATA_PATHS}
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
-      CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
+      CKANMETA_REMOTES: ${CKAN_METADATA_PATHS}
       AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
-      SQS_QUEUE: InboundDev.fifo
+      INFLATION_QUEUES: ksp=InboundDevKsp.fifo ksp2=InboundDevKsp2.fifo
+      GAME_ID: ksp2
+      MAX_QUEUED: 1
+      DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
+      DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
+    volumes:
+      - ./netkan:/home/netkan/netkan
+    command: scheduler --dev
+  scheduler:
+    build:
+      context: netkan/.
+      target: dev
+    environment:
+      NETKAN_REMOTES: ${NETKAN_METADATA_PATHS}
+      SSH_KEY: ${CKAN_NETKAN_SSHKEY}
+      CKANMETA_REMOTES: ${CKAN_METADATA_PATHS}
+      AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
+      INFLATION_QUEUES: ksp=InboundDevKsp.fifo ksp2=InboundDevKsp2.fifo
+      GAME_ID: ksp2
       MAX_QUEUED: 1
       DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
       DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
@@ -46,7 +66,8 @@ services:
   inflator:
     image: kspckan/inflator
     environment:
-      QUEUES: InboundDev.fifo,OutboundDev.fifo
+      QUEUES: InboundDevKsp.fifo,OutboundDev.fifo
+      GAME: KSP
       GH_Token: ${CKAN_GH_Token}
       AWS_REGION: ${CKAN_AWS_DEFAULT_REGION}
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
@@ -57,18 +78,20 @@ services:
       # distros is 1000:1000, which will match the
       # user in the container.
       - ${HOME}/ckan_cache:/home/netkan/ckan_cache
-  legacyhooks:
-    image: kspckan/webhooks
+  inflator-ksp2:
+    image: kspckan/inflator
     environment:
-      SSH_KEY: ${CKAN_NETKAN_SSHKEY}
+      QUEUES: InboundDevKsp2.fifo,OutboundDev.fifo
+      GAME: KSP2
       GH_Token: ${CKAN_GH_Token}
-      XKAN_GHSECRET: test
-      CKAN_meta: ${CKAN_METADATA_PATH}
-      NetKAN: ${NETKAN_METADATA_PATH}
-      IA_access: test
-      IA_secret: test
-      IA_collection: test
+      AWS_REGION: ${CKAN_AWS_DEFAULT_REGION}
+      AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
     volumes:
+      # Docker will create this with root perms if
+      # it's not created first. First user on most
+      # distros is 1000:1000, which will match the
+      # user in the container.
       - ${HOME}/ckan_cache:/home/netkan/ckan_cache
   webhooks:
     build:
@@ -77,14 +100,17 @@ services:
     environment:
       XKAN_GHSECRET: test
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
-      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
-      INFLATION_SQS_QUEUE: InboundDev.fifo
+      NETKAN_REMOTES: ${NETKAN_METADATA_PATHS}
+      INFLATION_SQS_QUEUES: ksp=InboundDevKsp.fifo ksp2=InboundDevKsp2.fifo
       MIRROR_SQS_QUEUE: MirroringDev.fifo
       AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
       DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
       DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
+      CKANMETA_REMOTES: ${CKAN_METADATA_PATHS}
+      CKANMETA_USER: ${CKAN_METADATA_USER}
+      CKANMETA_REPOS: ${CKAN_METADATA_REPOS}
     entrypoint: .local/bin/gunicorn
     command: -b 0.0.0.0:5000 --access-logfile - "netkan.webhooks:create_app()"
   adder:
@@ -93,7 +119,7 @@ services:
       target: dev
     environment:
       SQS_QUEUE: AddingDev.info
-      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
+      NETKAN_REMOTES: ${NETKAN_METADATA_PATHS}
       NETKAN_USER: ${CKAN_NETKAN_USER}
       NETKAN_REPO:  ${CKAN_NETKAN_REPO}
     command: spacedock-adder
@@ -107,7 +133,7 @@ services:
       AWS_DEFAULT_REGION: ${CKAN_AWS_DEFAULT_REGION}
       AWS_SECRET_ACCESS_KEY: ${CKAN_AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
-      CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
+      CKANMETA_REMOTES: ${CKAN_METADATA_PATHS}
       IA_access: test
       IA_secret: test
       IA_collection: test
@@ -162,8 +188,8 @@ services:
       target: dev
     environment:
       SSH_KEY: ${CKAN_NETKAN_SSHKEY}
-      NETKAN_REMOTE: ${NETKAN_METADATA_PATH}
-      CKANMETA_REMOTE: ${CKAN_METADATA_PATH}
+      NETKAN_REMOTES: ${NETKAN_METADATA_PATHS}
+      CKANMETA_REMOTES: ${CKAN_METADATA_PATHS}
       GH_Token: ${CKAN_GH_Token}
       DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
       DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}

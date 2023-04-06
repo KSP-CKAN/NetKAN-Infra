@@ -1,5 +1,5 @@
-from typing import List, Iterable, Dict, Any, IO
-import boto3  # pylint: disable=unused-import
+
+from typing import List, Iterable, IO, TYPE_CHECKING
 
 import requests
 import github
@@ -8,17 +8,29 @@ from git import Repo
 from .metadata import Netkan
 from .repos import NetkanRepo
 
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.service_resource import Message
+    from mypy_boto3_sqs.type_defs import (
+        DeleteMessageBatchRequestEntryTypeDef,
+        SendMessageBatchRequestEntryTypeDef,
+    )
+else:
+    Message = object
+    DeleteMessageBatchRequestEntryTypeDef = object
+    SendMessageBatchRequestEntryTypeDef = object
+
+
 USER_AGENT = 'Mozilla/5.0 (compatible; Netkanbot/1.0; CKAN; +https://github.com/KSP-CKAN/NetKAN-Infra)'
 
 
-def netkans(path: str, ids: Iterable[str]) -> Iterable[Netkan]:
+def netkans(path: str, ids: Iterable[str], game_id: str) -> Iterable[Netkan]:
     repo = NetkanRepo(Repo(path))
-    return (Netkan(p) for p in repo.nk_paths(ids))
+    return (Netkan(p, game_id=game_id) for p in repo.nk_paths(ids))
 
 
-def sqs_batch_entries(messages: Iterable[Dict[str, str]],
-                      batch_size: int = 10) -> Iterable[List[Dict[str, str]]]:
-    batch = []
+def sqs_batch_entries(messages: Iterable[SendMessageBatchRequestEntryTypeDef],
+                      batch_size: int = 10) -> Iterable[List[SendMessageBatchRequestEntryTypeDef]]:
+    batch: List[SendMessageBatchRequestEntryTypeDef] = []
     for msg in messages:
         batch.append(msg)
         if len(batch) == batch_size:
@@ -37,7 +49,7 @@ def github_limit_remaining(token: str) -> int:
     return github.Github(token, user_agent=USER_AGENT).get_rate_limit().core.remaining
 
 
-def deletion_msg(msg: 'boto3.resources.factory.sqs.Message') -> Dict[str, Any]:
+def deletion_msg(msg: Message) -> DeleteMessageBatchRequestEntryTypeDef:
     return {
         'Id':            msg.message_id,
         'ReceiptHandle': msg.receipt_handle,

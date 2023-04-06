@@ -14,8 +14,9 @@ class XkanRepo:
     Concantenates all common repo operations in one place
     """
 
-    def __init__(self, git_repo: Repo) -> None:
+    def __init__(self, git_repo: Repo, game_id: Optional[str] = None) -> None:
         self.git_repo = git_repo
+        self.game_id = game_id
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}({self.git_repo.__repr__()})>'
@@ -45,7 +46,8 @@ class XkanRepo:
         branch.checkout()
 
     def pull_remote_branch(self, branch_name: str, strategy_option: str = 'ours') -> None:
-        self.git_repo.remotes.origin.pull(branch_name, strategy_option=strategy_option)
+        self.git_repo.remotes.origin.pull(
+            branch_name, strategy_option=strategy_option)
 
     def push_remote_branch(self, branch_name: str) -> None:
         self.git_repo.remotes.origin.push(branch_name)
@@ -136,7 +138,7 @@ class NetkanRepo(XkanRepo):
         return (self.nk_path(identifier) for identifier in identifiers)
 
     def netkans(self) -> Iterable[Netkan]:
-        return (Netkan(f) for f in self.all_nk_paths())
+        return (Netkan(f, game_id=self.game_id) for f in self.all_nk_paths())
 
     @staticmethod
     def _nk_sort(path: Path) -> str:
@@ -160,9 +162,9 @@ class CkanMetaRepo(XkanRepo):
     def identifiers(self) -> Iterable[str]:
         return (path.stem for path in self.ckm_dir.iterdir()
                 if path.is_dir()
-                   and self.IDENTIFIER_PATTERN.fullmatch(path.stem)
-                   and any(child.match('*.ckan')
-                           for child in path.iterdir()))
+                and self.IDENTIFIER_PATTERN.fullmatch(path.stem)
+                and any(child.match('*.ckan')
+                        for child in path.iterdir()))
 
     def all_latest_modules(self) -> Iterable[Ckan]:
         return filter(None,

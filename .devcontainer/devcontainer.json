@@ -11,6 +11,6 @@
 		// uses the right one for terminals and tasks. For example, /bin/bash (or /bin/ash for Alpine).
 		"terminal.integrated.shell.linux": null
 	},
-	"postCreateCommand": "pip install --user -e netkan/.",
+	"postCreateCommand": "pip install --user -e netkan/.['development']",
 	"extensions": []
 }
