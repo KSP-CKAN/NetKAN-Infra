@@ -308,6 +308,7 @@ class TestMessageHandler(SharedArgsHarness):
         attrs = [{'Id': 'MessageMcMessageFace', 'ReceiptHandle': 'HandleMcHandleFace'}, {
             'Id': 'MessageMcMessageFace', 'ReceiptHandle': 'HandleMcHandleFace'}]
         self.assertEqual(self.handler.sqs_delete_entries(), attrs)
+        self.assertEqual(len(self.handler.processed), 0)
 
 
 class TestIndexerQueueHandler(SharedArgsHarness):
