@@ -2,9 +2,10 @@ import re
 import tempfile
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile, ZipInfo
-from typing import Dict, List, Any, Union, Pattern
+from typing import Dict, List, Any, Union, Pattern, Iterable
 
 from .common import download_stream_to_file
+from .cli.common import Game
 
 
 class ModAspect:
@@ -61,8 +62,11 @@ class ModAnalyzer:
         CfgAspect(r'^\s*name\s*=\s*ModuleWaterfallFX\b',
                                             ['graphics'],     ['Waterfall']),
 
-        FilenameAspect(r'.ks$',             ['config',
+        FilenameAspect(r'\.ks$',            ['config',
                                              'control'],      ['kOS']),
+        FilenameAspect(r'swinfo\.json$',    [],               ['SpaceWarp']),
+        FilenameAspect(r'\.dll$',           ['plugin'],       []),
+        FilenameAspect(r'\.cfg$',           ['config'],       []),
     ]
     FILTERS = [
         '__MACOSX', '.DS_Store',
@@ -77,7 +81,7 @@ class ModAnalyzer:
     CRAFT_TYPE_REGEXP = re.compile(r'^\s*type = (?P<type>VAB|SPH|None)',
                                    re.MULTILINE)
 
-    def __init__(self, ident: str, download_url: str) -> None:
+    def __init__(self, ident: str, download_url: str, game: Game) -> None:
         self.ident = ident
         self.download_file = tempfile.NamedTemporaryFile()
         download_stream_to_file(download_url, self.download_file)
@@ -90,16 +94,17 @@ class ModAnalyzer:
                       [zi for zi in self.zip.infolist()
                        if not zi.is_dir()])
 
-        self.tags: List[str] = [*(['plugin'] if self.has_dll() else []),
-                                *(['config'] if self.has_cfg() else [])]
+        self.mod_root_path = game.mod_root
+
+        self.tags: List[str] = []
         self.depends: List[Dict[str, str]] = []
         for aspect in self.ASPECTS:
             aspect.analyze(self)
         if 'parts' in self.tags:
             self.tags.remove('config')
 
-        self.default_install_stanza = {'find': ident,
-                                       'install_to': 'GameData'}
+        self.default_install_stanza = {'find':       ident,
+                                       'install_to': self.mod_root_path}
 
     def read_zipped_file(self, zipinfo: ZipInfo) -> str:
         return ('' if not self.zip else
@@ -108,6 +113,10 @@ class ModAnalyzer:
 
     def has_version_file(self) -> bool:
         return any(zi.filename.lower().endswith('.version')
+                   for zi in self.files)
+
+    def has_spacewarp_info(self) -> bool:
+        return any(zi.filename.lower().endswith('swinfo.json')
                    for zi in self.files)
 
     def has_dll(self) -> bool:
@@ -141,16 +150,29 @@ class ModAnalyzer:
         return any(self.ident in Path(zi.filename).parts[:-1]
                    for zi in self.files)
 
+    @staticmethod
+    def sublists(main_list: List[str], sublist_len: int) -> Iterable[List[str]]:
+        return (main_list[start : start + sublist_len]
+                for start in range(len(main_list) - sublist_len + 1))
+
+    @staticmethod
+    def iter_index(container: List[str], contained: List[str]) -> int:
+        for start, sublist in enumerate(ModAnalyzer.sublists(container, len(contained))):
+            if sublist == contained:
+                return start
+        return -1
+
     def find_folder(self) -> str:
+        gamedata_folded = self.mod_root_path.casefold().split('/')
+        gamedata_len = len(gamedata_folded)
         # First look for a unique entry directly under GameData
         dir_parts = {Path(zi.filename).parts[:-1] for zi in self.files}
         dir_parts_folded = [(dirs, [d.casefold() for d in dirs])
                             for dirs in dir_parts]
-        gamedata_folded = 'GameData'.casefold()
-        dirs_with_gamedata = {(dirs, dirs_folded.index(gamedata_folded))
+        dirs_with_gamedata = {(dirs, ModAnalyzer.iter_index(dirs_folded, gamedata_folded))
                               for dirs, dirs_folded in dir_parts_folded
-                              if gamedata_folded in dirs_folded}
-        parts_after_gd = {dirs[i + 1]: f'{dirs[i]}/{dirs[i + 1]}'
+                              if ModAnalyzer.iter_index(dirs_folded, gamedata_folded) > -1}
+        parts_after_gd = {dirs[i + gamedata_len]: f'{dirs[i]}/{dirs[i + gamedata_len]}'
                           for dirs, i in dirs_with_gamedata
                           if i < len(dirs) - 1}
         if len(parts_after_gd) > 1:
@@ -196,7 +218,7 @@ class ModAnalyzer:
 
     def get_install_stanzas(self) -> Dict[str, List[Dict[str, Any]]]:
         stanzas: List[Dict[str, Any]] = [{'find': self.find_folder(),
-                                          'install_to': 'GameData'},
+                                          'install_to': self.mod_root_path},
                                          *self.get_ships_install_stanzas()]
         filters = self.get_filters()
         filter_regexps = self.get_filter_regexps()
@@ -217,6 +239,8 @@ class ModAnalyzer:
         props: Dict[str, Any] = {}
         if self.has_version_file():
             props['$vref'] = '#/ckan/ksp-avc'
+        if self.has_spacewarp_info():
+            props['$vref'] = '#/ckan/space-warp'
         if self.tags:
             props['tags'] = self.tags
         if self.depends:
