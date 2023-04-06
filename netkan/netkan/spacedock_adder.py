@@ -188,7 +188,9 @@ class SpaceDockMessageHandler(BaseMessageHandler):
                 self.processed.append(netkan)
 
     def sqs_delete_entries(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
-        return [c.delete_attrs for c in self.processed]
+        entries = [c.delete_attrs for c in self.processed]
+        self.processed = []
+        return entries
 
     def process_messages(self) -> None:
         self._process_queue(self.queued)
