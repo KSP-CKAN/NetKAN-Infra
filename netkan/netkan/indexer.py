@@ -174,13 +174,11 @@ class CkanMessage:
 class MessageHandler(BaseMessageHandler):
     primary: Deque[CkanMessage]
     staged: Deque[CkanMessage]
-    processed: List[CkanMessage]
 
     def __init__(self, game: Game) -> None:
         super().__init__(game)
         self.primary = deque()
         self.staged = deque()
-        self.processed = []
 
     def __str__(self) -> str:
         return str(' '.join([str(x) for x in self.primary + self.staged]))
@@ -207,26 +205,24 @@ class MessageHandler(BaseMessageHandler):
         else:
             self.staged.append(ckan)
 
-    def _process_queue(self, queue: Deque[CkanMessage]) -> None:
+    def _process_queue(self, queue: Deque[CkanMessage]) -> List[CkanMessage]:
+        processed = []
         while queue:
             ckan = queue.popleft()
             ckan.process_ckan()
-            self.processed.append(ckan)
-
-    def sqs_delete_entries(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
-        entries = [c.delete_attrs for c in self.processed]
-        self.processed = []
-        return entries
+            processed.append(ckan)
+        return processed
 
     # Currently we intermingle Staged/Primary commits
     # separating them out will be a little more efficient
     # with our push/pull traffic.
-    def process_messages(self) -> None:
-        self._process_queue(self.primary)
-        if any(ckan.indexed for ckan in self.processed):
+    def process_messages(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
+        processed = self._process_queue(self.primary)
+        if any(ckan.indexed for ckan in processed):
             self.repo.pull_remote_primary()
             self.repo.push_remote_primary()
-        self._process_queue(self.staged)
+        processed.extend(self._process_queue(self.staged))
+        return [c.delete_attrs for c in processed]
 
 
 class IndexerQueueHandler(QueueHandler):

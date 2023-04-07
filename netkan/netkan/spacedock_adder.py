@@ -129,12 +129,10 @@ class SpaceDockAdder:
 
 class SpaceDockMessageHandler(BaseMessageHandler):
     queued: Deque[SpaceDockAdder]
-    processed: List[SpaceDockAdder]
 
     def __init__(self, game: Game) -> None:
         super().__init__(game)
         self.queued = deque()
-        self.processed = []
 
     def __str__(self) -> str:
         return str(' '.join([str(x) for x in self.queued]))
@@ -154,19 +152,16 @@ class SpaceDockMessageHandler(BaseMessageHandler):
         self.queued.append(
             SpaceDockAdder(message, self.repo, self.game, self.github_pr))
 
-    def _process_queue(self, queue: Deque[SpaceDockAdder]) -> None:
+    def _process_queue(self, queue: Deque[SpaceDockAdder]) -> List[SpaceDockAdder]:
+        processed = []
         while queue:
             netkan = queue.popleft()
             if netkan.try_add():
-                self.processed.append(netkan)
+                processed.append(netkan)
+        return processed
 
-    def sqs_delete_entries(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
-        entries = [c.delete_attrs for c in self.processed]
-        self.processed = []
-        return entries
-
-    def process_messages(self) -> None:
-        self._process_queue(self.queued)
+    def process_messages(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
+        return [c.delete_attrs for c in self._process_queue(self.queued)]
 
 
 class SpaceDockAdderQueueHandler(QueueHandler):
