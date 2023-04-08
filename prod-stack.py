@@ -349,67 +349,6 @@ netkan_ecs_role = t.add_resource(Role(
     ]
 ))
 
-# To be able to schedule tasks, the scheduler needs to be allowed to perform
-# the tasks.
-scheduler_resources = []
-for task in [
-        'Scheduler', 'SchedulerWebhooksPass', 'CertBot', 'StatusDumper',
-        'DownloadCounter', 'TicketCloser', 'AutoFreezer', 'RestartWebhooks',
-        'CleanCache']:
-    scheduler_resources.append(Sub(
-        'arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBot${Task}:*',
-        Task=task
-    ))
-netkan_scheduler_role = t.add_resource(Role(
-    "NetKANProdSchedulerRole",
-    AssumeRolePolicyDocument={
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Principal": {
-                    "Service": "events.amazonaws.com"
-                },
-                "Action": "sts:AssumeRole"
-            }
-        ]
-    },
-    Policies=[
-        Policy(
-            PolicyName="AllowEcsTaskScheduling",
-            PolicyDocument={
-                "Version": "2012-10-17",
-                "Statement": [
-                    {
-                        "Effect": "Allow",
-                        "Action": [
-                            "ecs:RunTask"
-                        ],
-                        "Resource": scheduler_resources,
-                        "Condition": {
-                            "ArnLike": {
-                                "ecs:cluster": GetAtt('NetKANCluster', 'Arn')
-                            }
-                        }
-                    },
-                    {
-                        "Effect": "Allow",
-                        "Action": "iam:PassRole",
-                        "Resource": [
-                            "*"
-                        ],
-                        "Condition": {
-                            "StringLike": {
-                                "iam:PassedToService": "ecs-tasks.amazonaws.com"
-                            }
-                        }
-                    }
-                ]
-            }
-        )
-    ]
-))
-
 # Build Account Permissions
 # It's useful for the CI to be able to update services upon build, there
 # is a service account with keys that will be exposed to CI for allowing
@@ -920,6 +859,66 @@ services = [
         ],
     },
 ]
+
+# To be able to schedule tasks, the scheduler needs to be allowed to perform
+# the tasks.
+scheduler_resources = []
+for task in [
+        x.get('name') for x in services if x.get('schedule', None) is not None]:
+    scheduler_resources.append(Sub(
+        'arn:aws:ecs:*:${AWS::AccountId}:task-definition/NetKANBot${Task}:*',
+        Task=task
+    ))
+netkan_scheduler_role = t.add_resource(Role(
+    "NetKANProdSchedulerRole",
+    AssumeRolePolicyDocument={
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "events.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole"
+            }
+        ]
+    },
+    Policies=[
+        Policy(
+            PolicyName="AllowEcsTaskScheduling",
+            PolicyDocument={
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "ecs:RunTask"
+                        ],
+                        "Resource": scheduler_resources,
+                        "Condition": {
+                            "ArnLike": {
+                                "ecs:cluster": GetAtt('NetKANCluster', 'Arn')
+                            }
+                        }
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": "iam:PassRole",
+                        "Resource": [
+                            "*"
+                        ],
+                        "Condition": {
+                            "StringLike": {
+                                "iam:PassedToService": "ecs-tasks.amazonaws.com"
+                            }
+                        }
+                    }
+                ]
+            }
+        )
+    ]
+))
+
 
 for service in services:
     name = service['name']
