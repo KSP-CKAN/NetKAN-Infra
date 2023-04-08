@@ -96,6 +96,7 @@ class QueueHandler:
             for _, handler in self.game_handlers.items():
                 with handler:
                     processed = handler.process_messages()
-                    queue.delete_messages(
-                        Entries=processed
-                    )
+                    if processed:
+                        queue.delete_messages(
+                            Entries=processed
+                        )
