@@ -172,21 +172,21 @@ class CkanMessage:
 
 
 class MessageHandler(BaseMessageHandler):
-    master: Deque[CkanMessage]
+    primary: Deque[CkanMessage]
     staged: Deque[CkanMessage]
     processed: List[CkanMessage]
 
     def __init__(self, game: Game) -> None:
         super().__init__(game)
-        self.master = deque()
+        self.primary = deque()
         self.staged = deque()
         self.processed = []
 
     def __str__(self) -> str:
-        return str(' '.join([str(x) for x in self.master + self.staged]))
+        return str(' '.join([str(x) for x in self.primary + self.staged]))
 
     def __len__(self) -> int:
-        return len(self.master + self.staged)
+        return len(self.primary + self.staged)
 
     @property
     def repo(self) -> CkanMetaRepo:
@@ -203,7 +203,7 @@ class MessageHandler(BaseMessageHandler):
             self.github_pr
         )
         if not ckan.Staged:
-            self.master.append(ckan)
+            self.primary.append(ckan)
         else:
             self.staged.append(ckan)
 
@@ -218,14 +218,14 @@ class MessageHandler(BaseMessageHandler):
         self.processed = []
         return entries
 
-    # Currently we intermingle Staged/Master commits
+    # Currently we intermingle Staged/Primary commits
     # separating them out will be a little more efficient
     # with our push/pull traffic.
     def process_messages(self) -> None:
-        self._process_queue(self.master)
+        self._process_queue(self.primary)
         if any(ckan.indexed for ckan in self.processed):
-            self.repo.pull_remote_branch('master')
-            self.repo.push_remote_branch('master')
+            self.repo.pull_remote_primary()
+            self.repo.push_remote_primary()
         self._process_queue(self.staged)
 
 

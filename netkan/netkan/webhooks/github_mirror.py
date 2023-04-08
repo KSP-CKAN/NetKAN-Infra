@@ -25,7 +25,7 @@ def mirror_hook(game_id: str) -> Tuple[Union[Response, str], int]:
     raw = request.get_json(silent=True)
     ref = raw.get('ref')  # type: ignore[union-attr]
     expected_ref = current_config.common.game(
-        game_id).ckanmeta_repo.git_repo.heads.master.path
+        game_id).ckanmeta_repo.primary_branch_path
     if ref != expected_ref:
         current_app.logger.info(
             "Wrong branch. Expected '%s', got '%s'", expected_ref, ref)

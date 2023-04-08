@@ -5,6 +5,7 @@ from typing import Iterable, List, Optional, Generator, Union
 
 from git import Repo, GitCommandError
 from git.objects.commit import Commit
+from git.refs import Head
 from .metadata import Netkan, Ckan
 
 
@@ -13,6 +14,7 @@ class XkanRepo:
     """
     Concantenates all common repo operations in one place
     """
+    _primary_branch: str
 
     def __init__(self, git_repo: Repo, game_id: Optional[str] = None) -> None:
         self.git_repo = git_repo
@@ -30,6 +32,23 @@ class XkanRepo:
     def active_branch(self) -> str:
         return str(self.git_repo.active_branch)
 
+    @property
+    def primary_branch(self) -> str:
+        if getattr(self, '_primary_branch', None) is None:
+            self._primary_branch = [
+                x.ref.name.split('/')[1] for x in
+                self.git_repo.refs if  # type: ignore[attr-defined]
+                x.name == 'origin/HEAD'
+            ][0]
+        return self._primary_branch
+
+    @property
+    def primary_branch_path(self) -> Head:
+        return getattr(self.git_repo.heads, self.primary_branch).path
+
+    def is_primary_active(self) -> bool:
+        return self.primary_branch == self.active_branch
+
     def is_active_branch(self, branch_name: str) -> bool:
         return branch_name == self.active_branch
 
@@ -40,17 +59,27 @@ class XkanRepo:
         it doesn't quite mirror what Git will do directly. If the branch
         doesn't exist an 'AttributeError' will be thown.
 
-        repo.checkout_branch('master')
+        repo.checkout_branch('a-branch-name')
         """
         branch = getattr(self.git_repo.heads, branch_name)
         branch.checkout()
+
+    def checkout_primary(self) -> None:
+        self.checkout_branch(self.primary_branch)
 
     def pull_remote_branch(self, branch_name: str, strategy_option: str = 'ours') -> None:
         self.git_repo.remotes.origin.pull(
             branch_name, strategy_option=strategy_option)
 
+    def pull_remote_primary(self, strategy_option: str = 'ours') -> None:
+        self.git_repo.remotes.origin.pull(
+            self.primary_branch, strategy_option=strategy_option)
+
     def push_remote_branch(self, branch_name: str) -> None:
         self.git_repo.remotes.origin.push(branch_name)
+
+    def push_remote_primary(self) -> None:
+        self.git_repo.remotes.origin.push(self.primary_branch)
 
     def close_repo(self) -> None:
         self.git_repo.close()
