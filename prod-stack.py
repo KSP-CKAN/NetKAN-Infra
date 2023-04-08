@@ -79,7 +79,7 @@ for queue in [inbound, inbound2, outbound, addqueue, mirrorqueue]:
         ),
     ])
 
-INFLATION_QUEUES = Sub('ksp=${ksp}', ksp=GetAtt(inbound, 'QueueName'))
+INFLATION_QUEUES = Sub('ksp=${ksp} ksp2=${ksp2}', ksp=GetAtt(inbound, 'QueueName'), ksp2=GetAtt(inbound2, 'QueueName'))
 
 # DyanamoDB: NetKAN Status
 netkan_db = t.add_resource(Table(
