@@ -83,11 +83,16 @@ class SpaceDockAdder:
 
     @staticmethod
     def _pr_body(info: Dict[str, Any]) -> str:
-        return SpaceDockAdder.PR_BODY_TEMPLATE.safe_substitute(
-            defaultdict(lambda: '',
-                        {**info,
-                         'all_authors_md': ', '.join(SpaceDockAdder.USER_TEMPLATE.safe_substitute(defaultdict(lambda: '', a))
-                                                     for a in [info, *info.get('shared_authors', [])])}))
+        try:
+            return SpaceDockAdder.PR_BODY_TEMPLATE.safe_substitute(
+                defaultdict(lambda: '',
+                            {**info,
+                             'all_authors_md': ', '.join(SpaceDockAdder.USER_TEMPLATE.safe_substitute(defaultdict(lambda: '', a))
+                                                         for a in [info, *info.get('shared_authors', [])])}))
+        except Exception as exc:
+            # Log the input on failure
+            logging.error('Failed to generate pull request body from %s', info)
+            raise exc
 
     def yaml_dump(self, obj: Dict[str, Any]) -> str:
         sio = io.StringIO()
