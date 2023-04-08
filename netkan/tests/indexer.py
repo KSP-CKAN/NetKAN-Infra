@@ -298,22 +298,21 @@ class TestMessageHandler(SharedArgsHarness):
         with MessageHandler(game=self.shared_args.game('ksp')) as handler:
             self.assertTrue(repo.is_primary_active())
 
-    @ mock.patch('netkan.indexer.CkanMessage.process_ckan')
+    @mock.patch('netkan.indexer.CkanMessage.process_ckan')
     def test_process_ckans(self, mocked_process):
         self.handler.append(self.mocked_message())
         self.handler.append(self.mocked_message(staged=True))
-        self.handler.process_messages()
-        self.assertEqual(len(self.handler.processed), 2)
+        processed = self.handler.process_messages()
+        self.assertEqual(len(processed), 2)
 
-    @ mock.patch('netkan.indexer.CkanMessage.process_ckan')
+    @mock.patch('netkan.indexer.CkanMessage.process_ckan')
     def test_delete_attrs(self, mocked_process):
         self.handler.append(self.mocked_message())
         self.handler.append(self.mocked_message(staged=True))
-        self.handler.process_messages()
+        processed = self.handler.process_messages()
         attrs = [{'Id': 'MessageMcMessageFace', 'ReceiptHandle': 'HandleMcHandleFace'}, {
             'Id': 'MessageMcMessageFace', 'ReceiptHandle': 'HandleMcHandleFace'}]
-        self.assertEqual(self.handler.sqs_delete_entries(), attrs)
-        self.assertEqual(len(self.handler.processed), 0)
+        self.assertEqual(processed, attrs)
 
 
 class TestIndexerQueueHandler(SharedArgsHarness):

@@ -48,26 +48,25 @@ class TestSpaceDockMessageHandler(SharedArgsHarness):
     def test_process_netkans(self, mocked_process):
         mocked_process.return_value = True
         self.handler.append(self.mocked_message())
-        self.handler.process_messages()
-        self.assertEqual(len(self.handler.processed), 1)
+        processed = self.handler.process_messages()
+        self.assertEqual(len(processed), 1)
 
     @mock.patch('netkan.spacedock_adder.SpaceDockAdder.try_add')
     def test_process_netkans_fail(self, mocked_process):
         mocked_process.return_value = False
         self.handler.append(self.mocked_message())
         self.assertEqual(len(self.handler.queued), 1)
-        self.handler.process_messages()
-        self.assertEqual(len(self.handler.processed), 0)
+        processed = self.handler.process_messages()
+        self.assertEqual(len(processed), 0)
 
     @mock.patch('netkan.spacedock_adder.SpaceDockAdder.try_add')
     def test_delete_attrs(self, mocked_process):
         mocked_process.return_value = True
         self.handler.append(self.mocked_message())
-        self.handler.process_messages()
+        processed = self.handler.process_messages()
         attrs = [{'Id': 'MessageMcMessageFace',
                   'ReceiptHandle': 'HandleMcHandleFace'}]
-        self.assertEqual(self.handler.sqs_delete_entries(), attrs)
-        self.assertEqual(len(self.handler.processed), 0)
+        self.assertEqual(processed, attrs)
 
 
 class TestSpaceDockAdderQueueHandler(SharedArgsHarness):

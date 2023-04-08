@@ -182,6 +182,7 @@ class SharedArgs:
     user: str
     _debug: bool
     _ssh_key: str
+    _game_ids: List[str]
 
     def __init__(self) -> None:
         self._environment_data = None
@@ -226,6 +227,18 @@ class SharedArgs:
         if getattr(self, f'_game_{game_id}', None) is None:
             setattr(self, f'_game_{game_id}', Game(game_id, self))
         return getattr(self, f'_game_{game_id}')
+
+    @property
+    def game_ids(self) -> List[str]:
+        if getattr(self, '_game_ids', None) is None:
+            game_ids = set()
+            for arg in ['ckanmeta_remotes', 'netkan_remotes', 'ia_collections', 'repos']:
+                if arg not in vars(self):
+                    continue
+                game_ids.update([x.split('=', maxsplit=1)[0]
+                                 for x in getattr(self, arg)])
+            self._game_ids = sorted(game_ids)  # sorts + casts to list type
+        return self._game_ids
 
 
 pass_state = click.make_pass_decorator(

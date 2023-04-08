@@ -71,6 +71,28 @@ class TestSharedArgs(TestCase):
             shared.ckanmeta_remote  # pylint: disable=pointless-statement
         self.assertEqual(error.exception.code, 1)
 
+    def test_shared_games_none(self):
+        shared = SharedArgs()
+        self.assertEqual(shared.game_ids, [])
+
+    def test_shared_games_ksp(self):
+        shared = SharedArgs()
+        shared.ckanmeta_remotes = ('ksp=ckan_url',)
+        shared.repos = ('ksp=ckan',)
+        self.assertEqual(shared.game_ids, ['ksp'])
+
+    def test_shared_games_ksp2(self):
+        shared = SharedArgs()
+        shared.ckanmeta_remotes = ('ksp2=ckan_url',)
+        shared.repos = ('ksp2=ckan',)
+        self.assertEqual(shared.game_ids, ['ksp2'])
+
+    def test_shared_games_multi(self):
+        shared = SharedArgs()
+        shared.ckanmeta_remotes = ('ksp2=ckan_url', 'ksp=ckan_url')
+        shared.repos = ('ksp2=ckan', 'ksp2=ckan')
+        self.assertEqual(shared.game_ids, ['ksp', 'ksp2'])
+
 
 class TestGame(SharedArgsHarness):
 

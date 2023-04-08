@@ -46,10 +46,7 @@ class BaseMessageHandler:
     def append(self, message: Message) -> None:
         raise NotImplementedError
 
-    def process_messages(self) -> None:
-        raise NotImplementedError
-
-    def sqs_delete_entries(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
+    def process_messages(self) -> List[DeleteMessageBatchRequestEntryTypeDef]:
         raise NotImplementedError
 
 
@@ -98,7 +95,7 @@ class QueueHandler:
 
             for _, handler in self.game_handlers.items():
                 with handler:
-                    handler.process_messages()
-                queue.delete_messages(
-                    Entries=handler.sqs_delete_entries()
-                )
+                    processed = handler.process_messages()
+                    queue.delete_messages(
+                        Entries=processed
+                    )

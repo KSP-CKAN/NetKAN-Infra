@@ -29,24 +29,26 @@ from ..mirrorer import Mirrorer
 @common_options
 @pass_state
 def auto_freezer(common: SharedArgs, days_limit: int, days_till_ignore: int) -> None:
-    afr = AutoFreezer(
-        common.game(common.game_id).netkan_repo,
-        common.game(common.game_id).github_pr,
-    )
-    afr.freeze_idle_mods(days_limit, days_till_ignore)
-    afr.mark_frozen_mods()
+    for game_id in common.game_ids:
+        afr = AutoFreezer(
+            common.game(game_id).netkan_repo,
+            common.game(game_id).github_pr,
+        )
+        afr.freeze_idle_mods(days_limit, days_till_ignore)
+        afr.mark_frozen_mods()
 
 
 @click.command()
 @common_options
 @pass_state
 def download_counter(common: SharedArgs) -> None:
-    logging.info('Starting Download Count Calculation...')
-    DownloadCounter(
-        common.game(common.game_id).ckanmeta_repo,
-        common.token
-    ).update_counts()
-    logging.info('Download Counter completed!')
+    for game_id in common.game_ids:
+        logging.info('Starting Download Count Calculation (%s)...', game_id)
+        DownloadCounter(
+            common.game(game_id).ckanmeta_repo,
+            common.token
+        ).update_counts()
+        logging.info('Download Counter completed! (%s)', game_id)
 
 
 @click.command()
