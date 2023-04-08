@@ -313,8 +313,8 @@ class Mirrorer:
                     continue
                 # Get up to date copy of the metadata for the files we're mirroring
                 logging.info('Updating repo')
-                self.ckm_repo.git_repo.heads.master.checkout()
-                self.ckm_repo.git_repo.remotes.origin.pull('master', strategy_option='theirs')
+                self.ckm_repo.checkout_primary()
+                self.ckm_repo.pull_remote_primary(strategy_option='theirs')
                 # Start processing the messages
                 to_delete: List[DeleteMessageBatchRequestEntryTypeDef] = []
                 for msg in messages:
@@ -373,7 +373,7 @@ class Mirrorer:
                 # /HebaruSan/Astrogator/releases -> HebaruSan/Astrogator
                 full_name = '/'.join(parsed.path.split('/')[1:3])
                 return self._gh.get_repo(full_name).default_branch
-        return 'master'
+        return 'main'
 
     def purge_epochs(self, dry_run: bool) -> None:
         if dry_run:

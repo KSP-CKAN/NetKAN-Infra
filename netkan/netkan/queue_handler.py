@@ -30,10 +30,9 @@ class BaseMessageHandler:
     # we can ensure we call close on it and run our handler inside
     # a context manager
     def __enter__(self) -> 'BaseMessageHandler':
-        if not self.repo.is_active_branch('master'):
-            self.repo.checkout_branch('master')
-        self.repo.pull_remote_branch(
-            'master', strategy_option=self.STRATEGY_OPTION)
+        if not self.repo.is_primary_active():
+            self.repo.checkout_primary()
+        self.repo.pull_remote_primary(strategy_option=self.STRATEGY_OPTION)
         return self
 
     def __exit__(self, exc_type: Type[BaseException],

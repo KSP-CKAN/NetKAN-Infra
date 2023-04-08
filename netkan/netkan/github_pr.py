@@ -24,9 +24,14 @@ class GitHubPR:
                 f'{self.user}/{self.git_repo}')
         return self._repo
 
+    @property
+    def default_branch(self) -> str:
+        return self.repo.default_branch
+
     def create_pull_request(self, title: str, branch: str, body: str, labels: Optional[List[str]] = None) -> None:
         try:
-            pull = self.repo.create_pull(title, body, 'master', branch)
+            pull = self.repo.create_pull(
+                title, body, self.default_branch, branch)
             logging.info('Pull request for %s opened at %s',
                          branch, pull.html_url)
 

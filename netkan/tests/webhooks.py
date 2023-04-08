@@ -71,7 +71,7 @@ class TestWebhookGitHubInflate(WebhooksHarness):
     @staticmethod
     def mock_netkan_hook() -> dict:
         return {
-            'ref': 'refs/heads/master',
+            'ref': 'refs/heads/main',
             'commits': [
                 {
                     'id': 'fec27dc0350adc7dc8659cde980d1eca9ce30167',
@@ -203,7 +203,7 @@ class TestWebhookGitHubMirror(WebhooksHarness):
     @staticmethod
     def mock_netkan_hook() -> dict:
         return {
-            'ref': 'refs/heads/master',
+            'ref': 'refs/heads/main',
             'commits': [
                 {
                     'id': 'fec27dc0350adc7dc8659cde980d1eca9ce30167',

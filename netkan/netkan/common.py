@@ -1,12 +1,12 @@
 
-from typing import List, Iterable, IO, TYPE_CHECKING
+from typing import List, Iterable, IO, TYPE_CHECKING, Union
 
 import requests
 import github
 from git import Repo
 
 from .metadata import Netkan
-from .repos import NetkanRepo
+from .repos import NetkanRepo, CkanMetaRepo
 
 if TYPE_CHECKING:
     from mypy_boto3_sqs.service_resource import Message
@@ -40,9 +40,9 @@ def sqs_batch_entries(messages: Iterable[SendMessageBatchRequestEntryTypeDef],
         yield batch
 
 
-def pull_all(repos: Iterable[Repo]) -> None:
+def pull_all(repos: Iterable[Union[NetkanRepo, CkanMetaRepo]]) -> None:
     for repo in repos:
-        repo.remotes.origin.pull('master', strategy_option='theirs')
+        repo.pull_remote_primary(strategy_option='theirs')
 
 
 def github_limit_remaining(token: str) -> int:

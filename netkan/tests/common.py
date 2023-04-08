@@ -29,15 +29,17 @@ class SharedArgsMixin(ABC):
             working = Path(cls._tmpdir().name, 'working', repo)
             upstream = Path(cls._tmpdir().name, 'upstream', repo)
             upstream.mkdir(parents=True)
-            Repo.init(upstream, bare=True)
+            Repo.init(upstream, bare=True, initial_branch='main')
             shutil.copytree(getattr(cls, f'{repo}_data'), working)
             git_repo = Repo.init(working)
+            Path(git_repo.working_dir, '.git', 'HEAD').write_text(
+                'ref: refs/heads/main', encoding='utf-8')
             shutil.copy(Path(__file__).parent.parent / '.gitconfig',
                         working / '.git' / 'config')
             git_repo.index.add(git_repo.untracked_files)
             git_repo.index.commit('Test Data')
             git_repo.create_remote('origin', upstream.as_posix())
-            git_repo.remotes.origin.push('master:master')
+            git_repo.remotes.origin.push('main:main')
             setattr(cls, f'{repo}_path', working)
             setattr(cls, f'{repo}_upstream', upstream)
 
@@ -91,7 +93,7 @@ class SharedArgsHarness(TestCase, SharedArgsMixin):
         for repo in ['ckan_path', 'netkan_path']:
             meta = Repo(getattr(self, repo))
             meta.git.clean('-df')
-            meta.heads.master.checkout()
+            meta.heads.main.checkout()
             try:
                 cleanup = meta.create_head('cleanup', 'HEAD~1')
                 meta.head.reference = cleanup

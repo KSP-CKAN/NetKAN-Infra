@@ -278,14 +278,12 @@ class DownloadCounter:
                 'NetKAN Updating Download Counts'
             )
             logging.info('Download counts changed and committed')
-            self.ckm_repo.git_repo.remotes.origin.push('master')
+            self.ckm_repo.push_remote_primary()
 
     def update_counts(self) -> None:
         if self.output_file:
             self.get_counts()
-            self.ckm_repo.git_repo.remotes.origin.pull(
-                'master', strategy_option='ours'
-            )
+            self.ckm_repo.pull_remote_primary(strategy_option='ours')
             self.write_json()
             if repo_file_add_or_changed(self.ckm_repo.git_repo, self.output_file):
                 self.commit_counts()

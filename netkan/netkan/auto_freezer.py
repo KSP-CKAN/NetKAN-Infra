@@ -16,7 +16,7 @@ class AutoFreezer:
         self.github_pr = github_pr
 
     def freeze_idle_mods(self, days_limit: int, days_till_ignore: int) -> None:
-        self.nk_repo.git_repo.remotes.origin.pull('master', strategy_option='ours')
+        self.nk_repo.pull_remote_primary(strategy_option='ours')
         idle_mods = self._find_idle_mods(days_limit, days_till_ignore)
         if idle_mods:
             with self.nk_repo.change_branch(self.BRANCH_NAME):
