@@ -1,7 +1,8 @@
 from hashlib import md5
 import json
-from typing import Tuple, Dict, Any, TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING
 from flask import Blueprint, current_app, request
+from werkzeug.datastructures import ImmutableMultiDict
 
 from ..common import sqs_batch_entries
 from .config import current_config
@@ -43,8 +44,21 @@ def add_hook(game_id: str) -> Tuple[str, int]:
     return '', 204
 
 
-def batch_message(raw: Dict[str, Any], game_id: str) -> SendMessageBatchRequestEntryTypeDef:
-    body = json.dumps(raw)
+def batch_message(raw: 'ImmutableMultiDict[str, str]', game_id: str) -> SendMessageBatchRequestEntryTypeDef:
+    body = json.dumps({**raw,
+                       # Turn the separate user property lists into a list of user dicts so JSON can encode it
+                       # (the original properties will only have the first user)
+                       'all_authors': [{'username':            user_tuple[0],
+                                        'user_github':         user_tuple[1],
+                                        'user_forum_id':       user_tuple[2],
+                                        'user_forum_username': user_tuple[3],
+                                        'email':               user_tuple[4]}
+                                       for user_tuple
+                                       in zip(raw.getlist('username'),
+                                              raw.getlist('user_github'),
+                                              raw.getlist('user_forum_id'),
+                                              raw.getlist('user_forum_username'),
+                                              raw.getlist('email'))]})
     return {
         'Id':                     '1',
         'MessageBody':            body,
