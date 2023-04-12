@@ -34,6 +34,7 @@ class CkanMessage:
         self.ckan = Ckan(contents=self.body)
         # pylint: disable=invalid-name
         self.ModIdentifier: str
+        self.GameId: str
         self.CheckTime: str
         self.FileName: str
         self.Success: bool
@@ -103,6 +104,7 @@ class CkanMessage:
 
     def status_attrs(self, new: bool = False) -> Dict[str, Any]:
         attrs: Dict[str, Any] = {
+            'game_id': self.GameId.lower(),
             'success': self.Success,
             'last_error': self.ErrorMessage,
             'last_warnings': self.WarningMessages,

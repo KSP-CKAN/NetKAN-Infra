@@ -35,6 +35,7 @@ class ModStatus(Model):
         region = region()
 
     ModIdentifier = UnicodeAttribute(hash_key=True)
+    game_id = UnicodeAttribute(null=True)
     last_error = UnicodeAttribute(null=True)
     last_warnings = UnicodeAttribute(null=True)
     last_checked = UTCDateTimeAttribute(null=True)
