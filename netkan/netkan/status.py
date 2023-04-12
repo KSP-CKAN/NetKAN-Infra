@@ -95,6 +95,8 @@ class ModStatus(Model):
         existing = json.loads(Path(filename).read_text(encoding='UTF-8'))
         with cls.batch_write() as batch:
             for key, item in existing.items():
+                # Ensure all date/time items are passed to ModStatus
+                # as proper datetime.datetime obects
                 for item_key in ['checked', 'indexed', 'inflated']:
                     update_key = f'last_{item_key}'
                     if not item[update_key]:
@@ -102,6 +104,9 @@ class ModStatus(Model):
                     item[update_key] = parse(
                         item.pop(update_key)
                     )
+                if item['release_date'] is not None:
+                    item['release_date'] = parse(item.pop('release_date'))
+
                 item['ModIdentifier'] = key
                 item['success'] = not item['failed']
                 item.pop('failed')
