@@ -123,10 +123,12 @@ class SpaceDockAdder:
             # Tell Discord about the problem and move on
             logging.error('%s failed to analyze %s from %s',
                           self.__class__.__name__, ident, url, exc_info=exc)
+        vref_props = {'$vref': props.pop('$vref')} if '$vref' in props else {}
         return {
             'spec_version': 'v1.18',
             'identifier': ident,
             '$kref': f"#/ckan/spacedock/{info.get('id', '')}",
+            **(vref_props),
             'license': info.get('license', '').strip().replace(' ', '-'),
             **(props),
             'x_via': f"Automated {info.get('site_name')} CKAN submission"
