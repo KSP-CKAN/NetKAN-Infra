@@ -109,6 +109,9 @@ class ModStatus(Model):
 
                 item['ModIdentifier'] = key
                 item['success'] = not item['failed']
+                # Assist in migration of tables to multi-game
+                if item['game_id'] is None:
+                    item['game_id'] = 'ksp'
                 item.pop('failed')
 
                 # Every batch write consumes a credit, we want to leave spare
