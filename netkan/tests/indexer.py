@@ -32,6 +32,8 @@ class TestCkan(unittest.TestCase):
                 'StringValue': '2019-06-24T19:06:14', 'DataType': 'String'},
             'ModIdentifier': {
                 'StringValue': 'DogeCoinFlag', 'DataType': 'String'},
+            'GameId': {
+                'StringValue': 'ksp', 'DataType': 'String'},
             'Staged': {'StringValue': 'False', 'DataType': 'String'},
             'Success': {'StringValue': 'True', 'DataType': 'String'},
             'FileName': {
