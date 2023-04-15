@@ -30,7 +30,7 @@ CKANMETA_USER = 'KSP-CKAN'
 CKANMETA_REPOS = 'ksp=CKAN-meta ksp2=KSP2-CKAN-meta'
 NETKAN_USER = 'KSP-CKAN'
 STATUS_BUCKET = 'status.ksp-ckan.space'
-status_key = 'status/netkan.json'
+STATUS_KEYS = 'ksp=status/netkan.json ksp2=status/netkan-ksp2.json'
 
 if not ZONE_ID:
     print('Zone ID Required from EnvVar `CKAN_ZONEID`')
@@ -79,14 +79,19 @@ for queue in [inbound, inbound2, outbound, addqueue, mirrorqueue]:
         ),
     ])
 
-INFLATION_QUEUES = Sub('ksp=${ksp} ksp2=${ksp2}', ksp=GetAtt(inbound, 'QueueName'), ksp2=GetAtt(inbound2, 'QueueName'))
+INFLATION_QUEUES = Sub('ksp=${ksp} ksp2=${ksp2}', ksp=GetAtt(
+    inbound, 'QueueName'), ksp2=GetAtt(inbound2, 'QueueName'))
 
-# DyanamoDB: NetKAN Status
-netkan_db = t.add_resource(Table(
-    "NetKANStatus",
+# DyanamoDB: MultiKAN Status
+multikan_db = t.add_resource(Table(
+    "MultiKANStatus",
     AttributeDefinitions=[
         AttributeDefinition(
             AttributeName="ModIdentifier",
+            AttributeType="S"
+        ),
+        AttributeDefinition(
+            AttributeName="game_id",
             AttributeType="S"
         ),
     ],
@@ -94,9 +99,13 @@ netkan_db = t.add_resource(Table(
         KeySchema(
             AttributeName="ModIdentifier",
             KeyType="HASH"
-        )
+        ),
+        KeySchema(
+            AttributeName="game_id",
+            KeyType="RANGE"
+        ),
     ],
-    TableName="NetKANStatus",
+    TableName="MultiKANStatus",
     ProvisionedThroughput=ProvisionedThroughput(
         # The free tier allows for 25 R/W Capacity Units
         # 5 allocated already for dev testing
@@ -107,7 +116,7 @@ netkan_db = t.add_resource(Table(
 
 t.add_output(Output(
     "TableName",
-    Value=Ref(netkan_db),
+    Value=Ref(multikan_db),
     Description="Table name of the newly create DynamoDB table",
 ))
 
@@ -186,7 +195,7 @@ netkan_role = t.add_resource(Role(
                             "dynamodb:BatchWriteItem",
                         ],
                         "Resource": [
-                            GetAtt(netkan_db, "Arn")
+                            GetAtt(multikan_db, "Arn")
                         ]
                     },
                     {
@@ -730,7 +739,7 @@ services = [
         'command': 'export-status-s3',
         'env': [
             ('STATUS_BUCKET', STATUS_BUCKET),
-            ('STATUS_KEY', status_key),
+            ('STATUS_KEYS', STATUS_KEYS),
             ('STATUS_INTERVAL', '0'),
         ],
         'schedule': 'rate(5 minutes)',

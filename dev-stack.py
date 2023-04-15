@@ -91,10 +91,14 @@ for queue in [inbound_ksp, inbound_ksp2, outbound, addqueue, mirrorqueue]:
     ])
 
 dev_db = t.add_resource(Table(
-    "DevNetKANStatus",
+    "DevMultiKANStatus",
     AttributeDefinitions=[
         AttributeDefinition(
             AttributeName="ModIdentifier",
+            AttributeType="S"
+        ),
+        AttributeDefinition(
+            AttributeName="game_id",
             AttributeType="S"
         ),
     ],
@@ -102,9 +106,13 @@ dev_db = t.add_resource(Table(
         KeySchema(
             AttributeName="ModIdentifier",
             KeyType="HASH"
-        )
+        ),
+        KeySchema(
+            AttributeName="game_id",
+            KeyType="RANGE"
+        ),
     ],
-    TableName="DevNetKANStatus",
+    TableName="DevMultiKANStatus",
     ProvisionedThroughput=ProvisionedThroughput(
         ReadCapacityUnits=5,
         WriteCapacityUnits=5

@@ -3,10 +3,12 @@ import logging
 import os
 import time
 from datetime import datetime, timezone
+from itertools import chain
 from pathlib import Path
 from typing import Optional, Dict, Any
 from dateutil.parser import parse
 from pynamodb.models import Model
+from pynamodb.expressions.condition import Condition
 from pynamodb.attributes import (
     UnicodeAttribute, UTCDateTimeAttribute, BooleanAttribute, MapAttribute
 )
@@ -22,7 +24,7 @@ from .repos import CkanMetaRepo
 
 
 def table_name() -> str:
-    return os.getenv('STATUS_DB', 'NetKANStatus')
+    return os.getenv('STATUS_DB', 'MultiKANStatus')
 
 
 def region() -> str:
@@ -35,7 +37,7 @@ class ModStatus(Model):
         region = region()
 
     ModIdentifier = UnicodeAttribute(hash_key=True)
-    game_id = UnicodeAttribute(null=True)
+    game_id = UnicodeAttribute(range_key=True)
     last_error = UnicodeAttribute(null=True)
     last_warnings = UnicodeAttribute(null=True)
     last_checked = UTCDateTimeAttribute(null=True)
@@ -65,9 +67,9 @@ class ModStatus(Model):
     # So we'd probably need to be tracking 10,000+ mods before it becomes
     # a problem.
     @classmethod
-    def export_all_mods(cls, compat: bool = True) -> Dict[str, Any]:
-        data = {}
-        for mod in cls.scan(rate_limit=5):
+    def export_game_mods(cls, condition: Condition, compat: bool = True) -> Dict[str, Any]:
+        data: Dict[str, Any] = {}
+        for mod in cls.scan(rate_limit=5, filter_condition=condition):
             data[mod.ModIdentifier] = mod.mod_attrs()
 
             # Persist compability with existing status ui
@@ -79,50 +81,64 @@ class ModStatus(Model):
         return data
 
     @classmethod
-    def export_to_s3(cls, bucket: str, key: str, compat: bool = True) -> None:
+    def export_all_mods(cls, compat: bool = True) -> Dict[str, Any]:
+        data: Dict[str, Any] = {}
+        for game_id in ['ksp', 'ksp2']:
+            data.update({game_id: cls.export_game_mods(
+                condition=ModStatus.game_id == game_id, compat=compat)})
+        data.update({'no_game_id': cls.export_game_mods(
+            condition=ModStatus.game_id.does_not_exist(), compat=compat)})
+        return data
+
+    @classmethod
+    def export_to_s3(cls, bucket: str, key: str, game_id: str, compat: bool = True) -> None:
         client = boto3.client('s3')
         client.put_object(
             Bucket=bucket,
             Key=key,
-            Body=json.dumps(cls.export_all_mods(compat)).encode(),
+            Body=json.dumps(cls.export_game_mods(
+                condition=ModStatus.game_id == game_id, compat=compat)).encode(),
         )
         logging.info('Exported to s3://%s/%s', bucket, key)
 
+    @staticmethod
+    def normalise_item(identifier: str, values: Dict[str, Any]) -> None:
+        # Ensure all date/time items are passed to ModStatus
+        # as proper datetime.datetime obects
+        for item_key in ['checked', 'indexed', 'inflated', 'downloaded']:
+            update_key = f'last_{item_key}'
+            if not values[update_key]:
+                continue
+            values[update_key] = parse(
+                values.pop(update_key)
+            )
+        if values['release_date'] is not None:
+            values['release_date'] = parse(values.pop('release_date'))
+
+        values['ModIdentifier'] = identifier
+        values['success'] = not values['failed']
+        # Assist in migration of tables to multi-game
+        if values['game_id'] is None:
+            values['game_id'] = 'ksp'
+        values.pop('failed')
+
     # This likely isn't super effecient, but we really should only have to use
-    # this operation once to seed the existing history.
+    # this operation once to seed/migrate the existing history.
     @classmethod
     def restore_status(cls, filename: str) -> None:
         existing = json.loads(Path(filename).read_text(encoding='UTF-8'))
         with cls.batch_write() as batch:
-            for key, item in existing.items():
-                # Ensure all date/time items are passed to ModStatus
-                # as proper datetime.datetime obects
-                for item_key in ['checked', 'indexed', 'inflated']:
-                    update_key = f'last_{item_key}'
-                    if not item[update_key]:
-                        continue
-                    item[update_key] = parse(
-                        item.pop(update_key)
-                    )
-                if item['release_date'] is not None:
-                    item['release_date'] = parse(item.pop('release_date'))
-
-                item['ModIdentifier'] = key
-                item['success'] = not item['failed']
-                # Assist in migration of tables to multi-game
-                if item['game_id'] is None:
-                    item['game_id'] = 'ksp'
-                item.pop('failed')
-
-                # Every batch write consumes a credit, we want to leave spare
-                # credits available for other operations and also not error out
-                # during the operation (pynamodb doesn't seem to have a limit
-                # option on batch queries).
-                if len(batch.pending_operations) == 5:
-                    batch.commit()
-                    time.sleep(1)
-
-                batch.save(ModStatus(**item))
+            for game in chain(existing.values()):
+                for key, item in game.items():
+                    # Every batch write consumes a credit, we want to leave spare
+                    # credits available for other operations and also not error out
+                    # during the operation (pynamodb doesn't seem to have a limit
+                    # option on batch queries).
+                    if len(batch.pending_operations) == 5:
+                        batch.commit()
+                        time.sleep(1)
+                    cls.normalise_item(key, item)
+                    batch.save(ModStatus(**item))
 
     @classmethod
     def last_indexed_from_git(cls, ckanmeta_repo: Repo, identifier: str) -> Optional[datetime]:

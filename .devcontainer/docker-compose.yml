@@ -17,12 +17,13 @@ services:
       AWS_ACCESS_KEY_ID: ${CKAN_AWS_ACCESS_KEY_ID}
       GH_Token: ${CKAN_GH_Token}
       SQS_TIMEOUT: 30
-      STATUS_DB: DevNetKANStatus
+      STATUS_DB: DevMultiKANStatus
       XKAN_GHSECRET: test
       INFLATION_QUEUES: ksp=InboundDevKsp.fifo ksp2=InboundDevKsp2.fifo
       MIRROR_SQS_QUEUE: MirroringDev.fifo
       STATUS_BUCKET: ckan-test-status
       STATUS_INTERVAL: 0
+      STATUS_KEYS: 'ksp=status/netkan.json ksp2=status/netkan-ksp2.json'
       DISCORD_WEBHOOK_ID: ${DISCORD_WEBHOOK_ID}
       DISCORD_WEBHOOK_TOKEN: ${DISCORD_WEBHOOK_TOKEN}
     volumes:
