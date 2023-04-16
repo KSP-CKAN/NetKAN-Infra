@@ -4,6 +4,7 @@ import logging
 import time
 
 from pathlib import Path
+from typing import Tuple
 
 import boto3
 import click
@@ -57,20 +58,27 @@ def download_counter(common: SharedArgs) -> None:
     help='Bucket to Dump status.json',
 )
 @click.option(
-    '--status-key', envvar='STATUS_KEY', default='status/netkan.json',
+    '--status-keys', envvar='STATUS_KEYS', default=['ksp=status/netkan.json'],
     help='Overwrite bucket key, defaults to `status/netkan.json`',
+    multiple=True
 )
 @click.option(
     '--interval', envvar='STATUS_INTERVAL', default=300,
     help='Dump status to S3 every `interval` seconds',
 )
-def export_status_s3(status_bucket: str, status_key: str, interval: bool) -> None:
+def export_status_s3(status_bucket: str, status_keys: Tuple[str, ...], interval: int) -> None:
     frequency = f'every {interval} seconds' if interval else 'once'
-    logging.info('Exporting to s3://%s/%s %s',
-                 status_bucket, status_key, frequency)
     while True:
-        ModStatus.export_to_s3(status_bucket, status_key, interval)
-        if not interval:
+        for status in status_keys:
+            game_id, key = status.split('=')
+            logging.info('Exporting %s to s3://%s/%s (%s)',
+                         status_bucket, game_id, key, frequency)
+            ModStatus.export_to_s3(
+                bucket=status_bucket,
+                key=key,
+                game_id=game_id
+            )
+        if interval <= 0:
             break
         time.sleep(interval)
     logging.info('Done.')
