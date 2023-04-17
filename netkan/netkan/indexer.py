@@ -136,7 +136,8 @@ class CkanMessage:
             self.write_metadata()
             self.commit_metadata(new_file)
         try:
-            status = ModStatus.get(self.ModIdentifier, range_key=self.GameId)
+            status = ModStatus.get(
+                self.ModIdentifier, range_key=self.GameId.lower())
             attrs = self.status_attrs()
             if not self.Success and getattr(status, 'last_error', None) != self.ErrorMessage:
                 logging.error('New inflation error for %s: %s',

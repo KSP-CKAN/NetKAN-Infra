@@ -90,7 +90,7 @@ def freeze(ids: List[str], game_id: str) -> None:
         logging.info('Marking frozen mods...')
         for ident in ids:
             try:
-                status = ModStatus.get(ident, range_key=game_id)
+                status = ModStatus.get(ident, range_key=game_id.lower())
                 if not status.frozen:
                     logging.info('Marking frozen: %s', ident)
                     # https://readthedocs.org/projects/pynamodb/downloads/pdf/stable/

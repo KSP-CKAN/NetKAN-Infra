@@ -59,7 +59,7 @@ class AutoFreezer:
 
     def _last_timestamp(self, ident: str) -> Optional[datetime]:
         try:
-            status = ModStatus.get(ident, range_key=self.game_id)
+            status = ModStatus.get(ident, range_key=self.game_id.lower())
             return getattr(status, 'release_date',
                            getattr(status, 'last_indexed',
                                    None))
@@ -84,7 +84,7 @@ class AutoFreezer:
 
     @staticmethod
     def _mod_cell(ident: str, game_id: str) -> str:
-        status = ModStatus.get(ident, range_key=game_id)
+        status = ModStatus.get(ident, range_key=game_id.lower())
         resources = getattr(status, 'resources', None)
         if resources:
             links = r' \| '.join(f'[{key}]({url})'
