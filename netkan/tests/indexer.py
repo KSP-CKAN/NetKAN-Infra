@@ -88,6 +88,9 @@ class TestCkan(unittest.TestCase):
     def test_ckan_message_mod_version(self):
         self.assertEqual('DogeCoinFlag-v1.02', self.message.mod_version)
 
+    def test_ckan_message_game_id(self):
+        self.assertEqual(self.message.GameId, 'ksp')
+
     def test_ckan_message_success(self):
         self.assertTrue(self.message.Success)
 
@@ -128,6 +131,7 @@ class TestCkan(unittest.TestCase):
     def test_ckan_message_status_attrs(self):
         attrs = self.message.status_attrs(new=True)
         self.assertEqual(attrs['ModIdentifier'], 'DogeCoinFlag')
+        self.assertEqual(attrs['game_id'], 'ksp')
         self.assertTrue(attrs['success'])
         self.assertIsInstance(attrs['last_inflated'], datetime)
         self.assertEqual(attrs['last_error'], None)
