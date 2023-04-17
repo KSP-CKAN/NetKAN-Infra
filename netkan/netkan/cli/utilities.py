@@ -34,6 +34,7 @@ def auto_freezer(common: SharedArgs, days_limit: int, days_till_ignore: int) -> 
         afr = AutoFreezer(
             common.game(game_id).netkan_repo,
             common.game(game_id).github_pr,
+            game_id,
         )
         afr.freeze_idle_mods(days_limit, days_till_ignore)
         afr.mark_frozen_mods()
