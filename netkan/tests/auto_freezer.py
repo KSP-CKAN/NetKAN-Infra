@@ -51,10 +51,11 @@ class TestAutoFreezer(unittest.TestCase):
                 Netkan(contents='{ "identifier": "SmartTank"  }'),
                 Netkan(contents='{ "identifier": "Ringworld"  }'),
             ]
-            status_mock.get.side_effect = lambda ident: unittest.mock.Mock(release_date=self.IDENT_TIMESTAMPS[ident])
+            status_mock.get.side_effect = lambda ident, range_key: unittest.mock.Mock(
+                release_date=self.IDENT_TIMESTAMPS[ident])
             nk_repo = nk_repo_mock(git.Repo('/blah'))
             github_pr = pr_mock('', '', '')
-            af = AutoFreezer(nk_repo, github_pr)
+            af = AutoFreezer(nk_repo, github_pr, 'ksp')
 
             # Act
             astrogator_dttm = af._last_timestamp('Astrogator')
@@ -79,14 +80,14 @@ class TestAutoFreezer(unittest.TestCase):
             patch('netkan.auto_freezer.ModStatus') as status_mock, \
             patch('netkan.github_pr.GitHubPR') as pr_mock:
 
-            status_mock.get.side_effect = lambda ident: unittest.mock.Mock(
+            status_mock.get.side_effect = lambda ident, range_key: unittest.mock.Mock(
                 release_date=self.IDENT_TIMESTAMPS[ident],
                 resources=MapAttribute(**self.IDENT_RESOURCES[ident]))
-            unittest.util._MAX_LENGTH=999999999 # :snake:
+            unittest.util._MAX_LENGTH = 999999999  # :snake:
 
             nk_repo = nk_repo_mock(git.Repo('/blah'))
             github_pr = pr_mock('', '', '')
-            af = AutoFreezer(nk_repo, github_pr)
+            af = AutoFreezer(nk_repo, github_pr, 'ksp')
 
             # Act
             af._submit_pr('test_branch_name', 69, [

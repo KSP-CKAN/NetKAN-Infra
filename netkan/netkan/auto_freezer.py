@@ -11,9 +11,10 @@ class AutoFreezer:
 
     BRANCH_NAME = 'freeze/auto'
 
-    def __init__(self, nk_repo: NetkanRepo, github_pr: GitHubPR) -> None:
+    def __init__(self, nk_repo: NetkanRepo, github_pr: GitHubPR, game_id: str) -> None:
         self.nk_repo = nk_repo
         self.github_pr = github_pr
+        self.game_id = game_id
 
     def freeze_idle_mods(self, days_limit: int, days_till_ignore: int) -> None:
         self.nk_repo.pull_remote_primary(strategy_option='ours')
@@ -56,10 +57,9 @@ class AutoFreezer:
         idle_mods.sort(key=lambda mod: mod[1])
         return idle_mods
 
-    @staticmethod
-    def _last_timestamp(ident: str) -> Optional[datetime]:
+    def _last_timestamp(self, ident: str) -> Optional[datetime]:
         try:
-            status = ModStatus.get(ident)
+            status = ModStatus.get(ident, range_key=self.game_id)
             return getattr(status, 'release_date',
                            getattr(status, 'last_indexed',
                                    None))
@@ -74,18 +74,17 @@ class AutoFreezer:
         ])
         self.nk_repo.git_repo.index.commit(f'Freeze {ident}')
 
-    @staticmethod
-    def _mod_table(idle_mods: List[Tuple[str, datetime]]) -> str:
+    def _mod_table(self, idle_mods: List[Tuple[str, datetime]]) -> str:
         return '\n'.join([
             'Mod | Last Update',
             ':-- | :--',
-            *[f'{AutoFreezer._mod_cell(mod[0])} | {mod[1].astimezone(timezone.utc):%Y-%m-%d %H:%M %Z}'
+            *[f'{AutoFreezer._mod_cell(mod[0], self.game_id)} | {mod[1].astimezone(timezone.utc):%Y-%m-%d %H:%M %Z}'
               for mod in idle_mods]
         ])
 
     @staticmethod
-    def _mod_cell(ident: str) -> str:
-        status = ModStatus.get(ident)
+    def _mod_cell(ident: str, game_id: str) -> str:
+        status = ModStatus.get(ident, range_key=game_id)
         resources = getattr(status, 'resources', None)
         if resources:
             links = r' \| '.join(f'[{key}]({url})'
