@@ -104,7 +104,6 @@ class CkanMessage:
 
     def status_attrs(self, new: bool = False) -> Dict[str, Any]:
         attrs: Dict[str, Any] = {
-            'game_id': self.GameId.lower(),
             'success': self.Success,
             'last_error': self.ErrorMessage,
             'last_warnings': self.WarningMessages,
@@ -116,7 +115,10 @@ class CkanMessage:
         if resources:
             attrs['resources'] = resources
         if new:
-            attrs['ModIdentifier'] = self.ModIdentifier
+            attrs.update({
+                'ModIdentifier': self.ModIdentifier,
+                'game_id': self.GameId.lower(),
+            })
         cache_path = self.ckan.cache_find_file
         if cache_path:
             cache_mtime = datetime.fromtimestamp(cache_path.stat().st_mtime)
@@ -134,7 +136,7 @@ class CkanMessage:
             self.write_metadata()
             self.commit_metadata(new_file)
         try:
-            status = ModStatus.get(self.ModIdentifier)
+            status = ModStatus.get(self.ModIdentifier, range_key=self.GameId)
             attrs = self.status_attrs()
             if not self.Success and getattr(status, 'last_error', None) != self.ErrorMessage:
                 logging.error('New inflation error for %s: %s',
