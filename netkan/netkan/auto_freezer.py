@@ -33,7 +33,7 @@ class AutoFreezer:
     def mark_frozen_mods(self) -> None:
         with ModStatus.batch_write() as batch:
             logging.info('Marking frozen mods...')
-            for mod in ModStatus.scan(rate_limit=5):
+            for mod in ModStatus.scan(rate_limit=5, filter_condition=ModStatus.game_id == self.game_id):
                 if not mod.frozen and self._is_frozen(mod.ModIdentifier):
                     logging.info('Marking frozen: %s', mod.ModIdentifier)
                     mod.frozen = True
