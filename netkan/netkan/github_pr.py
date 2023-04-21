@@ -42,9 +42,10 @@ class GitHubPR:
         except GithubException as exc:
             logging.error('Pull request for %s failed: %s',
                           branch, self.get_error_message(exc.data))
+            owner_name = self.repo.owner.name
             logging.info(
-                'Attempting to find existing PR via head=%s:%s', self.repo.owner, branch)
-            for pull in self.repo.get_pulls(head=f'{self.repo.owner}:{branch}'):
+                'Attempting to find existing PR via head=%s:%s', owner_name, branch)
+            for pull in self.repo.get_pulls(head=f'{owner_name}:{branch}'):
                 # Post description as a comment if pull request exists
                 logging.info('PR found: #%s %s', pull.number, pull.title)
                 comment = pull.create_issue_comment(body)
