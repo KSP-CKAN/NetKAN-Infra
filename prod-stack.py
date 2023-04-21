@@ -793,7 +793,8 @@ services = [
     },
     {
         'name': 'AutoFreezer',
-        'command': 'auto-freezer',
+        'memory': '156',
+        'command': ['auto-freezer', '--deep-clone'],
         'env': [
             ('NETKAN_REMOTES', NETKAN_REMOTES),
             ('CKAN_USER', NETKAN_USER),
