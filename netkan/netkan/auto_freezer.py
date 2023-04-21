@@ -1,3 +1,4 @@
+import time
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Iterable, Optional, List, Tuple
@@ -36,6 +37,10 @@ class AutoFreezer:
                 if not mod.frozen and self._is_frozen(mod.ModIdentifier):
                     logging.info('Marking frozen: %s', mod.ModIdentifier)
                     mod.frozen = True
+                    # Ensure we don't exceed our table rate limit
+                    if len(batch.pending_operations) == 5:
+                        batch.commit()
+                        time.sleep(1)
                     batch.save(mod)
             logging.info('Done!')
 
