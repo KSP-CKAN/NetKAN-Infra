@@ -28,39 +28,6 @@ class CkanMirror(Ckan):
     DESCRIPTION_TEMPLATE = Template(
         read_text('netkan', 'mirror_description_template.jinja2'))
 
-    REDISTRIBUTABLE_LICENSES = {
-        "public-domain",
-        "Apache", "Apache-1.0", "Apache-2.0",
-        "Artistic", "Artistic-1.0", "Artistic-2.0",
-        "BSD-2-clause", "BSD-3-clause", "BSD-4-clause",
-        "ISC",
-        "CC-BY", "CC-BY-1.0", "CC-BY-2.0", "CC-BY-2.5", "CC-BY-3.0", "CC-BY-4.0",
-        "CC-BY-SA", "CC-BY-SA-1.0", "CC-BY-SA-2.0", "CC-BY-SA-2.5", "CC-BY-SA-3.0", "CC-BY-SA-4.0",
-        "CC-BY-NC", "CC-BY-NC-1.0", "CC-BY-NC-2.0", "CC-BY-NC-2.5", "CC-BY-NC-3.0", "CC-BY-NC-4.0",
-        "CC-BY-NC-SA", "CC-BY-NC-SA-1.0", "CC-BY-NC-SA-2.0", "CC-BY-NC-SA-2.5", "CC-BY-NC-SA-3.0", "CC-BY-NC-SA-4.0",
-        "CC-BY-NC-ND", "CC-BY-NC-ND-1.0", "CC-BY-NC-ND-2.0", "CC-BY-NC-ND-2.5", "CC-BY-NC-ND-3.0", "CC-BY-NC-ND-4.0",
-        "CC-BY-ND", "CC-BY-ND-1.0", "CC-BY-ND-2.0", "CC-BY-ND-2.5", "CC-BY-ND-3.0", "CC-BY-ND-4.0",
-        "CC0",
-        "CDDL", "CPL",
-        "EFL-1.0", "EFL-2.0",
-        "Expat", "MIT",
-        "GPL-1.0", "GPL-2.0", "GPL-3.0",
-        "LGPL-2.0", "LGPL-2.1", "LGPL-3.0",
-        "GFDL-1.0", "GFDL-1.1", "GFDL-1.2", "GFDL-1.3",
-        "GFDL-NIV-1.0", "GFDL-NIV-1.1", "GFDL-NIV-1.2", "GFDL-NIV-1.3",
-        "LPPL-1.0", "LPPL-1.1", "LPPL-1.2", "LPPL-1.3c",
-        "MPL-1.1", "MPL-2.0",
-        "Perl",
-        "Python-2.0",
-        "QPL-1.0",
-        "W3C",
-        "Zlib",
-        "Zope",
-        "WTFPL",
-        "Unlicense",
-        "open-source", "unrestricted"
-    }
-
     LICENSE_URLS = {
         "Apache"            : 'http://www.apache.org/licenses/LICENSE-1.0',
         "Apache-1.0"        : 'http://www.apache.org/licenses/LICENSE-1.0',
@@ -163,20 +130,8 @@ class CkanMirror(Ckan):
         return [self.LICENSE_URLS[lic]
                 for lic in self.licenses() if lic in self.LICENSE_URLS]
 
-    @property
-    def redistributable(self) -> bool:
-        for lic in self.licenses():
-            if lic in self.REDISTRIBUTABLE_LICENSES:
-                return True
-        return False
-
     def mirror_item(self, with_epoch: bool = True) -> str:
         return f'{self.identifier}-{self._format_version(with_epoch)}'
-
-    def mirror_filename(self, with_epoch: bool = True) -> Optional[str]:
-        if 'download_hash' not in self._raw:
-            return None
-        return f'{self.download_hash["sha1"][0:8]}-{self.identifier}-{self._format_version(with_epoch)}.{Ckan.MIME_TO_EXTENSION[self.download_content_type]}'
 
     def mirror_source_filename(self, with_epoch: bool = True) -> str:
         return f'{self.identifier}-{self._format_version(with_epoch)}.source.zip'
@@ -379,8 +334,9 @@ class Mirrorer:
         if dry_run:
             logging.info('Dry run mode enabled, no changes will be made')
         for result in self._epoch_search():
-            ident = result.get('identifier')
-            if ident:
+            if 'ident' in result:
+                # https://internetarchive.readthedocs.io/en/stable/internetarchive.html#internetarchive.Search
+                ident = result['identifier']  # type: ignore[index]
                 item = self.ia_session.get_item(ident)
                 logging.info('Found epoch to purge: %s (%s)', ident, item.metadata.get('title'))
                 if not dry_run:
@@ -391,7 +347,7 @@ class Mirrorer:
 
     def _epoch_search(self) -> Iterable[internetarchive.Search]:
         return filter(
-            self._result_has_epoch,
+            self._result_has_epoch,  # type: ignore[arg-type]
             self.ia_session.search_items(
                 f'collection:({self.ia_collection})',
                 fields=['identifier', 'title']

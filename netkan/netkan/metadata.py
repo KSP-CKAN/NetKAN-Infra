@@ -116,6 +116,38 @@ class Netkan:
 
 
 class Ckan:
+    REDISTRIBUTABLE_LICENSES = {
+        "public-domain",
+        "Apache", "Apache-1.0", "Apache-2.0",
+        "Artistic", "Artistic-1.0", "Artistic-2.0",
+        "BSD-2-clause", "BSD-3-clause", "BSD-4-clause",
+        "ISC",
+        "CC-BY", "CC-BY-1.0", "CC-BY-2.0", "CC-BY-2.5", "CC-BY-3.0", "CC-BY-4.0",
+        "CC-BY-SA", "CC-BY-SA-1.0", "CC-BY-SA-2.0", "CC-BY-SA-2.5", "CC-BY-SA-3.0", "CC-BY-SA-4.0",
+        "CC-BY-NC", "CC-BY-NC-1.0", "CC-BY-NC-2.0", "CC-BY-NC-2.5", "CC-BY-NC-3.0", "CC-BY-NC-4.0",
+        "CC-BY-NC-SA", "CC-BY-NC-SA-1.0", "CC-BY-NC-SA-2.0", "CC-BY-NC-SA-2.5", "CC-BY-NC-SA-3.0", "CC-BY-NC-SA-4.0",
+        "CC-BY-NC-ND", "CC-BY-NC-ND-1.0", "CC-BY-NC-ND-2.0", "CC-BY-NC-ND-2.5", "CC-BY-NC-ND-3.0", "CC-BY-NC-ND-4.0",
+        "CC-BY-ND", "CC-BY-ND-1.0", "CC-BY-ND-2.0", "CC-BY-ND-2.5", "CC-BY-ND-3.0", "CC-BY-ND-4.0",
+        "CC0",
+        "CDDL", "CPL",
+        "EFL-1.0", "EFL-2.0",
+        "Expat", "MIT",
+        "GPL-1.0", "GPL-2.0", "GPL-3.0",
+        "LGPL-2.0", "LGPL-2.1", "LGPL-3.0",
+        "GFDL-1.0", "GFDL-1.1", "GFDL-1.2", "GFDL-1.3",
+        "GFDL-NIV-1.0", "GFDL-NIV-1.1", "GFDL-NIV-1.2", "GFDL-NIV-1.3",
+        "LPPL-1.0", "LPPL-1.1", "LPPL-1.2", "LPPL-1.3c",
+        "MPL-1.1", "MPL-2.0",
+        "Perl",
+        "Python-2.0",
+        "QPL-1.0",
+        "W3C",
+        "Zlib",
+        "Zope",
+        "WTFPL",
+        "Unlicense",
+        "open-source", "unrestricted"
+    }
 
     @total_ordering
     class Version:
@@ -321,6 +353,23 @@ class Ckan:
             raise AttributeError('Required property `version` not found')
         return self.Version(raw_ver)
 
+    # download can be a list now, default to the first one
+    @property
+    def download(self) -> str:
+        download = self._raw.get('download')
+        if isinstance(download, list):
+            return download[0] if len(download) > 0 else None
+        return download
+
+    # Provide all downloads with alternate property in case we need them,
+    # including implicit archive.org fallback where applicable
+    @property
+    def downloads(self) -> List[str]:
+        download = self._raw['download']
+        downloads = download if isinstance(download, list) else [download]
+        archive = self.mirror_download() if self.redistributable else None
+        return [*downloads, archive] if archive else downloads
+
     @property
     def cache_prefix(self) -> Optional[str]:
         if 'download' not in self._raw:
@@ -372,3 +421,21 @@ class Ckan:
     def licenses(self) -> List[str]:
         lic = self.license
         return lic if isinstance(lic, list) else [lic]
+
+    @property
+    def redistributable(self) -> bool:
+        for lic in self.licenses():
+            if lic in self.REDISTRIBUTABLE_LICENSES:
+                return True
+        return False
+
+    def mirror_filename(self, with_epoch: bool = True) -> Optional[str]:
+        if 'download_hash' not in self._raw:
+            return None
+        return f'{self.download_hash["sha1"][0:8]}-{self.identifier}-{self._format_version(with_epoch)}.{Ckan.MIME_TO_EXTENSION[self.download_content_type]}'
+
+    def mirror_download(self, with_epoch: bool = True) -> Optional[str]:
+        filename = self.mirror_filename(with_epoch)
+        if filename:
+            return f'https://archive.org/download/{self.identifier}-{self._format_version(with_epoch)}/{filename}'
+        return None
