@@ -113,10 +113,7 @@ class GraphQLQuery:
             if user_repo in self.cache:
                 count = self.cache[user_repo]
                 logging.info('Count for %s is %s', ident, count)
-                if ident in counts:
-                    counts[ident] += count
-                else:
-                    counts[ident] = count
+                counts[ident] = counts.get(ident, 0) + count
         return counts
 
     def graphql_to_github(self, query: str) -> Dict[str, Any]:
@@ -171,10 +168,7 @@ class SpaceDockBatchedQuery:
             count = sd_counts.get(sd_id)
             if count:
                 logging.info('Count for %s is %s', identifier, count)
-                if identifier in counts:
-                    counts[identifier] += count
-                else:
-                    counts[identifier] = count
+                counts[identifier] = counts.get(identifier, 0) + count
         return counts
 
 
@@ -207,10 +201,7 @@ class InternetArchiveBatchedQuery:
         result = requests.get(self.IARCHIVE_API + ','.join(self.ids.values()),
                               timeout=60).json()
         for ckan_ident, ia_ident in self.ids.items():
-            if ckan_ident in counts:
-                counts[ckan_ident] += result[ia_ident]['all_time']
-            else:
-                counts[ckan_ident] = result[ia_ident]['all_time']
+            counts[ckan_ident] = counts.get(ckan_ident, 0) + result[ia_ident]['all_time']
         return counts
 
 
