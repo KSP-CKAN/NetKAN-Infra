@@ -113,7 +113,7 @@ class GraphQLQuery:
             if user_repo in self.cache:
                 count = self.cache[user_repo]
                 logging.info('Count for %s is %s', ident, count)
-                counts[ident] = count
+                counts[ident] = counts.get(ident, 0) + count
         return counts
 
     def graphql_to_github(self, query: str) -> Dict[str, Any]:
@@ -168,7 +168,7 @@ class SpaceDockBatchedQuery:
             count = sd_counts.get(sd_id)
             if count:
                 logging.info('Count for %s is %s', identifier, count)
-                counts[identifier] = count
+                counts[identifier] = counts.get(identifier, 0) + count
         return counts
 
 
@@ -201,7 +201,7 @@ class InternetArchiveBatchedQuery:
         result = requests.get(self.IARCHIVE_API + ','.join(self.ids.values()),
                               timeout=60).json()
         for ckan_ident, ia_ident in self.ids.items():
-            counts[ckan_ident] = result[ia_ident]['all_time']
+            counts[ckan_ident] = counts.get(ckan_ident, 0) + result[ia_ident]['all_time']
         return counts
 
 
@@ -223,39 +223,40 @@ class DownloadCounter:
         graph_query = GraphQLQuery(self.github_token)
         sd_query = SpaceDockBatchedQuery()
         ia_query = InternetArchiveBatchedQuery()
-        for ckan in self.ckm_repo.all_latest_modules():
+        for ckan in self.ckm_repo.all_latest_modules():  # pylint: disable=too-many-nested-blocks
             if ckan.kind == 'dlc':
                 continue
-            try:
-                url_parse = urllib.parse.urlparse(ckan.download)
-                if url_parse.netloc == 'github.com':
-                    match = self.GITHUB_PATH_PATTERN.match(url_parse.path)
-                    if match:
-                        # Process GitHub modules together in big batches
-                        graph_query.add(ckan.identifier, *match.groups())
-                        if graph_query.full():
-                            # Run the query
-                            graph_query.get_result(self.counts)
-                            # Clear request list
-                            graph_query.clear()
-                elif url_parse.netloc == 'spacedock.info':
-                    match = self.SPACEDOCK_PATH_PATTERN.match(url_parse.path)
-                    if match:
-                        # Process SpaceDock modules together in one huge batch
-                        sd_query.add(ckan.identifier, int(match.group(1)))
-                    else:
-                        logging.error('Failed to parse SD URL for %s: %s',
-                                      ckan.identifier, ckan.download)
-                elif url_parse.netloc == 'archive.org':
-                    ia_query.add(ckan)
-                    if ia_query.full():
-                        ia_query.get_result(self.counts)
-                        ia_query = InternetArchiveBatchedQuery()
-            except Exception as exc:  # pylint: disable=broad-except
-                # Don't let one bad apple spoil the bunch
-                # Print file path because netkan_dl might be None
-                logging.error('DownloadCounter failed for %s',
-                              ckan.identifier, exc_info=exc)
+            for download in ckan.downloads:
+                try:
+                    url_parse = urllib.parse.urlparse(download)
+                    if url_parse.netloc == 'github.com':
+                        match = self.GITHUB_PATH_PATTERN.match(url_parse.path)
+                        if match:
+                            # Process GitHub modules together in big batches
+                            graph_query.add(ckan.identifier, *match.groups())
+                            if graph_query.full():
+                                # Run the query
+                                graph_query.get_result(self.counts)
+                                # Clear request list
+                                graph_query.clear()
+                    elif url_parse.netloc == 'spacedock.info':
+                        match = self.SPACEDOCK_PATH_PATTERN.match(url_parse.path)
+                        if match:
+                            # Process SpaceDock modules together in one huge batch
+                            sd_query.add(ckan.identifier, int(match.group(1)))
+                        else:
+                            logging.error('Failed to parse SD URL for %s: %s',
+                                          ckan.identifier, download)
+                    elif url_parse.netloc == 'archive.org':
+                        ia_query.add(ckan)
+                        if ia_query.full():
+                            ia_query.get_result(self.counts)
+                            ia_query = InternetArchiveBatchedQuery()
+                except Exception as exc:  # pylint: disable=broad-except
+                    # Don't let one bad apple spoil the bunch
+                    # Print file path because netkan_dl might be None
+                    logging.error('DownloadCounter failed for %s',
+                                  ckan.identifier, exc_info=exc)
         if not sd_query.empty():
             sd_query.get_result(self.counts)
         if not graph_query.empty():
@@ -275,7 +276,7 @@ class DownloadCounter:
         if self.output_file:
             self.ckm_repo.commit(
                 [self.output_file.as_posix()],
-                'NetKAN Updating Download Counts'
+                'NetKAN updating download counts'
             )
             logging.info('Download counts changed and committed')
             self.ckm_repo.push_remote_primary()

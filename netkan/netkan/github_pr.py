@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from github import Github, GithubException
 from github.Repository import Repository
 
@@ -52,8 +52,9 @@ class GitHubPR:
                 logging.info('Comment added with id %s', comment.id)
 
     @staticmethod
-    def get_error_message(exc_data: Dict[str, Any]) -> str:
-        return ' - '.join([exc_data.get('message',
+    def get_error_message(exc_data: Union[str, Dict[str, Any]]) -> str:
+        return exc_data if isinstance(exc_data, str) else ' - '.join([
+                           exc_data.get('message',
                                         'Unknown error'),
                            *(err['message']
                              for err in exc_data.get('errors', [])
