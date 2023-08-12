@@ -105,8 +105,6 @@ class CkanMirror(Ckan):
         "Unlicense"         : 'https://unlicense.org/UNLICENSE',
     }
 
-    EPOCH_VERSION_REGEXP = re.compile('^[0-9]+:')
-
     def __init__(self, collection: str, filename: Optional[Union[str, Path]] = None, contents: Optional[str] = None) -> None:
         Ckan.__init__(self, filename, contents)
         self.collection = collection

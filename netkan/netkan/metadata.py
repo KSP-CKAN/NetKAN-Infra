@@ -116,6 +116,9 @@ class Netkan:
 
 
 class Ckan:
+
+    EPOCH_VERSION_REGEXP = re.compile('^[0-9]+:')
+
     REDISTRIBUTABLE_LICENSES = {
         "public-domain",
         "Apache", "Apache-1.0", "Apache-2.0",
