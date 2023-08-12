@@ -224,13 +224,6 @@ class CkanMirror(Ckan):
             'x-amz-auto-make-bucket': str(1),
         }
 
-    def _format_version(self, with_epoch: bool) -> Optional[str]:
-        if self.version:
-            if with_epoch:
-                return self.version.string.replace(':', '-')
-            return self.EPOCH_VERSION_REGEXP.sub('', self.version.string)
-        return None
-
     @property
     def mirror_description(self) -> str:
         return self.DESCRIPTION_TEMPLATE.render(mod=self)

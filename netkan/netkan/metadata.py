@@ -439,3 +439,10 @@ class Ckan:
         if filename:
             return f'https://archive.org/download/{self.identifier}-{self._format_version(with_epoch)}/{filename}'
         return None
+
+    def _format_version(self, with_epoch: bool) -> Optional[str]:
+        if self.version:
+            if with_epoch:
+                return self.version.string.replace(':', '-')
+            return self.EPOCH_VERSION_REGEXP.sub('', self.version.string)
+        return None
