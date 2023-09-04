@@ -61,6 +61,8 @@ class ModAnalyzer:
                                             [],               ['B9PartSwitch']),
         CfgAspect(r'^\s*name\s*=\s*ModuleWaterfallFX\b',
                                             ['graphics'],     ['Waterfall']),
+        CfgAspect(r'^\s*VertexMitchellNetravaliHeightMap\b',
+                                            [],               ['VertexMitchellNetravaliHeightMap']),
 
         FilenameAspect(r'\.ks$',            ['config',
                                              'control'],      ['kOS']),
