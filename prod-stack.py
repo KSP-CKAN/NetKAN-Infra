@@ -842,7 +842,7 @@ services = [
     },
     {
         'name': 'Adder',
-        'command': 'spacedock-adder',
+        'command': ['spacedock-adder', '--deep-clone'],
         'secrets': ['GH_Token', 'SSH_KEY'],
         'env': [
             ('SQS_QUEUE', GetAtt(addqueue, 'QueueName')),
