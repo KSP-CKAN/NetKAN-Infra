@@ -20,7 +20,7 @@ class GraphQLQuery:
     GITHUB_API = 'https://api.github.com/graphql'
 
     # Get this many modules per request
-    MODULES_PER_GRAPHQL = 40
+    MODULES_PER_GRAPHQL = 20
 
     # The request we send to GitHub, with a parameter for the module specific section
     GRAPHQL_TEMPLATE = Template(read_text('netkan', 'downloads_query.graphql'))

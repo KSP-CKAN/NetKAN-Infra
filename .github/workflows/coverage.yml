@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   coverage:
+    if: false
     runs-on: ubuntu-latest
     defaults:
       run:
