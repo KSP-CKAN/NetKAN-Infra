@@ -28,10 +28,11 @@ class GitHubPR:
     def default_branch(self) -> str:
         return self.repo.default_branch
 
-    def create_pull_request(self, title: str, branch: str, body: str, labels: Optional[List[str]] = None) -> None:
+    def create_pull_request(self, title: str, branch: str, body: str,
+                            labels: Optional[List[str]] = None) -> None:
         try:
-            pull = self.repo.create_pull(
-                title, body, self.default_branch, branch)
+            pull = self.repo.create_pull(self.default_branch, branch,
+                                         title=title, body=body)
             logging.info('Pull request for %s opened at %s',
                          branch, pull.html_url)
 

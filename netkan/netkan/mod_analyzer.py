@@ -69,6 +69,7 @@ class ModAnalyzer:
         FilenameAspect(r'swinfo\.json$',    [],               ['SpaceWarp']),
         FilenameAspect(r'\.dll$',           ['plugin'],       []),
         FilenameAspect(r'\.cfg$',           ['config'],       []),
+        FilenameAspect(r'\.patch$',         ['config'],       ['PatchManager']),
     ]
     FILTERS = [
         '__MACOSX', '.DS_Store',
