@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Mapping, Any, cast
 
 from unittest import mock, TestCase
 from unittest.mock import MagicMock
@@ -121,7 +122,7 @@ class TestWebhookGitHubInflate(WebhooksHarness):
         response = self.client.post(
             '/gh/inflate/ksp', json=data, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json, {'message': 'Wrong branch'})
+        self.assertDictEqual(cast(Mapping[Any, object], response.json), {'message': 'Wrong branch'})
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     def test_inflate_ksp2_wrong_branch(self, sig: MagicMock):
@@ -131,7 +132,7 @@ class TestWebhookGitHubInflate(WebhooksHarness):
         response = self.client.post(
             '/gh/inflate/ksp2', json=data, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json, {'message': 'Wrong branch'})
+        self.assertDictEqual(cast(Mapping[Any, object], response.json), {'message': 'Wrong branch'})
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     def test_inflate_ksp_no_commits(self, sig: MagicMock):
@@ -141,7 +142,8 @@ class TestWebhookGitHubInflate(WebhooksHarness):
         response = self.client.post(
             '/gh/inflate/ksp', json=data, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json, {'message': 'No commits received'})
+        self.assertDictEqual(cast(Mapping[Any, object], response.json),
+                             {'message': 'No commits received'})
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     def test_inflate_ksp2_no_commits(self, sig: MagicMock):
@@ -151,7 +153,8 @@ class TestWebhookGitHubInflate(WebhooksHarness):
         response = self.client.post(
             '/gh/inflate/ksp2', json=data, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json, {'message': 'No commits received'})
+        self.assertDictEqual(cast(Mapping[Any, object], response.json),
+                             {'message': 'No commits received'})
 
     @mock.patch('netkan.status.ModStatus.get')
     @mock.patch('netkan.webhooks.github_utils.sig_match')
@@ -251,7 +254,7 @@ class TestWebhookGitHubMirror(WebhooksHarness):
         response = self.client.post(
             '/gh/mirror/ksp', json=data, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json, {'message': 'Wrong branch'})
+        self.assertDictEqual(cast(Mapping[Any, object], response.json), {'message': 'Wrong branch'})
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     def test_inflate_ksp2_wrong_branch(self, sig: MagicMock):
@@ -261,7 +264,7 @@ class TestWebhookGitHubMirror(WebhooksHarness):
         response = self.client.post(
             '/gh/mirror/ksp2', json=data, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json, {'message': 'Wrong branch'})
+        self.assertDictEqual(cast(Mapping[Any, object], response.json), {'message': 'Wrong branch'})
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     def test_inflate_ksp_no_commits(self, sig: MagicMock):
@@ -271,7 +274,8 @@ class TestWebhookGitHubMirror(WebhooksHarness):
         response = self.client.post(
             '/gh/mirror/ksp', json=data, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json, {'message': 'No commits received'})
+        self.assertDictEqual(cast(Mapping[Any, object], response.json),
+                             {'message': 'No commits received'})
 
     @mock.patch('netkan.webhooks.github_utils.sig_match')
     def test_inflate_ksp2_no_commits(self, sig: MagicMock):
@@ -281,7 +285,8 @@ class TestWebhookGitHubMirror(WebhooksHarness):
         response = self.client.post(
             '/gh/mirror/ksp2', json=data, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json, {'message': 'No commits received'})
+        self.assertDictEqual(cast(Mapping[Any, object], response.json),
+                             {'message': 'No commits received'})
 
 
 class TestWebhookInflate(WebhooksHarness):
@@ -433,7 +438,7 @@ class TestWebhookSpaceDockAdd(WebhooksHarness):
     @staticmethod
     def mock_netkan_hook() -> dict:
         return {
-            'name:              Mod Name Entered by the User on spacedock'
+            'name': 'Mod Name Entered by the User on spacedock',
             'id': '12345',
             'license': 'GPL-3.0',
             'username': 'modauthor1',
