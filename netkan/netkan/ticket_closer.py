@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from importlib.resources import read_text
 from collections import defaultdict
 from string import Template
@@ -18,7 +18,7 @@ class TicketCloser:
         self._user_name = user_name
 
     def close_tickets(self, days_limit: int = 7) -> None:
-        date_cutoff = datetime.now() - timedelta(days=days_limit)
+        date_cutoff = datetime.now(timezone.utc) - timedelta(days=days_limit)
 
         for repo_name in self.REPO_NAMES:
             repo = self._gh.get_repo(f'{self._user_name}/{repo_name}')
