@@ -19,7 +19,7 @@ def init_repo(metadata: str, path: str, deep_clone: bool) -> Repo:
 
 def init_ssh(key: str, key_path: Path) -> None:
     if not key:
-        logging.warning('Private Key required for SSH Git')
+        logging.warning('Private key required for SSH Git')
         return
     logging.info('Private Key found, writing to disk')
     key_path.mkdir(exist_ok=True)

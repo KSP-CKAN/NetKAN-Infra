@@ -219,7 +219,8 @@ class SharedArgs:
 
     @ssh_key.setter
     def ssh_key(self, value: str) -> None:
-        init_ssh(value, Path(Path.home(), '.ssh'))
+        if value:
+            init_ssh(value, Path(Path.home(), '.ssh'))
         self._ssh_key = value
 
     def game(self, game: str) -> Game:
