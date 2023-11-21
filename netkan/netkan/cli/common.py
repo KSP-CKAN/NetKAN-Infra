@@ -56,7 +56,7 @@ _COMMON_OPTIONS = [
     click.option('--ia-collections', envvar='IA_COLLECTIONS', expose_value=False,
                  help='game=Collection, for mirroring mods in on Internet Archive',
                  multiple=True, callback=ctx_callback),
-    click.option('--game-id', envvar='GAME_ID', help='Game ID for this task',
+    click.option('--game-id', default='KSP', envvar='GAME_ID', help='Game ID for this task',
                  expose_value=False, callback=ctx_callback)
 ]
 

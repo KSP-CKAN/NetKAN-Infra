@@ -17,6 +17,7 @@ from .utilities import (
     download_counter,
     ticket_closer,
     mirror_purge_epochs,
+    analyze_mod,
 )
 
 
@@ -39,3 +40,4 @@ netkan.add_command(auto_freezer)
 netkan.add_command(spacedock_adder)
 netkan.add_command(mirrorer)
 netkan.add_command(mirror_purge_epochs)
+netkan.add_command(analyze_mod)

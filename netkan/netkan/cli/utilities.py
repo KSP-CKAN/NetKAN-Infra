@@ -2,12 +2,14 @@ import datetime
 import json
 import logging
 import time
+import io
 
 from pathlib import Path
 from typing import Tuple
 
 import boto3
 import click
+from ruamel.yaml import YAML
 
 from .common import common_options, pass_state, SharedArgs
 
@@ -16,6 +18,7 @@ from ..download_counter import DownloadCounter
 from ..ticket_closer import TicketCloser
 from ..auto_freezer import AutoFreezer
 from ..mirrorer import Mirrorer
+from ..mod_analyzer import ModAnalyzer
 
 
 @click.command(short_help='Submit or update a PR freezing idle mods')
@@ -61,7 +64,27 @@ def download_counter(common: SharedArgs) -> None:
         logging.info('Download Counter completed! (%s)', game_id)
 
 
-@click.command()
+@click.command(short_help='Autogenerate a mod\'s .netkan properties')
+@click.argument('ident', required=True)
+@click.argument('download_url', required=True)
+@common_options
+@pass_state
+def analyze_mod(common: SharedArgs, ident: str, download_url: str) -> None:
+    """
+    Download a mod with identifier IDENT from DOWNLOAD_URL
+    and guess its netkan properties
+    """
+    sio = io.StringIO()
+    yaml = YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.dump(ModAnalyzer(ident, download_url, common.game(common.game_id or 'KSP'))
+                  .get_netkan_properties(),
+              sio)
+    click.echo('spec_version: v1.18')
+    click.echo(f'identifier: {ident}')
+    click.echo(sio.getvalue())
+
+
 @click.command(short_help='Update the JSON status file on s3')
 @click.option(
     '--status-bucket', envvar='STATUS_BUCKET', required=True,
