@@ -50,4 +50,4 @@ class TicketCloser:
                              issue.title, repo_name, issue.number)
 
                 issue.create_comment(self.BODY_TEMPLATE.safe_substitute(defaultdict(lambda: '', {})))
-                issue.edit(state='closed')
+                issue.edit(state='closed', state_reason='not_planned')
