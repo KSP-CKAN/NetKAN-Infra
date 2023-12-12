@@ -2,12 +2,14 @@ import datetime
 import json
 import logging
 import time
+import io
 
 from pathlib import Path
 from typing import Tuple
 
 import boto3
 import click
+from ruamel.yaml import YAML
 
 from .common import common_options, pass_state, SharedArgs
 
@@ -16,9 +18,10 @@ from ..download_counter import DownloadCounter
 from ..ticket_closer import TicketCloser
 from ..auto_freezer import AutoFreezer
 from ..mirrorer import Mirrorer
+from ..mod_analyzer import ModAnalyzer
 
 
-@click.command()
+@click.command(short_help='Submit or update a PR freezing idle mods')
 @click.option(
     '--days-limit', default=1000,
     help='Number of days to wait before freezing a mod as idle',
@@ -30,6 +33,10 @@ from ..mirrorer import Mirrorer
 @common_options
 @pass_state
 def auto_freezer(common: SharedArgs, days_limit: int, days_till_ignore: int) -> None:
+    """
+    Scan the given NetKAN repo for mods that haven't updated
+    in a given number of days and submit or update a pull request to freeze them
+    """
     for game_id in common.game_ids:
         afr = AutoFreezer(
             common.game(game_id).netkan_repo,
@@ -40,10 +47,14 @@ def auto_freezer(common: SharedArgs, days_limit: int, days_till_ignore: int) -> 
         afr.mark_frozen_mods()
 
 
-@click.command()
+@click.command(short_help='Update download counts in a given repo')
 @common_options
 @pass_state
 def download_counter(common: SharedArgs) -> None:
+    """
+    Count downloads for all the mods in the given repo
+    and update the download_counts.json file
+    """
     for game_id in common.game_ids:
         logging.info('Starting Download Count Calculation (%s)...', game_id)
         DownloadCounter(
@@ -53,7 +64,28 @@ def download_counter(common: SharedArgs) -> None:
         logging.info('Download Counter completed! (%s)', game_id)
 
 
-@click.command()
+@click.command(short_help='Autogenerate a mod\'s .netkan properties')
+@click.argument('ident', required=True)
+@click.argument('download_url', required=True)
+@common_options
+@pass_state
+def analyze_mod(common: SharedArgs, ident: str, download_url: str) -> None:
+    """
+    Download a mod with identifier IDENT from DOWNLOAD_URL
+    and guess its netkan properties
+    """
+    sio = io.StringIO()
+    yaml = YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.dump(ModAnalyzer(ident, download_url, common.game(common.game_id or 'KSP'))
+                  .get_netkan_properties(),
+              sio)
+    click.echo('spec_version: v1.18')
+    click.echo(f'identifier: {ident}')
+    click.echo(sio.getvalue())
+
+
+@click.command(short_help='Update the JSON status file on s3')
 @click.option(
     '--status-bucket', envvar='STATUS_BUCKET', required=True,
     help='Bucket to Dump status.json',
@@ -68,6 +100,10 @@ def download_counter(common: SharedArgs) -> None:
     help='Dump status to S3 every `interval` seconds',
 )
 def export_status_s3(status_bucket: str, status_keys: Tuple[str, ...], interval: int) -> None:
+    """
+    Retrieves the mod timestamps and warnings/errors from the status database
+    and saves them where the status page can see them in JSON format
+    """
     frequency = f'every {interval} seconds' if interval else 'once'
     while True:
         for status in status_keys:
@@ -85,14 +121,22 @@ def export_status_s3(status_bucket: str, status_keys: Tuple[str, ...], interval:
     logging.info('Done.')
 
 
-@click.command()
+@click.command(short_help='Print the mod status JSON')
 def dump_status() -> None:
+    """
+    Retrieves the mod timestamps and warnings/errors from the status database
+    and prints them in JSON format
+    """
     click.echo(json.dumps(ModStatus.export_all_mods()))
 
 
-@click.command()
+@click.command(short_help='Normalize status database entries')
 @click.argument('filename')
 def restore_status(filename: str) -> None:
+    """
+    Normalize the status info for all mods in database and
+    commit them in groups of 5 per second
+    """
     click.echo(
         'To keep within free tier rate limits, this could take some time'
     )
@@ -100,21 +144,30 @@ def restore_status(filename: str) -> None:
     click.echo('Done!')
 
 
-@click.command()
+@click.command(short_help='Set status timestamps based on git repo')
 @common_options
 @pass_state
 def recover_status_timestamps(common: SharedArgs) -> None:
+    """
+    If a mod's status entry is missing a last indexed timestamp,
+    set it to the timstamp from the most recent commit in the meta repo
+    """
     ModStatus.recover_timestamps(common.game(common.game_id).ckanmeta_repo)
 
 
-@click.command()
+@click.command(short_help='Update and restart one of the bot\'s containers')
 @click.option(
-    '--cluster', help='ECS Cluster running the service',
+    '--cluster', required=True,
+    help='ECS Cluster running the service',
 )
 @click.option(
-    '--service-name', help='Name of ECS Service to restart',
+    '--service-name', required=True,
+    help='Name of ECS Service to restart',
 )
 def redeploy_service(cluster: str, service_name: str) -> None:
+    """
+    Update and restart the given service on the given container
+    """
     click.secho(
         f'Forcing redeployment of {cluster}:{service_name}',
         fg='green'
@@ -145,7 +198,7 @@ def redeploy_service(cluster: str, service_name: str) -> None:
     click.secho('Service Redeployed', fg='green')
 
 
-@click.command()
+@click.command(short_help='Close inactive issues on GitHub')
 @click.option(
     '--days-limit', default=7,
     help='Number of days to wait for OP to reply',
@@ -153,10 +206,15 @@ def redeploy_service(cluster: str, service_name: str) -> None:
 @common_options
 @pass_state
 def ticket_closer(common: SharedArgs, days_limit: int) -> None:
+    """
+    Close issues with the Support tag where the most recent
+    reply isn't from the original author and that have been
+    inactive for the given number of days
+    """
     TicketCloser(common.token, common.user).close_tickets(days_limit)
 
 
-@click.command()
+@click.command(short_help='Purge old downloads from the bot\'s download cache')
 @click.option(
     '--days', help='Purge items older than X from cache',
 )
@@ -166,6 +224,10 @@ def ticket_closer(common: SharedArgs, days_limit: int) -> None:
     help='Absolute path to the mod download cache'
 )
 def clean_cache(days: int, cache: str) -> None:
+    """
+    Purge downloads from the bot's download cach that are
+    older than the given number of days
+    """
     older_than = (
         datetime.datetime.now() - datetime.timedelta(days=int(days))
     ).timestamp()
@@ -176,15 +238,19 @@ def clean_cache(days: int, cache: str) -> None:
             item.unlink()
 
 
-@click.command()
+@click.command(short_help='Remove epoch strings from archive.org entries')
 @click.option(
-    '--dry-run',
-    help='',
-    default=False,
+    '--dry-run', default=False,
+    help='True to report what would be done instead of doing it'
 )
 @common_options
 @pass_state
 def mirror_purge_epochs(common: SharedArgs, dry_run: bool) -> None:
+    """
+    Loop over mods mirrored to archive.org
+    and remove their version epoch prefixes.
+    This has never actually been used.
+    """
     Mirrorer(
         common.game(common.game_id).ckanmeta_repo, common.ia_access,
         common.ia_secret, common.game(common.game_id).ia_collection
