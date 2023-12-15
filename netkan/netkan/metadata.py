@@ -35,7 +35,7 @@ class Netkan:
         self.game_id = game_id
         yaml = YAML(typ='safe')
         # YAML parser doesn't allow tabs, so replace with spaces
-        self._raw = yaml.load(self.contents.replace('\t', '    '))
+        self._raw = next(yaml.load_all(self.contents.replace('\t', '    ')))
         # Extract kref_src + kref_id from the kref
         self.kref_src: Optional[str]
         self.kref_id: Optional[str]
