@@ -1,4 +1,4 @@
-FROM python:3.7 as base
+FROM python:3.11 as base
 RUN useradd -ms /bin/bash netkan
 ADD . /netkan
 WORKDIR /netkan
@@ -7,7 +7,7 @@ RUN chown -R netkan:netkan /netkan
 USER netkan
 RUN pip install --user . --no-warn-script-location
 
-FROM python:3.7 as production
+FROM python:3.11 as production
 COPY --from=base /home/netkan /home/netkan
 RUN useradd -Ms /bin/bash netkan
 RUN chown -R netkan:netkan /home/netkan
