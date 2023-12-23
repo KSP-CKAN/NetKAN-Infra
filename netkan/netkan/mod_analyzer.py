@@ -2,19 +2,19 @@ import re
 import tempfile
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile, ZipInfo
-from typing import Dict, List, Any, Union, Pattern, Iterable
+from typing import Dict, List, Set, Any, Union, Pattern, Iterable
 
 from .common import download_stream_to_file
 from .cli.common import Game
 
 
 class ModAspect:
-    def __init__(self, tags: List[str], depends: List[str]) -> None:
+    def __init__(self, tags: Set[str], depends: List[str]) -> None:
         self.tags = tags
         self.depends = depends
 
     def apply_match(self, analyzer: 'ModAnalyzer') -> None:
-        analyzer.tags += self.tags
+        analyzer.tags |= self.tags
         analyzer.depends += [{'name': dep} for dep in self.depends]
 
     def analyze(self, analyzer: 'ModAnalyzer') -> None:
@@ -24,7 +24,7 @@ class ModAspect:
 
 
 class FilenameAspect(ModAspect):
-    def __init__(self, name_regex: str, tags: List[str], depends: List[str]) -> None:
+    def __init__(self, name_regex: str, tags: Set[str], depends: List[str]) -> None:
         super().__init__(tags, depends)
         self.name_pattern = re.compile(name_regex)
 
@@ -35,7 +35,7 @@ class FilenameAspect(ModAspect):
 
 class CfgAspect(ModAspect):
 
-    def __init__(self, cfg_regex: str, tags: List[str], depends: List[str]) -> None:
+    def __init__(self, cfg_regex: str, tags: Set[str], depends: List[str]) -> None:
         super().__init__(tags, depends)
         self.cfg_pattern = re.compile(cfg_regex, re.MULTILINE)
 
@@ -48,28 +48,31 @@ class ModAnalyzer:
 
     ASPECTS: List[ModAspect] = [
         CfgAspect(r'^\s*[@+$\-!%]|^\s*[a-zA-Z0-9_]+:',
-                                            [],               ['ModuleManager']),
-        CfgAspect(r'^\s*PART\b',            ['parts'],        []),
-        CfgAspect(r'^\s*INTERNAL\b',        ['crewed'],       []),
-        CfgAspect(r'^\s*@TechTree\b',       ['tech-tree'],    []),
-        CfgAspect(r'^\s*@Kopernicus\b',     ['planet-pack'],  ['Kopernicus']),
-        CfgAspect(r'^\s*STATIC\b',          ['buildings'],    ['KerbalKonstructs']),
-        CfgAspect(r'^\s*TUFX_PROFILE\b',    ['graphics'],     ['TUFX']),
-        CfgAspect(r'^\s*CONTRACT_TYPE\b',   ['career'],       ['ContractConfigurator']),
-        CfgAspect(r'^\s*@CUSTOMBARNKIT\b',  [],               ['CustomBarnKit']),
+                                            set(),            ['ModuleManager']),
+        CfgAspect(r'^\s*PART\b',            {'parts'},        []),
+        CfgAspect(r'^\s*INTERNAL\b',        {'crewed',
+                                             'first-person'}, []),
+        CfgAspect(r'^\s*PROP\b',            {'first-person'}, []),
+        CfgAspect(r'^\s*@TechTree\b',       {'tech-tree'},    []),
+        CfgAspect(r'^\s*@Kopernicus\b',     {'planet-pack'},  ['Kopernicus']),
+        CfgAspect(r'^\s*STATIC\b',          {'buildings'},    ['KerbalKonstructs']),
+        CfgAspect(r'^\s*TUFX_PROFILE\b',    {'graphics'},     ['TUFX']),
+        CfgAspect(r'^\s*CONTRACT_TYPE\b',   {'career'},       ['ContractConfigurator']),
+        CfgAspect(r'^\s*@CUSTOMBARNKIT\b',  set(),            ['CustomBarnKit']),
         CfgAspect(r'^\s*name\s*=\s*ModuleB9PartSwitch\b',
-                                            [],               ['B9PartSwitch']),
+                                            set(),            ['B9PartSwitch']),
         CfgAspect(r'^\s*name\s*=\s*ModuleWaterfallFX\b',
-                                            ['graphics'],     ['Waterfall']),
+                                            {'graphics'},     ['Waterfall']),
         CfgAspect(r'^\s*VertexMitchellNetravaliHeightMap\b',
-                                            [],               ['VertexMitchellNetravaliHeightMap']),
+                                            set(),            ['VertexMitchellNetravaliHeightMap']),
 
-        FilenameAspect(r'\.ks$',            ['config',
-                                             'control'],      ['kOS']),
-        FilenameAspect(r'swinfo\.json$',    [],               ['SpaceWarp']),
-        FilenameAspect(r'\.dll$',           ['plugin'],       []),
-        FilenameAspect(r'\.cfg$',           ['config'],       []),
-        FilenameAspect(r'\.patch$',         ['config'],       ['PatchManager']),
+        FilenameAspect(r'\.ks$',            {'config',
+                                             'control'},      ['kOS']),
+        FilenameAspect(r'swinfo\.json$',    set(),            ['SpaceWarp']),
+        FilenameAspect(r'\.dll$',           {'plugin'},       []),
+        FilenameAspect(r'\.cfg$',           {'config'},       []),
+        FilenameAspect(r'\.patch$',         {'config'},       ['PatchManager']),
+        FilenameAspect(r'/(Spaces|Props)/', {'first-person'}, []),
     ]
     FILTERS = [
         '__MACOSX', '.DS_Store',
@@ -99,7 +102,7 @@ class ModAnalyzer:
 
         self.mod_root_path = game.mod_root
 
-        self.tags: List[str] = []
+        self.tags: Set[str] = set()
         self.depends: List[Dict[str, str]] = []
         for aspect in self.ASPECTS:
             aspect.analyze(self)
@@ -245,7 +248,7 @@ class ModAnalyzer:
         if self.has_spacewarp_info():
             props['$vref'] = '#/ckan/space-warp'
         if self.tags:
-            props['tags'] = self.tags
+            props['tags'] = list(sorted(self.tags))
         if self.depends:
             props['depends'] = self.depends
         props.update(self.get_install_stanzas())
