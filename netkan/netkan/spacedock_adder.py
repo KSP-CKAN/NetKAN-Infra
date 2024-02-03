@@ -32,7 +32,6 @@ class SpaceDockAdder:
     PR_BODY_TEMPLATE = Template(read_text('netkan', 'sd_adder_pr_body_template.md'))
     USER_TEMPLATE = Template('[$username]($user_url)')
     TITLE_TEMPLATE = Template('Add $name from $site_name')
-    NETKAN_SEPARATOR = '---\n'
     _info: Dict[str, Any]
 
 
@@ -66,7 +65,7 @@ class SpaceDockAdder:
         branch_name = f"add/{netkan[0].get('identifier')}"
         with self.nk_repo.change_branch(branch_name):
             # Create file
-            netkan_path.write_text(SpaceDockAdder.NETKAN_SEPARATOR.join([self.yaml_dump(single_netkan) for single_netkan in netkan]))
+            netkan_path.write_text(self.yaml_dump(netkan))
 
             # Add netkan to branch
             self.nk_repo.git_repo.index.add([netkan_path.as_posix()])
@@ -107,9 +106,9 @@ class SpaceDockAdder:
             logging.error('Failed to generate pull request body from %s', info)
             raise exc
 
-    def yaml_dump(self, obj: Dict[str, Any]) -> str:
+    def yaml_dump(self, objs: List[Dict[str, Any]]) -> str:
         sio = io.StringIO()
-        self.yaml.dump(obj, sio)
+        self.yaml.dump_all(objs, sio)
         return sio.getvalue()
 
     @staticmethod
@@ -121,10 +120,10 @@ class SpaceDockAdder:
         ident = re.sub(r'[\W_]+', '', info.get('name', ''))
         gh_repo = self.get_github_repo(info.get('source_link',''))
         if gh_repo is not None:
-            gh_netkan = self.make_github_netkan(ident,gh_repo,info)
+            gh_netkan = self.make_github_netkan(ident, gh_repo, info)
             if gh_netkan is not None:
                 netkans.append(gh_netkan)
-        netkans.append(self.make_spacedock_netkan(ident,info))
+        netkans.append(self.make_spacedock_netkan(ident, info))
         return netkans
 
     def make_spacedock_netkan(self, ident: str, info: Dict[str, Any]) -> Dict[str, Any]:
