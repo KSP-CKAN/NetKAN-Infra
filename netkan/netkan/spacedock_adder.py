@@ -169,8 +169,8 @@ class SpaceDockAdder:
         props: Dict[str, Any] = {}
         try:
             latest_release = gh_repo.get_latest_release()
-        except:
-            logging.warn('No releases found on GitHub for %s, omitting GitHub section', ident)
+        except: # pylint: disable=broad-except
+            logging.warning('No releases found on GitHub for %s, omitting GitHub section', ident)
             return None
         tag_name = latest_release.tag_name
         digit = re.search(r"\d", tag_name)
@@ -179,7 +179,7 @@ class SpaceDockAdder:
             version_find = tag_name[:digit.start()]
         assets = latest_release.assets
         if len(assets) == 0:
-            logging.warn('Release for %s has no assets, omitting GitHub section', ident)
+            logging.warning('Release for %s has no assets, omitting GitHub section', ident)
             return None
         url = assets[0].browser_download_url
         try:
