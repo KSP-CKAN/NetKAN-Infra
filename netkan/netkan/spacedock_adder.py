@@ -8,16 +8,15 @@ import logging
 from typing import Dict, Deque, Any, List, Optional, Type, TYPE_CHECKING
 import git
 from ruamel.yaml import YAML
+from github.Repository import Repository
+from github.GitRelease import GitRelease
+from github import Github
 
 from .cli.common import Game
 from .github_pr import GitHubPR
 from .mod_analyzer import ModAnalyzer
 from .queue_handler import BaseMessageHandler, QueueHandler
 from .repos import NetkanRepo
-from github.Repository import Repository
-from github.GitRelease import GitRelease
-from github.GitReleaseAsset import GitReleaseAsset
-from github import Github
 
 if TYPE_CHECKING:
     from mypy_boto3_sqs.service_resource import Message
@@ -164,7 +163,7 @@ class SpaceDockAdder:
         else:
             return None
 
-    def make_github_netkan(self, ident: str, gh_repo: Repository, info: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def make_github_netkan(self, ident: str, gh_repo: Repository, info: Dict[str, Any]) -> Optional[Dict[str, Any]]: # pylint: disable=too-many-locals
         mod: Optional[ModAnalyzer] = None
         props: Dict[str, Any] = {}
         releases = gh_repo.get_releases()
