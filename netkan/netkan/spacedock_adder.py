@@ -155,7 +155,8 @@ class SpaceDockAdder:
             sections = source_link.strip('/').split('/')
             repo_name = sections[-2] + '/' + sections[-1]
             g = Github()
-            try:
+            try: # pylint: disable=broad-except
+            # Tell Discord about the problem and move on
                 return g.get_repo(repo_name)
             except Exception as exc:
                 logging.error('%s failed to get the github repository from spacedock source url %s', self.__class__.__name__, source_link, exc_info=exc)
@@ -182,7 +183,7 @@ class SpaceDockAdder:
         try:
             mod = ModAnalyzer(ident, url, self.game)
             props = mod.get_netkan_properties() if mod else {}
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception as exc: # pylint: disable=broad-except
             # Tell Discord about the problem and move on
             logging.error('%s failed to analyze %s from %s',
                           self.__class__.__name__, ident, url, exc_info=exc)
