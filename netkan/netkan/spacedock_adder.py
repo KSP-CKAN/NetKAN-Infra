@@ -6,10 +6,10 @@ from string import Template
 from collections import defaultdict, deque
 import logging
 from typing import Dict, Deque, Any, List, Optional, Type, TYPE_CHECKING
+import urllib.parse
 import git
 from ruamel.yaml import YAML
 from github.Repository import Repository
-from github.GitRelease import GitRelease
 from github import Github
 
 from .cli.common import Game
@@ -32,8 +32,8 @@ class SpaceDockAdder:
     PR_BODY_TEMPLATE = Template(read_text('netkan', 'sd_adder_pr_body_template.md'))
     USER_TEMPLATE = Template('[$username]($user_url)')
     TITLE_TEMPLATE = Template('Add $name from $site_name')
+    GITHUB_PATH_PATTERN = re.compile(r'^/([^/]+)/([^/]+)')
     _info: Dict[str, Any]
-
 
     def __init__(self, message: Message, nk_repo: NetkanRepo, game: Game, github_pr: Optional[GitHubPR] = None) -> None:
         self.message = message
@@ -118,7 +118,7 @@ class SpaceDockAdder:
     def make_netkan(self, info: Dict[str, Any]) -> List[Dict[str, Any]]:
         netkans = []
         ident = re.sub(r'[\W_]+', '', info.get('name', ''))
-        gh_repo = self.get_github_repo(info.get('source_link',''))
+        gh_repo = self.get_github_repo(info.get('source_link', ''))
         if gh_repo is not None:
             gh_netkan = self.make_github_netkan(ident, gh_repo, info)
             if gh_netkan is not None:
@@ -148,28 +148,30 @@ class SpaceDockAdder:
             'x_via': f"Automated {info.get('site_name')} CKAN submission"
         }
 
-
     def get_github_repo(self, source_link: str) -> Optional[Repository]:
-        if 'github.com/' in source_link:
-            sections = source_link.strip('/').split('/')
-            repo_name = sections[-2] + '/' + sections[-1]
-            g = Github()
-            try:
-                return g.get_repo(repo_name)
-            except Exception as exc: # pylint: disable=broad-except
-                # Tell Discord about the problem and move on
-                logging.error('%s failed to get the github repository from spacedock source url %s', self.__class__.__name__, source_link, exc_info=exc)
-                return None
-        else:
-            return None
+        url_parse = urllib.parse.urlparse(source_link)
+        if url_parse.netloc == 'github.com':
+            match = self.GITHUB_PATH_PATTERN.match(url_parse.path)
+            if match:
+                repo_name = '/'.join(match.groups())
+                g = Github(self.github_pr.token)
+                try:
+                    return g.get_repo(repo_name)
+                except Exception as exc: # pylint: disable=broad-except
+                    # Tell Discord about the problem and move on
+                    logging.error('%s failed to get the GitHub repository from SpaceDock source url %s',
+                                  self.__class__.__name__, source_link, exc_info=exc)
+                    return None
+        return None
 
     def make_github_netkan(self, ident: str, gh_repo: Repository, info: Dict[str, Any]) -> Optional[Dict[str, Any]]: # pylint: disable=too-many-locals
         mod: Optional[ModAnalyzer] = None
         props: Dict[str, Any] = {}
-        releases = gh_repo.get_releases()
-        if releases.totalCount == 0:
+        try:
+            latest_release = gh_repo.get_latest_release()
+        except:
+            logging.warn('No releases found on GitHub for %s, omitting GitHub section', ident)
             return None
-        latest_release: GitRelease = releases[0]
         tag_name = latest_release.tag_name
         digit = re.search(r"\d", tag_name)
         version_find = ''
@@ -177,6 +179,7 @@ class SpaceDockAdder:
             version_find = tag_name[:digit.start()]
         assets = latest_release.assets
         if len(assets) == 0:
+            logging.warn('Release for %s has no assets, omitting GitHub section', ident)
             return None
         url = assets[0].browser_download_url
         try:
@@ -203,7 +206,6 @@ class SpaceDockAdder:
                 'strict': 'false'
             }
         return netkan
-
 
     @property
     def delete_attrs(self) -> DeleteMessageBatchRequestEntryTypeDef:
