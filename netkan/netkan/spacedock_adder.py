@@ -169,7 +169,7 @@ class SpaceDockAdder:
         props: Dict[str, Any] = {}
         try:
             latest_release = gh_repo.get_latest_release()
-        except: # pylint: disable=broad-except
+        except: # pylint: disable=broad-except,bare-except
             logging.warning('No releases found on GitHub for %s, omitting GitHub section', ident)
             return None
         tag_name = latest_release.tag_name
