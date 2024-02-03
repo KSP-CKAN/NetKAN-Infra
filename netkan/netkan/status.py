@@ -47,7 +47,7 @@ class ModStatus(Model):
     release_date = UTCDateTimeAttribute(null=True)
     success = BooleanAttribute()
     frozen = BooleanAttribute(default=False)
-    resources: 'MapAttribute[str, Any]' = MapAttribute(default={})
+    resources: 'MapAttribute[str, Any]' = MapAttribute()
 
     def mod_attrs(self) -> Dict[str, Any]:
         attributes = {}
