@@ -36,6 +36,7 @@ class SpaceDockAdder:
     NETKAN_SEPARATOR = '---\n'
     _info: Dict[str, Any]
 
+
     def __init__(self, message: Message, nk_repo: NetkanRepo, game: Game, github_pr: Optional[GitHubPR] = None) -> None:
         self.message = message
         self.nk_repo = nk_repo
@@ -120,9 +121,9 @@ class SpaceDockAdder:
         netkans = []
         ident = re.sub(r'[\W_]+', '', info.get('name', ''))
         gh_repo = self.get_github_repo(info.get('source_link',''))
-        if gh_repo != None:
+        if gh_repo is not None:
             gh_netkan = self.make_github_netkan(ident,gh_repo,info)
-            if gh_netkan != None:
+            if gh_netkan is not None:
                 netkans.append(gh_netkan)
         netkans.append(self.make_spacedock_netkan(ident,info))
         return netkans
