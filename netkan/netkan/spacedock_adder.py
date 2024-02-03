@@ -35,7 +35,7 @@ class SpaceDockAdder:
     GITHUB_PATH_PATTERN = re.compile(r'^/([^/]+)/([^/]+)')
     _info: Dict[str, Any]
 
-    def __init__(self, message: Message, nk_repo: NetkanRepo, game: Game, github_pr: Optional[GitHubPR] = None) -> None:
+    def __init__(self, message: Message, nk_repo: NetkanRepo, game: Game, github_pr: GitHubPR) -> None:
         self.message = message
         self.nk_repo = nk_repo
         self.game = game
