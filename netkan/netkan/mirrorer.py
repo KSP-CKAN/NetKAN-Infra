@@ -6,7 +6,6 @@ import hashlib
 import logging
 import shutil
 from pathlib import Path
-from importlib.resources import read_text
 from typing import Optional, List, Union, Iterable, BinaryIO, Dict, Any, TYPE_CHECKING
 import boto3
 import github
@@ -16,6 +15,7 @@ from jinja2 import Template
 from .metadata import Ckan
 from .repos import CkanMetaRepo
 from .common import deletion_msg, download_stream_to_file, USER_AGENT
+from .utils import legacy_read_text
 
 if TYPE_CHECKING:
     from mypy_boto3_sqs.type_defs import DeleteMessageBatchRequestEntryTypeDef
@@ -26,7 +26,7 @@ else:
 class CkanMirror(Ckan):
 
     DESCRIPTION_TEMPLATE = Template(
-        read_text('netkan', 'mirror_description_template.jinja2'))
+        legacy_read_text('netkan', 'mirror_description_template.jinja2'))
 
     BUCKET_EXCLUDE_PATTERN = re.compile(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9._-]')
 
