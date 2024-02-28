@@ -28,13 +28,15 @@ class CkanMirror(Ckan):
     DESCRIPTION_TEMPLATE = Template(
         read_text('netkan', 'mirror_description_template.jinja2'))
 
+    BUCKET_EXCLUDE_PATTERN = re.compile(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9._-]')
+
     LICENSE_URLS = {
         "Apache"            : 'http://www.apache.org/licenses/LICENSE-1.0',
         "Apache-1.0"        : 'http://www.apache.org/licenses/LICENSE-1.0',
         "Apache-2.0"        : 'http://www.apache.org/licenses/LICENSE-2.0',
-        "Artistic"          : 'http://www.gnu.org/licenses/license-list.en.html#ArtisticLicense',
-        "Artistic-1.0"      : 'http://www.gnu.org/licenses/license-list.en.html#ArtisticLicense',
-        "Artistic-2.0"      : 'http://www.perlfoundation.org/artistic_license_2_0',
+        "Artistic"          : 'https://directory.fsf.org/wiki/License:Artistic-1.0',
+        "Artistic-1.0"      : 'https://directory.fsf.org/wiki/License:Artistic-1.0',
+        "Artistic-2.0"      : 'https://directory.fsf.org/wiki/License:Artistic-2.0',
         "BSD-2-clause"      : 'https://opensource.org/licenses/BSD-2-Clause',
         "BSD-3-clause"      : 'https://opensource.org/licenses/BSD-3-Clause',
         "ISC"               : 'https://opensource.org/licenses/ISC',
@@ -99,20 +101,23 @@ class CkanMirror(Ckan):
         "Perl"              : 'http://dev.perl.org/licenses/',
         "Python-2.0"        : 'https://www.python.org/download/releases/2.0/license/',
         "QPL-1.0"           : 'https://opensource.org/licenses/QPL-1.0',
-        "W3C"               : 'https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document',
+        "W3C"               : 'https://www.w3.org/copyright/software-license-2023/',
         "Zlib"              : 'http://www.zlib.net/zlib_license.html',
         "Zope"              : 'http://old.zope.org/Resources/License.1',
         "Unlicense"         : 'https://unlicense.org/UNLICENSE',
     }
 
-    def __init__(self, collection: str, filename: Optional[Union[str, Path]] = None, contents: Optional[str] = None) -> None:
+    def __init__(self, collection: str, filename: Optional[Union[str, Path]] = None,
+                 contents: Optional[str] = None) -> None:
         Ckan.__init__(self, filename, contents)
         self.collection = collection
 
     @property
     def can_mirror(self) -> bool:
         return (
-            self.kind == 'package' and getattr(self, 'download_content_type', '') in Ckan.MIME_TO_EXTENSION and self.redistributable
+            self.kind == 'package'
+            and getattr(self, 'download_content_type', '') in Ckan.MIME_TO_EXTENSION
+            and self.redistributable
         )
 
     def mirrored(self, iarchive: internetarchive.session.ArchiveSession) -> bool:
@@ -129,13 +134,24 @@ class CkanMirror(Ckan):
                 for lic in self.licenses() if lic in self.LICENSE_URLS]
 
     def mirror_item(self, with_epoch: bool = True) -> str:
-        return f'{self.identifier}-{self._format_version(with_epoch)}'
+        return self._ia_bucket_sanitize(
+            f'{self.identifier}-{self._format_version(with_epoch)}')
 
     def mirror_source_filename(self, with_epoch: bool = True) -> str:
-        return f'{self.identifier}-{self._format_version(with_epoch)}.source.zip'
+        return self._ia_bucket_sanitize(
+            f'{self.identifier}-{self._format_version(with_epoch)}.source.zip')
 
     def mirror_title(self, with_epoch: bool = True) -> str:
         return f'{self.name} - {self._format_version(with_epoch)}'
+
+    # InternetArchive says:
+    # Bucket names should be valid archive identifiers;
+    # try someting matching this regular expression:
+    # ^[a-zA-Z0-9][a-zA-Z0-9_.-]{4,100}$
+    # (We enforce everything except the minimum of 4 characters)
+    @classmethod
+    def _ia_bucket_sanitize(cls, s: str) -> str:
+        return cls.BUCKET_EXCLUDE_PATTERN.sub('', s)[:100]
 
     @property
     def item_metadata(self) -> Dict[str, Any]:
@@ -229,10 +245,12 @@ class CkanMirror(Ckan):
 
 class Mirrorer:
 
-    EPOCH_ID_REGEXP = re.compile('-[0-9]+-')
-    EPOCH_TITLE_REGEXP = re.compile(' - [0-9]+:')
+    EPOCH_ID_REGEXP = re.compile(r'-[0-9]+-')
+    EPOCH_TITLE_REGEXP = re.compile(r' - [0-9]+:')
 
-    def __init__(self, ckm_repo: CkanMetaRepo, ia_access: str, ia_secret: str, ia_collection: str, token: Optional[str] = None) -> None:
+    def __init__(self, ckm_repo: CkanMetaRepo,
+                 ia_access: str, ia_secret: str, ia_collection: str,
+                 token: Optional[str] = None) -> None:
         self.ckm_repo = ckm_repo
         self.ia_collection = ia_collection
         self.ia_access = ia_access
