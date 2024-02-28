@@ -2,14 +2,13 @@ import json
 import logging
 import re
 from pathlib import Path
-from importlib.resources import read_text
 from string import Template
 import urllib.parse
 from typing import Dict, Tuple, Any, Optional
 
 import requests
 
-from .utils import repo_file_add_or_changed
+from .utils import repo_file_add_or_changed, legacy_read_text
 from .repos import CkanMetaRepo
 from .metadata import Ckan
 
@@ -23,7 +22,7 @@ class GraphQLQuery:
     MODULES_PER_GRAPHQL = 20
 
     # The request we send to GitHub, with a parameter for the module specific section
-    GRAPHQL_TEMPLATE = Template(read_text('netkan', 'downloads_query.graphql'))
+    GRAPHQL_TEMPLATE = Template(legacy_read_text('netkan', 'downloads_query.graphql'))
 
     # The request string per module, depends on getDownloads fragment existing in
     # the main template

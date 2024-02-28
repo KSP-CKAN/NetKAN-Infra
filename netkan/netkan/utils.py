@@ -2,6 +2,8 @@ import logging
 import subprocess
 from pathlib import Path
 from typing import Union
+from importlib.resources import files
+
 from git import Repo
 
 
@@ -42,3 +44,7 @@ def repo_file_add_or_changed(repo: Repo, filename: Union[str, Path]) -> bool:
                 x.a_path for x in repo.index.diff(None)]:
             return True
     return False
+
+
+def legacy_read_text(pkg: str, resource: str) -> str:
+    return files(pkg).joinpath(resource).read_text()

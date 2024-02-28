@@ -1,17 +1,17 @@
 import logging
 from datetime import datetime, timedelta, timezone
-from importlib.resources import read_text
 from collections import defaultdict
 from string import Template
 import github
 
 from .common import USER_AGENT
+from .utils import legacy_read_text
 
 
 class TicketCloser:
 
     REPO_NAMES = ['CKAN', 'NetKAN']
-    BODY_TEMPLATE = Template(read_text('netkan', 'ticket_close_template.md'))
+    BODY_TEMPLATE = Template(legacy_read_text('netkan', 'ticket_close_template.md'))
 
     def __init__(self, token: str, user_name: str) -> None:
         self._gh = github.Github(token, user_agent=USER_AGENT)

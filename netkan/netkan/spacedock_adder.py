@@ -1,7 +1,6 @@
 import json
 import re
 import io
-from importlib.resources import read_text
 from string import Template
 from collections import defaultdict, deque
 import logging
@@ -17,6 +16,7 @@ from .github_pr import GitHubPR
 from .mod_analyzer import ModAnalyzer
 from .queue_handler import BaseMessageHandler, QueueHandler
 from .repos import NetkanRepo
+from .utils import legacy_read_text
 
 if TYPE_CHECKING:
     from mypy_boto3_sqs.service_resource import Message
@@ -28,8 +28,8 @@ else:
 
 # https://github.com/KSP-SpaceDock/SpaceDock/blob/master/KerbalStuff/ckan.py
 class SpaceDockAdder:
-    COMMIT_TEMPLATE = Template(read_text('netkan', 'sd_adder_commit_template.md'))
-    PR_BODY_TEMPLATE = Template(read_text('netkan', 'sd_adder_pr_body_template.md'))
+    COMMIT_TEMPLATE = Template(legacy_read_text('netkan', 'sd_adder_commit_template.md'))
+    PR_BODY_TEMPLATE = Template(legacy_read_text('netkan', 'sd_adder_pr_body_template.md'))
     USER_TEMPLATE = Template('[$username]($user_url)')
     TITLE_TEMPLATE = Template('Add $name from $site_name')
     GITHUB_PATH_PATTERN = re.compile(r'^/([^/]+)/([^/]+)')
