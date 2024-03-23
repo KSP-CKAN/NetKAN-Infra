@@ -2,7 +2,8 @@ name: Report Coverage
 
 on:
   workflow_run:
-    workflows: ["Build Coverage"]
+    workflows:
+      - Build Coverage
     types:
       - completed
 
