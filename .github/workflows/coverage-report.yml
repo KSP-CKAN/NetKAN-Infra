@@ -1,0 +1,29 @@
+name: Report Coverage
+
+on:
+  workflow_run:
+    workflows:
+      - Build Coverage
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  coverage-report:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage.xml
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get Cover
+        uses: techman83/coverage@feat/workflow_run
+        with:
+          coverageFile: coverage.xml
+          token: ${{ secrets.GITHUB_TOKEN }}

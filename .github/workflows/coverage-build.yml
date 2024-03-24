@@ -1,0 +1,35 @@
+name: Build Coverage
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  coverage-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: netkan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: netkan/setup.py
+      - name: Install test dependencies
+        run: pip install .[test]
+      - name: force our git config
+        run: cp .gitconfig ~/.
+      - name: Run Coverage
+        run: |
+          coverage run -m pytest
+          coverage xml
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage.xml
+          path: netkan/coverage.xml
+          retention-days: 1
