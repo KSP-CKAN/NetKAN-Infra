@@ -1,4 +1,4 @@
-FROM ubuntu:latest as ubuntu_with_python
+FROM ubuntu:22.04 as ubuntu_with_python
 
 # Don't prompt for time zone
 ENV DEBIAN_FRONTEND=noninteractive
