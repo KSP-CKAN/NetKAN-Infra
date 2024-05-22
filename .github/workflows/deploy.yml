@@ -78,10 +78,11 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         run: |
-          netkan redeploy-service --cluster NetKANCluster --service-name Indexer
-          netkan redeploy-service --cluster NetKANCluster --service-name Webhooks
-          netkan redeploy-service --cluster NetKANCluster --service-name Adder
-          netkan redeploy-service --cluster NetKANCluster --service-name Mirrorer
+          for SERVICE in Indexer Webhooks Adder Mirrorer
+          do
+            netkan redeploy-service --cluster NetKANCluster --service-name $SERVICE &
+          done
+          wait
       - name: CKAN repo dispatch
         env:
           REPO_ACCESS_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
