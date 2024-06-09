@@ -283,7 +283,7 @@ class DownloadCounter:
     @staticmethod
     def _download_summary_table(counts: Dict[str, int], how_many: int) -> str:
         return '\n'.join(f'    {counts[ident]:8}  {ident}'
-                         for ident in heapq.nlargest(how_many, counts, counts.get)
+                         for ident in heapq.nlargest(how_many, counts, lambda i: counts.get(i))
                          if counts[ident] > 0)
 
     def log_top(self, how_many: int) -> None:
