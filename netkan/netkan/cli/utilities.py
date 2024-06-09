@@ -57,10 +57,9 @@ def download_counter(common: SharedArgs) -> None:
     """
     for game_id in common.game_ids:
         logging.info('Starting Download Count Calculation (%s)...', game_id)
-        DownloadCounter(
-            common.game(game_id).ckanmeta_repo,
-            common.token
-        ).update_counts()
+        DownloadCounter(game_id,
+                        common.game(game_id).ckanmeta_repo,
+                        common.token).update_counts()
         logging.info('Download Counter completed! (%s)', game_id)
 
 

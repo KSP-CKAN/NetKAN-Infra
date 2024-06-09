@@ -5,6 +5,7 @@ from pathlib import Path
 from string import Template
 import urllib.parse
 from typing import Dict, Tuple, Any, Optional
+import heapq
 
 import requests
 
@@ -209,7 +210,8 @@ class DownloadCounter:
     GITHUB_PATH_PATTERN = re.compile(r'^/([^/]+)/([^/]+)')
     SPACEDOCK_PATH_PATTERN = re.compile(r'^/mod/([^/]+)')
 
-    def __init__(self, ckm_repo: CkanMetaRepo, github_token: str) -> None:
+    def __init__(self, game_id: str, ckm_repo: CkanMetaRepo, github_token: str) -> None:
+        self.game_id = game_id
         self.ckm_repo = ckm_repo
         self.counts: Dict[str, Any] = {}
         self.github_token = github_token
@@ -273,17 +275,35 @@ class DownloadCounter:
 
     def commit_counts(self) -> None:
         if self.output_file:
-            self.ckm_repo.commit(
-                [self.output_file.as_posix()],
-                'NetKAN updating download counts'
-            )
+            self.ckm_repo.commit([self.output_file.as_posix()],
+                                 'NetKAN updating download counts')
             logging.info('Download counts changed and committed')
             self.ckm_repo.push_remote_primary()
+
+    @staticmethod
+    def _download_summary_table(counts: Dict[str, int], how_many: int) -> str:
+        return '\n'.join(f'    {counts[ident]:8}  {ident}'
+                         for ident in heapq.nlargest(how_many, counts, counts.get)
+                         if counts[ident] > 0)
+
+    def log_top(self, how_many: int) -> None:
+        if self.output_file and self.output_file.exists():
+            with open(self.output_file) as old_file:
+                old_counts = json.load(old_file)
+                deltas = {ident: count - old_counts[ident]
+                          for ident, count in self.counts.items()
+                          if ident in old_counts}
+                # This isn't an error, but only errors go to Discord
+                logging.error('Top %s downloads for %s all-time:\n%s\n\n'
+                              'Top %s downloads for %s today:\n%s',
+                              how_many, self.game_id, self._download_summary_table(self.counts, how_many),
+                              how_many, self.game_id, self._download_summary_table(deltas, how_many))
 
     def update_counts(self) -> None:
         if self.output_file:
             self.get_counts()
             self.ckm_repo.pull_remote_primary(strategy_option='ours')
+            self.log_top(5)
             self.write_json()
             if repo_file_add_or_changed(self.ckm_repo.git_repo, self.output_file):
                 self.commit_counts()
