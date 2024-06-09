@@ -288,7 +288,7 @@ class DownloadCounter:
 
     def log_top(self, how_many: int) -> None:
         if self.output_file and self.output_file.exists():
-            with open(self.output_file) as old_file:
+            with open(self.output_file, encoding='UTF-8') as old_file:
                 old_counts = json.load(old_file)
                 deltas = {ident: count - old_counts[ident]
                           for ident, count in self.counts.items()
