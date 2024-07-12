@@ -634,7 +634,7 @@ t.add_resource(RecordSetType(
 services = [
     {
         'name': 'Indexer',
-        'command': 'indexer',
+        'command': ['indexer', '--deep-clone'],
         'memory': '256',
         'secrets': [
             'SSH_KEY', 'GH_Token',
