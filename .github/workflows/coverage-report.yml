@@ -15,7 +15,7 @@ permissions:
 jobs:
   coverage-report:
     runs-on: ubuntu-latest
-    if: ${{ false && github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -23,6 +23,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Get Cover
+        if: false
         uses: techman83/coverage@feat/workflow_run
         with:
           coverageFile: coverage.xml
