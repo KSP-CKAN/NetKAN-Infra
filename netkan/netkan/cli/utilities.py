@@ -79,7 +79,6 @@ def analyze_mod(common: SharedArgs, ident: str, download_url: str) -> None:
     yaml.dump(ModAnalyzer(ident, download_url, common.game(common.game_id or 'KSP'))
                   .get_netkan_properties(),
               sio)
-    click.echo('spec_version: v1.18')
     click.echo(f'identifier: {ident}')
     click.echo(sio.getvalue())
 

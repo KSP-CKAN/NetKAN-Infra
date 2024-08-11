@@ -139,7 +139,6 @@ class SpaceDockAdder:
                           self.__class__.__name__, ident, url, exc_info=exc)
         vref_props = {'$vref': props.pop('$vref')} if '$vref' in props else {}
         return {
-            'spec_version': 'v1.34',
             'identifier': ident,
             '$kref': f"#/ckan/spacedock/{info.get('id', '')}",
             **(vref_props),
@@ -191,7 +190,6 @@ class SpaceDockAdder:
                           self.__class__.__name__, ident, url, exc_info=exc)
         vref_props = {'$vref': props.pop('$vref')} if '$vref' in props else {}
         netkan = {
-            'spec_version': 'v1.34',
             'identifier': ident,
             '$kref': f"#/ckan/github/{gh_repo.full_name}",
             **(vref_props),
