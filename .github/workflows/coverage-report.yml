@@ -15,7 +15,7 @@ permissions:
 jobs:
   coverage-report:
     runs-on: ubuntu-latest
-    if: false && ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ false && github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/download-artifact@v4
         with:
