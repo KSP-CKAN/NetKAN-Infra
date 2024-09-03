@@ -35,7 +35,8 @@ class SpaceDockAdder:
     GITHUB_PATH_PATTERN = re.compile(r'^/([^/]+)/([^/]+)')
     _info: Dict[str, Any]
 
-    def __init__(self, message: Message, nk_repo: NetkanRepo, game: Game, github_pr: GitHubPR) -> None:
+    def __init__(self, message: Message, nk_repo: NetkanRepo,
+                 game: Game, github_pr: GitHubPR) -> None:
         self.message = message
         self.nk_repo = nk_repo
         self.game = game
@@ -97,7 +98,8 @@ class SpaceDockAdder:
             return SpaceDockAdder.PR_BODY_TEMPLATE.safe_substitute(defaultdict(
                 lambda: '',
                 {**info,
-                 'all_authors_md': ', '.join(SpaceDockAdder.USER_TEMPLATE.safe_substitute(defaultdict(lambda: '', a))
+                 'all_authors_md': ', '.join(SpaceDockAdder.USER_TEMPLATE.safe_substitute(
+                                                                defaultdict(lambda: '', a))
                                              for a in ([info]
                                                        if bad_author else
                                                        [info, *info.get('shared_authors', [])]))}))
@@ -120,7 +122,7 @@ class SpaceDockAdder:
         ident = re.sub(r'[\W_]+', '', info.get('name', ''))
         gh_repo = self.get_github_repo(info.get('source_link', ''))
         if gh_repo is not None:
-            gh_netkan = self.make_github_netkan(ident, gh_repo, info)
+            gh_netkan = self.make_github_netkan(ident, gh_repo)
             if gh_netkan is not None:
                 netkans.append(gh_netkan)
         netkans.append(self.make_spacedock_netkan(ident, info))
@@ -142,7 +144,6 @@ class SpaceDockAdder:
             'identifier': ident,
             '$kref': f"#/ckan/spacedock/{info.get('id', '')}",
             **(vref_props),
-            'license': info.get('license', '').strip().replace(' ', '-'),
             **(props),
             'x_via': f"Automated {info.get('site_name')} CKAN submission"
         }
@@ -158,12 +159,12 @@ class SpaceDockAdder:
                     return g.get_repo(repo_name)
                 except Exception as exc: # pylint: disable=broad-except
                     # Tell Discord about the problem and move on
-                    logging.error('%s failed to get the GitHub repository from SpaceDock source url %s',
+                    logging.error('%s failed to get GitHub repo from SpaceDock source url %s',
                                   self.__class__.__name__, source_link, exc_info=exc)
                     return None
         return None
 
-    def make_github_netkan(self, ident: str, gh_repo: Repository, info: Dict[str, Any]) -> Optional[Dict[str, Any]]: # pylint: disable=too-many-locals
+    def make_github_netkan(self, ident: str, gh_repo: Repository) -> Optional[Dict[str, Any]]: # pylint: disable=too-many-locals
         mod: Optional[ModAnalyzer] = None
         props: Dict[str, Any] = {}
         try:
@@ -177,10 +178,9 @@ class SpaceDockAdder:
         if digit:
             version_find = tag_name[:digit.start()]
         assets = latest_release.assets
-        if len(assets) == 0:
-            logging.warning('Release for %s has no assets, omitting GitHub section', ident)
-            return None
-        url = assets[0].browser_download_url
+        use_source_archive = not assets
+        url = latest_release.zipball_url if use_source_archive \
+                                         else assets[0].browser_download_url
         try:
             mod = ModAnalyzer(ident, url, self.game)
             props = mod.get_netkan_properties() if mod else {}
@@ -189,21 +189,17 @@ class SpaceDockAdder:
             logging.error('%s failed to analyze %s from %s',
                           self.__class__.__name__, ident, url, exc_info=exc)
         vref_props = {'$vref': props.pop('$vref')} if '$vref' in props else {}
-        netkan = {
+        return {
             'identifier': ident,
             '$kref': f"#/ckan/github/{gh_repo.full_name}",
+            **({'x_netkan_github': {'use_source_archive': True}}
+               if use_source_archive else {}),
+            **({'x_netkan_version_edit': {'find': f'^{version_find}',
+                                          'replace': '',
+                                          'strict': False}}
+               if version_find != '' else {}),
             **(vref_props),
-            'license': info.get('license', '').strip().replace(' ', '-'),
-            **(props),
         }
-
-        if version_find != '':
-            netkan['x_netkan_version_edit'] = {
-                'find': f'^{version_find}',
-                'replace': '',
-                'strict': 'false'
-            }
-        return netkan
 
     @property
     def delete_attrs(self) -> DeleteMessageBatchRequestEntryTypeDef:
