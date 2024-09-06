@@ -6,6 +6,7 @@ from string import Template
 import urllib.parse
 from typing import Dict, Tuple, Any, Optional
 import heapq
+from datetime import date
 
 import requests
 
@@ -205,10 +206,36 @@ class InternetArchiveBatchedQuery:
         return counts
 
 
+class SourceForgeQuerier:
+
+    # https://sourceforge.net/p/forge/documentation/Download%20Stats%20API/
+    API_TEMPLATE = Template('https://sourceforge.net/projects/${proj_id}/files/stats/json'
+                            '?start_date=2010-01-01&end_date=${today}'
+                            '&os_by_country=false&period=monthly')
+
+    @classmethod
+    def get_count(cls, proj_id):
+        return requests.get(cls.get_query(proj_id), timeout=60).json()['total']
+
+    @classmethod
+    def get_query(cls, proj_id):
+        return cls.API_TEMPLATE.safe_substitute(proj_id=proj_id,
+                                                today=date.today().isoformat())
+
+    @classmethod
+    def get_result(cls, ident: str, proj_id: str,
+                   counts: Optional[Dict[str, int]] = None) -> Dict[str, int]:
+        if counts is None:
+            counts = {}
+        counts[ident] = counts.get(ident, 0) + cls.get_count(proj_id)
+        return counts
+
+
 class DownloadCounter:
 
     GITHUB_PATH_PATTERN = re.compile(r'^/([^/]+)/([^/]+)')
     SPACEDOCK_PATH_PATTERN = re.compile(r'^/mod/([^/]+)')
+    SOURCEFORGE_PATH_PATTERN = re.compile(r'^/project/([^/]+)')
 
     def __init__(self, game_id: str, ckm_repo: CkanMetaRepo, github_token: str) -> None:
         self.game_id = game_id
@@ -253,6 +280,14 @@ class DownloadCounter:
                         if ia_query.full():
                             ia_query.get_result(self.counts)
                             ia_query = InternetArchiveBatchedQuery()
+                    elif url_parse.netloc.endswith('.sourceforge.net'):
+                        match = self.SOURCEFORGE_PATH_PATTERN.match(url_parse.path)
+                        if match:
+                            SourceForgeQuerier.get_result(ckan.identifier, match.group(1),
+                                                          self.counts)
+                        else:
+                            logging.error('Failed to parse SF URL for %s: %s',
+                                          ckan.identifier, download)
                 except Exception as exc:  # pylint: disable=broad-except
                     # Don't let one bad apple spoil the bunch
                     # Print file path because netkan_dl might be None
@@ -296,8 +331,10 @@ class DownloadCounter:
                 # This isn't an error, but only errors go to Discord
                 logging.error('Top %s downloads for %s all-time:\n%s\n\n'
                               'Top %s downloads for %s today:\n%s',
-                              how_many, self.game_id, self._download_summary_table(self.counts, how_many),
-                              how_many, self.game_id, self._download_summary_table(deltas, how_many))
+                              how_many, self.game_id,
+                              self._download_summary_table(self.counts, how_many),
+                              how_many, self.game_id,
+                              self._download_summary_table(deltas, how_many))
 
     def update_counts(self) -> None:
         if self.output_file:
