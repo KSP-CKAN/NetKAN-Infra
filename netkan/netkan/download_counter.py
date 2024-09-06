@@ -214,11 +214,11 @@ class SourceForgeQuerier:
                             '&os_by_country=false&period=monthly')
 
     @classmethod
-    def get_count(cls, proj_id):
+    def get_count(cls, proj_id: str) -> int:
         return requests.get(cls.get_query(proj_id), timeout=60).json()['total']
 
     @classmethod
-    def get_query(cls, proj_id):
+    def get_query(cls, proj_id: str) -> str:
         return cls.API_TEMPLATE.safe_substitute(proj_id=proj_id,
                                                 today=date.today().isoformat())
 
