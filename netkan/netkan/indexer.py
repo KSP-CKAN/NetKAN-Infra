@@ -74,7 +74,7 @@ class CkanMessage:
 
     @property
     def staging_branch_name(self) -> str:
-        return f'add/{self.mod_version}'
+        return f'add/{self.mod_version}'.replace(' ', '')
 
     def mod_file_md5(self) -> str:
         with open(self.mod_file, mode='rb') as file:
