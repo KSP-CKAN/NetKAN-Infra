@@ -202,7 +202,11 @@ class InternetArchiveBatchedQuery:
         result = requests.get(self.IARCHIVE_API + ','.join(self.ids.values()),
                               timeout=60).json()
         for ckan_ident, ia_ident in self.ids.items():
-            counts[ckan_ident] = counts.get(ckan_ident, 0) + result[ia_ident]['all_time']
+            try:
+                counts[ckan_ident] = counts.get(ckan_ident, 0) + result[ia_ident]['all_time']
+            except KeyError as exc:
+                logging.error('InternetArchive id not found in downloads result: %s',
+                              ia_ident, exc_info=exc)
         return counts
 
 
