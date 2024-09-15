@@ -119,6 +119,8 @@ class Ckan:
 
     EPOCH_VERSION_REGEXP = re.compile('^[0-9]+:')
 
+    BUCKET_EXCLUDE_PATTERN = re.compile(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9._-]')
+
     REDISTRIBUTABLE_LICENSES = {
         "public-domain",
         "Apache", "Apache-1.0", "Apache-2.0",
@@ -442,6 +444,19 @@ class Ckan:
         if filename:
             return f'https://archive.org/download/{self.identifier}-{self._format_version(with_epoch)}/{filename}'
         return None
+
+    def mirror_item(self, with_epoch: bool = True) -> str:
+        return self._ia_bucket_sanitize(
+            f'{self.identifier}-{self._format_version(with_epoch)}')
+
+    # InternetArchive says:
+    # Bucket names should be valid archive identifiers;
+    # try someting matching this regular expression:
+    # ^[a-zA-Z0-9][a-zA-Z0-9_.-]{4,100}$
+    # (We enforce everything except the minimum of 4 characters)
+    @classmethod
+    def _ia_bucket_sanitize(cls, s: str) -> str:
+        return cls.BUCKET_EXCLUDE_PATTERN.sub('', s)[:100]
 
     def _format_version(self, with_epoch: bool) -> Optional[str]:
         if self.version:

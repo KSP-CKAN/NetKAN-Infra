@@ -190,11 +190,8 @@ class InternetArchiveBatchedQuery:
     def full(self) -> bool:
         return len(self.ids) >= self.MODULES_PER_REQUEST
 
-    def _get_ia_ident(self, ckan: Ckan) -> str:
-        return f'{ckan.identifier}-{ckan.version.string.replace(":", "-")}'
-
     def add(self, ckan: Ckan) -> None:
-        self.ids[ckan.identifier] = self._get_ia_ident(ckan)
+        self.ids[ckan.identifier] = ckan.mirror_item()
 
     def get_result(self, counts: Optional[Dict[str, int]] = None) -> Dict[str, int]:
         if counts is None:
