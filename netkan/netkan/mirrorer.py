@@ -28,8 +28,6 @@ class CkanMirror(Ckan):
     DESCRIPTION_TEMPLATE = Template(
         legacy_read_text('netkan', 'mirror_description_template.jinja2'))
 
-    BUCKET_EXCLUDE_PATTERN = re.compile(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9._-]')
-
     LICENSE_URLS = {
         "Apache"            : 'http://www.apache.org/licenses/LICENSE-1.0',
         "Apache-1.0"        : 'http://www.apache.org/licenses/LICENSE-1.0',
@@ -133,25 +131,12 @@ class CkanMirror(Ckan):
         return [self.LICENSE_URLS[lic]
                 for lic in self.licenses() if lic in self.LICENSE_URLS]
 
-    def mirror_item(self, with_epoch: bool = True) -> str:
-        return self._ia_bucket_sanitize(
-            f'{self.identifier}-{self._format_version(with_epoch)}')
-
     def mirror_source_filename(self, with_epoch: bool = True) -> str:
         return self._ia_bucket_sanitize(
             f'{self.identifier}-{self._format_version(with_epoch)}.source.zip')
 
     def mirror_title(self, with_epoch: bool = True) -> str:
         return f'{self.name} - {self._format_version(with_epoch)}'
-
-    # InternetArchive says:
-    # Bucket names should be valid archive identifiers;
-    # try someting matching this regular expression:
-    # ^[a-zA-Z0-9][a-zA-Z0-9_.-]{4,100}$
-    # (We enforce everything except the minimum of 4 characters)
-    @classmethod
-    def _ia_bucket_sanitize(cls, s: str) -> str:
-        return cls.BUCKET_EXCLUDE_PATTERN.sub('', s)[:100]
 
     @property
     def item_metadata(self) -> Dict[str, Any]:
