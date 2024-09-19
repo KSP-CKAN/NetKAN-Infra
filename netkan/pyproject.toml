@@ -1,0 +1,110 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netkan"
+version = "1.0"
+dependencies = [
+    "boto3",
+    "click",
+    "gitpython",
+    "pynamodb",
+    # 2019-11-01 capping to 2.8.0 - https://github.com/boto/botocore/commit/e87e7a745fd972815b235a9ee685232745aa94f9
+    "python-dateutil>=2.1,<2.8.1",
+    "requests",
+    "flask",
+    "jinja2",
+    "internetarchive!=3.0.1",
+    "gunicorn>=19.9,!=20.0.0",
+    "discord.py>=1.6.0,<=1.7.3",
+    "PyGithub",
+    "ruamel.yaml",
+]
+requires-python = ">=3.8"
+authors = [{ name = "Leon Wright", email = "techman83@gmail.com" }]
+description = "NetKAN Infra"
+
+[project.urls]
+Repository = "https://github.com/KSP-CKAN/NetKAN-infra/"
+Issues = "https://github.com/KSP-CKAN/NetKAN-infra/issues"
+
+[project.scripts]
+netkan = "netkan.cli:netkan"
+
+[project.optional-dependencies]
+development = [
+    "ptvsd",
+    "autopep8",
+    "boto3-stubs[essential,cloudwatch]",
+    "coverage",
+    "troposphere",
+    "pytest",
+    "mypy",
+    "pytest-mypy",
+    "pylint",
+    "pytest-pylint",
+    "types-python-dateutil",
+    "types-click",
+    "types-requests",
+    "types-Flask",
+    "types-Jinja2",
+]
+test = [
+    "boto3-stubs[essential,cloudwatch]",
+    "coverage",
+    "pytest",
+    "mypy",
+    "pytest-mypy",
+    "pylint",
+    "pytest-pylint",
+    "types-python-dateutil",
+    "types-click",
+    "types-requests",
+    "types-Flask",
+    "types-Jinja2",
+]
+
+[tool.coverage.run]
+branch = true
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = ["if TYPE_CHECKING:", "    pass"]
+
+[tool.pytest.ini_options]
+python_files = "tests/__init__.py"
+addopts = "-p no:cacheprovider --mypy --pylint"
+filterwarnings = ["ignore", "default:::netkan.*", "default:::tests.*"]
+
+[tool.mypy]
+ignore_missing_imports = true
+warn_redundant_casts = true
+show_error_context = true
+show_column_numbers = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "netkan.*"
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = """
+    line-too-long,
+    duplicate-code,
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    too-few-public-methods,
+    too-many-instance-attributes,
+    too-many-statements,
+    too-many-return-statements,
+    too-many-branches,
+    too-many-arguments,
+    consider-using-with,
+"""

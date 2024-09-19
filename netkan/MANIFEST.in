@@ -1,0 +1,2 @@
+global-include *.md *.jinja2 *.graphql
+recursive-exclude tests *

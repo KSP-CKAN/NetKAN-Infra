@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 as ubuntu_with_python
+FROM ubuntu:24.04 AS ubuntu_with_python
 
 # Don't prompt for time zone
 ENV DEBIAN_FRONTEND=noninteractive
@@ -6,53 +6,47 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install Git and Python
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        git libffi-dev openssh-client \
-        python3 python-is-python3 \
-    && apt-get clean
+    git libffi-dev openssh-client \
+    python3 python-is-python3 ca-certificates curl && \
+    apt-get clean && \
+    curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    rm /usr/lib/python3.12/EXTERNALLY-MANAGED && \
+    python3 get-pip.py --no-input && rm get-pip.py
+RUN groupmod -n 'netkan' 'ubuntu' && \
+    usermod -l 'netkan' -d /home/netkan -m ubuntu
 
-FROM ubuntu_with_python as base
-RUN apt-get install -y --no-install-recommends \
-    python3-pip python3-setuptools python3-dev
-RUN useradd -ms /bin/bash netkan
-ADD . /netkan
+FROM ubuntu_with_python AS base
+COPY . /netkan
 WORKDIR /netkan
-RUN pip install pip --upgrade
 RUN chown -R netkan:netkan /netkan
 USER netkan
 RUN pip install --user . --no-warn-script-location
 
-FROM ubuntu_with_python as production
+FROM ubuntu_with_python AS production
 COPY --from=base /home/netkan/.local /home/netkan/.local
-RUN useradd -Ms /bin/bash netkan
 RUN chown -R netkan:netkan /home/netkan
 WORKDIR /home/netkan
 USER netkan
-ADD .gitconfig .
-ENV PATH "$PATH:/home/netkan/.local/bin"
+COPY .gitconfig .
+ENV PATH="$PATH:/home/netkan/.local/bin"
 RUN /home/netkan/.local/bin/netkan --help
 ENTRYPOINT [".local/bin/netkan"]
 CMD ["--help"]
 
-FROM production as test
+FROM production AS test
 USER root
-RUN apt-get install -y --no-install-recommends \
-    python3-pip python3-setuptools python3-dev
-RUN pip install pip --upgrade
-ADD . /netkan
+COPY . /netkan
 RUN chown -R netkan:netkan /netkan
 USER netkan
 WORKDIR /netkan
 RUN pip install --user .[test]
 RUN /home/netkan/.local/bin/pytest -v
 
-FROM production as dev
+FROM production AS dev
 USER root
-RUN apt-get install -y --no-install-recommends \
-    python3-pip python3-setuptools python3-dev
-RUN pip install pip --upgrade
 ADD . /netkan
 RUN chown -R netkan:netkan /netkan
-ADD run_dev.sh /usr/local/bin/
+COPY run_dev.sh /usr/local/bin/
 USER netkan
 RUN pip install --user /netkan/.[development]
 ENTRYPOINT ["/usr/local/bin/run_dev.sh"]

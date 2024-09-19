@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "ms-vscode-remote.vscode-remote-extensionpack",
-        "ms-python.python"
+        "ms-python.python",
+        "tamasfe.even-better-toml"
     ]
 }
