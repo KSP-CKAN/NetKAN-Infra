@@ -106,5 +106,6 @@ disable = """
     too-many-return-statements,
     too-many-branches,
     too-many-arguments,
+    too-many-positional-arguments,
     consider-using-with,
 """
