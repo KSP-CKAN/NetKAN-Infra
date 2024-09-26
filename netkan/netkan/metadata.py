@@ -315,6 +315,7 @@ class Ckan:
         'application/x-tar': 'tar',
         'application/x-compressed-tar': 'tar.gz',
         'application/zip': 'zip',
+        'application/vnd.github+json': 'zip',
     }
     ISODATETIME_PROPERTIES = [
         'release_date'
