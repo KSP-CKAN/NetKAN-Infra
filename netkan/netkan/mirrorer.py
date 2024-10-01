@@ -124,8 +124,22 @@ class CkanMirror(Ckan):
             return False
         if not item.exists:
             return False
-        sha1 = self.download_hash['sha1'].lower()
-        return any(file['sha1'].lower() == sha1 for file in item.files if 'sha1' in file)
+        sha1 = self._sha1()
+        if sha1 is None:
+            return False
+        return any(file['sha1'].lower() == sha1
+                   for file in item.files
+                   if 'sha1' in file)
+
+    def _sha1(self) -> Optional[str]:
+        if 'sha1' in self.download_hash:
+            # Use hash from metadata if set
+            return self.download_hash['sha1'].lower()
+        dl_io = self.open_download()
+        if dl_io is not None:
+            # Calculate hash from file if found
+            return self.large_file_sha1(dl_io)
+        return None
 
     def license_urls(self) -> List[str]:
         return [self.LICENSE_URLS[lic]
@@ -154,6 +168,13 @@ class CkanMirror(Ckan):
     @staticmethod
     def large_file_sha256(file: BinaryIO, block_size: int = 8192) -> str:
         sha = hashlib.sha256()
+        for block in iter(lambda: file.read(block_size), b''):
+            sha.update(block)
+        return sha.hexdigest().upper()
+
+    @staticmethod
+    def large_file_sha1(file: BinaryIO, block_size: int = 8192) -> str:
+        sha = hashlib.sha1()
         for block in iter(lambda: file.read(block_size), b''):
             sha.update(block)
         return sha.hexdigest().upper()

@@ -5,6 +5,7 @@ from pathlib import Path
 from hashlib import sha1
 import uuid
 import urllib.parse
+from string import Template
 from typing import Optional, List, Tuple, Union, Any, Dict, TYPE_CHECKING
 from ruamel.yaml import YAML
 import dateutil.parser
@@ -320,6 +321,7 @@ class Ckan:
     ISODATETIME_PROPERTIES = [
         'release_date'
     ]
+    MIRROR_FILENAME_TEMPLATE = Template('$prefix-$identifier-$version.$extension')
 
     def __init__(self, filename: Optional[Union[str, Path]] = None, contents: Optional[str] = None) -> None:
         if filename:
@@ -438,7 +440,11 @@ class Ckan:
     def mirror_filename(self, with_epoch: bool = True) -> Optional[str]:
         if 'download_hash' not in self._raw:
             return None
-        return f'{self.download_hash["sha1"][0:8]}-{self.identifier}-{self._format_version(with_epoch)}.{Ckan.MIME_TO_EXTENSION[self.download_content_type]}'
+        return self.MIRROR_FILENAME_TEMPLATE.safe_substitute(
+            prefix=self._mirror_prefix(),
+            identifier=self.identifier,
+            version=self._format_version(with_epoch),
+            extension=Ckan.MIME_TO_EXTENSION[self.download_content_type])
 
     def mirror_download(self, with_epoch: bool = True) -> Optional[str]:
         filename = self.mirror_filename(with_epoch)
@@ -449,6 +455,12 @@ class Ckan:
     def mirror_item(self, with_epoch: bool = True) -> str:
         return self._ia_bucket_sanitize(
             f'{self.identifier}-{self._format_version(with_epoch)}')
+
+    def _mirror_prefix(self) -> str:
+        return (self.download_hash['sha1']
+                if 'sha1' in self.download_hash
+                else self.download_hash['sha256']
+               )[0:8]
 
     # InternetArchive says:
     # Bucket names should be valid archive identifiers;
