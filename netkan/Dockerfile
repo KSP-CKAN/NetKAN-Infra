@@ -44,6 +44,7 @@ RUN /home/netkan/.local/bin/pytest -v
 
 FROM production AS dev
 USER root
+RUN apt-get install nodejs -y && apt-get clean
 ADD . /netkan
 RUN chown -R netkan:netkan /netkan
 COPY run_dev.sh /usr/local/bin/
