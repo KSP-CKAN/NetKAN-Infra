@@ -366,7 +366,7 @@ class Ckan:
     def download(self) -> str:
         download = self._raw.get('download')
         if isinstance(download, list):
-            return download[0] if len(download) > 0 else None
+            return download[0] if isinstance(download[0], str) and len(download) > 0 else ''
         return download
 
     # Provide all downloads with alternate property in case we need them,
