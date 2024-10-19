@@ -9,6 +9,7 @@ import heapq
 from datetime import date
 
 import requests
+from requests.exceptions import ConnectTimeout
 
 from .utils import repo_file_add_or_changed, legacy_read_text
 from .repos import CkanMetaRepo
@@ -183,6 +184,7 @@ class InternetArchiveBatchedQuery:
 
     def __init__(self) -> None:
         self.ids: Dict[str, str] = {}
+        self.connect_timed_out = False
 
     def empty(self) -> bool:
         return len(self.ids) == 0
@@ -196,15 +198,24 @@ class InternetArchiveBatchedQuery:
     def get_result(self, counts: Optional[Dict[str, int]] = None) -> Dict[str, int]:
         if counts is None:
             counts = {}
-        result = requests.get(self.IARCHIVE_API + ','.join(self.ids.values()),
-                              timeout=60).json()
-        for ckan_ident, ia_ident in self.ids.items():
-            try:
-                counts[ckan_ident] = counts.get(ckan_ident, 0) + result[ia_ident]['all_time']
-            except KeyError as exc:
-                logging.error('InternetArchive id not found in downloads result: %s',
-                              ia_ident, exc_info=exc)
-        return counts
+        if self.connect_timed_out:
+            return counts
+        try:
+            result = requests.get(self.IARCHIVE_API + ','.join(self.ids.values()),
+                                  timeout=60).json()
+            for ckan_ident, ia_ident in self.ids.items():
+                try:
+                    counts[ckan_ident] = counts.get(ckan_ident, 0) + result[ia_ident]['all_time']
+                except KeyError as exc:
+                    logging.error('InternetArchive id not found in downloads result: %s',
+                                  ia_ident, exc_info=exc)
+            return counts
+        except ConnectTimeout as exc:
+            # Cleanly turn off archive.org counting while the downtime continues
+            logging.error('Failed to get counts from archive.org',
+                          exc_info=exc)
+            self.connect_timed_out = True
+            return counts
 
 
 class SourceForgeQuerier:
