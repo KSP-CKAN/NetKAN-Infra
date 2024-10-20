@@ -254,7 +254,7 @@ class DownloadCounter:
     def get_counts(self) -> None:
         graph_query = GitHubBatchedQuery(self.github_token)
         sd_query = SpaceDockBatchedQuery()
-        ia_query = InternetArchiveBatchedQuery()
+        ia_query: Optional[InternetArchiveBatchedQuery] = InternetArchiveBatchedQuery()
         for ckan in self.ckm_repo.all_latest_modules():  # pylint: disable=too-many-nested-blocks
             if ckan.kind == 'dlc':
                 continue
