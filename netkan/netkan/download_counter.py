@@ -16,7 +16,9 @@ from .repos import CkanMetaRepo
 from .metadata import Ckan
 
 
-class GraphQLQuery:
+class GitHubBatchedQuery:
+
+    PATH_PATTERN = re.compile(r'^/([^/]+)/([^/]+)')
 
     # The URL that handles GitHub GraphQL requests
     GITHUB_API = 'https://api.github.com/graphql'
@@ -137,6 +139,8 @@ class GraphQLQuery:
 
 class SpaceDockBatchedQuery:
 
+    PATH_PATTERN = re.compile(r'^/mod/([^/]+)')
+
     SPACEDOCK_API = 'https://spacedock.info/api/download_counts'
 
     def __init__(self) -> None:
@@ -184,7 +188,6 @@ class InternetArchiveBatchedQuery:
 
     def __init__(self) -> None:
         self.ids: Dict[str, str] = {}
-        self.connect_timed_out = False
 
     def empty(self) -> bool:
         return len(self.ids) == 0
@@ -198,27 +201,20 @@ class InternetArchiveBatchedQuery:
     def get_result(self, counts: Optional[Dict[str, int]] = None) -> Dict[str, int]:
         if counts is None:
             counts = {}
-        if self.connect_timed_out:
-            return counts
-        try:
-            result = requests.get(self.IARCHIVE_API + ','.join(self.ids.values()),
-                                  timeout=60).json()
-            for ckan_ident, ia_ident in self.ids.items():
-                try:
-                    counts[ckan_ident] = counts.get(ckan_ident, 0) + result[ia_ident]['all_time']
-                except KeyError as exc:
-                    logging.error('InternetArchive id not found in downloads result: %s',
-                                  ia_ident, exc_info=exc)
-            return counts
-        except ConnectTimeout as exc:
-            # Cleanly turn off archive.org counting while the downtime continues
-            logging.error('Failed to get counts from archive.org',
-                          exc_info=exc)
-            self.connect_timed_out = True
-            return counts
+        result = requests.get(self.IARCHIVE_API + ','.join(self.ids.values()),
+                              timeout=60).json()
+        for ckan_ident, ia_ident in self.ids.items():
+            try:
+                counts[ckan_ident] = counts.get(ckan_ident, 0) + result[ia_ident]['all_time']
+            except KeyError as exc:
+                logging.error('InternetArchive id not found in downloads result: %s',
+                              ia_ident, exc_info=exc)
+        return counts
 
 
 class SourceForgeQuerier:
+
+    PATH_PATTERN = re.compile(r'^/project/([^/]+)')
 
     # https://sourceforge.net/p/forge/documentation/Download%20Stats%20API/
     API_TEMPLATE = Template('https://sourceforge.net/projects/${proj_id}/files/stats/json'
@@ -245,10 +241,6 @@ class SourceForgeQuerier:
 
 class DownloadCounter:
 
-    GITHUB_PATH_PATTERN = re.compile(r'^/([^/]+)/([^/]+)')
-    SPACEDOCK_PATH_PATTERN = re.compile(r'^/mod/([^/]+)')
-    SOURCEFORGE_PATH_PATTERN = re.compile(r'^/project/([^/]+)')
-
     def __init__(self, game_id: str, ckm_repo: CkanMetaRepo, github_token: str) -> None:
         self.game_id = game_id
         self.ckm_repo = ckm_repo
@@ -260,9 +252,9 @@ class DownloadCounter:
             )
 
     def get_counts(self) -> None:
-        graph_query = GraphQLQuery(self.github_token)
+        graph_query = GitHubBatchedQuery(self.github_token)
         sd_query = SpaceDockBatchedQuery()
-        ia_query = InternetArchiveBatchedQuery()
+        ia_query: Optional[InternetArchiveBatchedQuery] = InternetArchiveBatchedQuery()
         for ckan in self.ckm_repo.all_latest_modules():  # pylint: disable=too-many-nested-blocks
             if ckan.kind == 'dlc':
                 continue
@@ -270,7 +262,7 @@ class DownloadCounter:
                 try:
                     url_parse = urllib.parse.urlparse(download)
                     if url_parse.netloc == 'github.com':
-                        match = self.GITHUB_PATH_PATTERN.match(url_parse.path)
+                        match = GitHubBatchedQuery.PATH_PATTERN.match(url_parse.path)
                         if match:
                             # Process GitHub modules together in big batches
                             graph_query.add(ckan.identifier, *match.groups())
@@ -280,7 +272,7 @@ class DownloadCounter:
                                 # Clear request list
                                 graph_query.clear()
                     elif url_parse.netloc == 'spacedock.info':
-                        match = self.SPACEDOCK_PATH_PATTERN.match(url_parse.path)
+                        match = SpaceDockBatchedQuery.PATH_PATTERN.match(url_parse.path)
                         if match:
                             # Process SpaceDock modules together in one huge batch
                             sd_query.add(ckan.identifier, int(match.group(1)))
@@ -288,12 +280,19 @@ class DownloadCounter:
                             logging.error('Failed to parse SD URL for %s: %s',
                                           ckan.identifier, download)
                     elif url_parse.netloc == 'archive.org':
-                        ia_query.add(ckan)
-                        if ia_query.full():
-                            ia_query.get_result(self.counts)
-                            ia_query = InternetArchiveBatchedQuery()
+                        if ia_query:
+                            ia_query.add(ckan)
+                            if ia_query.full():
+                                try:
+                                    ia_query.get_result(self.counts)
+                                    ia_query = InternetArchiveBatchedQuery()
+                                except ConnectTimeout as exc:
+                                    # Cleanly turn off archive.org counting while the downtime continues
+                                    logging.error('Failed to get counts from archive.org',
+                                                  exc_info=exc)
+                                    ia_query = None
                     elif url_parse.netloc.endswith('.sourceforge.net'):
-                        match = self.SOURCEFORGE_PATH_PATTERN.match(url_parse.path)
+                        match = SourceForgeQuerier.PATH_PATTERN.match(url_parse.path)
                         if match:
                             SourceForgeQuerier.get_result(ckan.identifier, match.group(1),
                                                           self.counts)
@@ -310,7 +309,7 @@ class DownloadCounter:
         if not graph_query.empty():
             # Final pass doesn't overflow the bound
             graph_query.get_result(self.counts)
-        if not ia_query.empty():
+        if ia_query and not ia_query.empty():
             ia_query.get_result(self.counts)
 
     def write_json(self) -> None:
