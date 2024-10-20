@@ -309,7 +309,7 @@ class DownloadCounter:
         if not graph_query.empty():
             # Final pass doesn't overflow the bound
             graph_query.get_result(self.counts)
-        if not ia_query.empty():
+        if ia_query and not ia_query.empty():
             ia_query.get_result(self.counts)
 
     def write_json(self) -> None:
