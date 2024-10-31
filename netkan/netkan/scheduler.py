@@ -115,10 +115,8 @@ class NetkanScheduler:
         if not dev:
             github_remaining = github_limit_remaining(self.github_token)
             if github_remaining < min_gh:
-                logging.error(
-                    "Run skipped, GitHub API limit nearing exhaustion (Current: %s)",
-                    github_remaining
-                )
+                logging.error("Run skipped for %s; GitHub API rate limit remaining %s below %s",
+                              self.game_id, github_remaining, min_gh)
                 return False
 
             end = datetime.datetime.utcnow()
@@ -131,9 +129,8 @@ class NetkanScheduler:
             # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances-monitoring-cpu-credits.html
             cpu_credits = self.cpu_credits(cloudwatch, instance_id, start, end)
             if cpu_credits < min_cpu:
-                logging.info(
-                    "Run skipped, below cpu credit target (Current Avg: %s)", cpu_credits
-                )
+                logging.error("Run skipped for %s: cpu credit %s below target %s",
+                              self.game_id, cpu_credits, min_cpu)
                 return False
 
             # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html
@@ -144,21 +141,14 @@ class NetkanScheduler:
             vol_credits_percent = self.volume_credits_percent(
                 cloudwatch, instance_id, start, end)
             if vol_credits_percent < min_io:
-                logging.error(
-                    "Run skipped, below volume credit target percentage (Current Avg: %s)",
-                    vol_credits_percent
-                )
+                logging.error("Run skipped for %s: volume credit percentage %s below target %s",
+                              self.game_id, vol_credits_percent, min_io)
                 return False
 
-        message_count = int(
-            self.queue.attributes.get(
-                'ApproximateNumberOfMessages', 0)
-        )
+        message_count = int(self.queue.attributes.get('ApproximateNumberOfMessages', 0))
         if message_count > max_queued:
-            logging.info(
-                "Run skipped, too many NetKANs to process (%s left)",
-                message_count
-            )
+            logging.error("Run skipped for %s: %s messages in queue exceeds %s",
+                          self.game_id, message_count, max_queued)
             return False
 
         return True
