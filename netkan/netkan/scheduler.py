@@ -110,8 +110,8 @@ class NetkanScheduler:
             logging.error("Couldn't acquire Volume Credit Stats")
         return creds
 
-    def can_schedule(self, max_queued: int, dev: bool = False,
-                     min_cpu: int = 50, min_io: int = 70, min_gh: int = 1500) -> bool:
+    def can_schedule(self, max_queued: int, min_cpu: int, min_io: int, min_gh: int,
+                     dev: bool = False) -> bool:
         if not dev:
             github_remaining = github_limit_remaining(self.github_token)
             if github_remaining < min_gh:

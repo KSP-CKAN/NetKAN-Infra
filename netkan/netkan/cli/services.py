@@ -23,13 +23,13 @@ def indexer(common: SharedArgs) -> None:
 
 @click.command(short_help='The Scheduler service')
 @click.option(
-    '--max-queued', default=20, envvar='MAX_QUEUED',
-    help='SQS Queue to send netkan metadata for scheduling',
-)
-@click.option(
     '--group',
     type=click.Choice(['all', 'webhooks', 'nonhooks']), default="nonhooks",
     help='Which mods to schedule',
+)
+@click.option(
+    '--max-queued', default=20, envvar='MAX_QUEUED',
+    help='Only schedule if the inflation queue already has fewer than this many messages',
 )
 @click.option(
     '--min-cpu', default=200,
@@ -39,14 +39,19 @@ def indexer(common: SharedArgs) -> None:
     '--min-io', default=70,
     help='Only schedule if we have at least this many IO credits remaining',
 )
+@click.option(
+    '--min-gh', default=1500,
+    help='Only schedule if our GitHub API rate limit has this many remaining',
+)
 @common_options
 @pass_state
 def scheduler(
     common: SharedArgs,
-    max_queued: int,
     group: str,
+    max_queued: int,
     min_cpu: int,
-    min_io: int
+    min_io: int,
+    min_gh: int
 ) -> None:
     """
     Reads netkans from a NetKAN repo and submits them to the
@@ -59,7 +64,7 @@ def scheduler(
             nonhooks_group=(group in ('all', 'nonhooks')),
             webhooks_group=(group in ('all', 'webhooks')),
         )
-        if sched.can_schedule(max_queued, common.dev, min_cpu, min_io):
+        if sched.can_schedule(max_queued, min_cpu, min_io, min_gh, common.dev):
             sched.schedule_all_netkans()
             logging.info("NetKANs submitted to %s", game.inflation_queue)
 
