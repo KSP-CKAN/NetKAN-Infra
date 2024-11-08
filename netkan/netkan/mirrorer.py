@@ -319,18 +319,23 @@ class Mirrorer:
         if download_file:
             logging.info('Uploading %s', ckan.mirror_item())
             item = internetarchive.Item(self.ia_session, ckan.mirror_item())
-            item.upload_file(download_file.name, ckan.mirror_filename(),
-                             ckan.item_metadata,
-                             ckan.download_headers)
-            source_url = ckan.source_download(self._default_branch(ckan))
-            if source_url:
-                with tempfile.NamedTemporaryFile() as tmp:
-                    logging.info('Attempting to archive source from %s', source_url)
-                    download_stream_to_file(source_url, tmp)
-                    tmp.flush()
-                    item.upload_file(tmp.name, ckan.mirror_source_filename(),
-                                     ckan.item_metadata,
-                                     ckan.source_download_headers(tmp.name))
+            try:
+                item.upload_file(download_file.name, ckan.mirror_filename(),
+                                 ckan.item_metadata,
+                                 ckan.download_headers)
+                source_url = ckan.source_download(self._default_branch(ckan))
+                if source_url:
+                    with tempfile.NamedTemporaryFile() as tmp:
+                        logging.info('Attempting to archive source from %s', source_url)
+                        download_stream_to_file(source_url, tmp)
+                        tmp.flush()
+                        item.upload_file(tmp.name, ckan.mirror_source_filename(),
+                                         ckan.item_metadata,
+                                         ckan.source_download_headers(tmp.name))
+            except Exception as exc: # pylint: disable=broad-except
+                logging.error('Upload of %s failed: %s',
+                              ckan.mirror_item(), exc)
+                return False
             return True
         logging.error("Failed to find or download %s", ckan.download)
         return False
