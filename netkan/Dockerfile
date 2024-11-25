@@ -30,7 +30,7 @@ USER netkan
 COPY .gitconfig .
 ENV PATH="$PATH:/home/netkan/.local/bin"
 RUN /home/netkan/.local/bin/netkan --help
-ENTRYPOINT [".local/bin/netkan"]
+ENTRYPOINT ["/home/netkan/.local/bin/netkan"]
 CMD ["--help"]
 
 FROM production AS test
