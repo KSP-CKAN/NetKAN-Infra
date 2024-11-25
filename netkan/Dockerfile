@@ -29,6 +29,7 @@ WORKDIR /home/netkan
 USER netkan
 COPY .gitconfig .
 ENV PATH="$PATH:/home/netkan/.local/bin"
+ENV PYTHONPATH=/home/netkan/.local/lib/python3.10/site-packages
 RUN /home/netkan/.local/bin/netkan --help
 ENTRYPOINT ["/home/netkan/.local/bin/netkan"]
 CMD ["--help"]
