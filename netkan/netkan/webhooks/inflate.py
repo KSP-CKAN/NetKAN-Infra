@@ -22,7 +22,9 @@ def inflate_hook(game_id: str) -> Tuple[str, int]:
         return 'An array of identifiers is required', 400
     # Make sure our NetKAN and CKAN-meta repos are up to date
     pull_all(game.repos)
-    messages = (nk.sqs_message(game.ckanmeta_repo.highest_version(nk.identifier))
+    repo = game.ckanmeta_repo
+    messages = (nk.sqs_message(repo.highest_version(nk.identifier),
+                               repo.highest_version_prerelease(nk.identifier))
                 for nk in netkans(str(game.netkan_repo.git_repo.working_dir), ids, game_id=game_id))
     for batch in sqs_batch_entries(messages):
         current_app.logger.info(

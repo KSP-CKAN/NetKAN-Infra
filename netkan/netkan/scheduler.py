@@ -54,7 +54,9 @@ class NetkanScheduler:
         return self.webhooks_group if netkan.hook_only() else self.nonhooks_group
 
     def schedule_all_netkans(self) -> None:
-        messages = (nk.sqs_message(self.ckm_repo.highest_version(nk.identifier))
+        repo = self.ckm_repo
+        messages = (nk.sqs_message(repo.highest_version(nk.identifier),
+                                   repo.highest_version_prerelease(nk.identifier))
                     for nk in self.nk_repo.netkans() if self._in_group(nk))
         for batch in sqs_batch_entries(messages):
             self.client.send_message_batch(**self.sqs_batch_attrs(batch))
