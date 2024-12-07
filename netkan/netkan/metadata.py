@@ -96,23 +96,25 @@ class Netkan:
             'StringValue': val,
         }
 
-    def sqs_message_attribs(self, high_ver: Optional['Ckan.Version'] = None) -> Dict[str, Any]:
+    def sqs_message_attribs(self, high_ver: Optional['Ckan.Version'] = None, high_ver_pre: Optional['Ckan.Version'] = None) -> Dict[str, Any]:
         attribs: Dict[str, Any] = {
             'GameId': self.string_attrib(self.game_id or 'ksp')
         }
         if high_ver and not getattr(self, 'x_netkan_allow_out_of_order', False):
             attribs['HighestVersion'] = self.string_attrib(high_ver.string)
+        if high_ver_pre and not getattr(self, 'x_netkan_allow_out_of_order', False):
+            attribs['HighestVersionPrerelease'] = self.string_attrib(high_ver_pre.string)
         return attribs
 
     def sqs_message(
-            self, high_ver: Optional['Ckan.Version'] = None) -> SendMessageBatchRequestEntryTypeDef:
+            self, high_ver: Optional['Ckan.Version'] = None, high_ver_pre: Optional['Ckan.Version'] = None) -> SendMessageBatchRequestEntryTypeDef:
         hex_id = uuid.uuid4().hex
         return {
             'Id': hex_id,
             'MessageBody': self.contents,
             'MessageGroupId': '1',
             'MessageDeduplicationId': hex_id,
-            'MessageAttributes': self.sqs_message_attribs(high_ver),
+            'MessageAttributes': self.sqs_message_attribs(high_ver, high_ver_pre),
         }
 
 
@@ -429,6 +431,10 @@ class Ckan:
     def licenses(self) -> List[str]:
         lic = self.license
         return lic if isinstance(lic, list) else [lic]
+
+    @property
+    def is_prerelease(self) -> bool:
+        return self._raw.get('release_status') in ('testing', 'development')
 
     @property
     def redistributable(self) -> bool:

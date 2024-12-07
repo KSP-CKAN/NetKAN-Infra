@@ -64,7 +64,9 @@ def inflate(ids: Iterable[str], game_id: str) -> None:
     if game.netkan_repo.git_repo.working_dir:
         # Make sure our NetKAN and CKAN-meta repos are up to date
         pull_all(game.repos)
-        messages = (nk.sqs_message(game.ckanmeta_repo.highest_version(nk.identifier))
+        repo = game.ckanmeta_repo
+        messages = (nk.sqs_message(repo.highest_version(nk.identifier),
+                                   repo.highest_version_prerelease(nk.identifier))
                     for nk in netkans(str(game.netkan_repo.git_repo.working_dir), ids, game_id))
         for batch in sqs_batch_entries(messages):
             current_config.client.send_message_batch(

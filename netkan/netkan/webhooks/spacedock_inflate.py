@@ -44,9 +44,10 @@ def inflate_hook(game_id: str) -> Tuple[str, int]:
             return '', 204
 
         # Submit them to the queue
-        messages = (nk.sqs_message(
-            current_config.common.game(game_id).ckanmeta_repo.highest_version(nk.identifier))
-            for nk in nks)
+        repo = current_config.common.game(game_id).ckanmeta_repo
+        messages = (nk.sqs_message(repo.highest_version(nk.identifier),
+                                   repo.highest_version_prerelease(nk.identifier))
+                    for nk in nks)
         for batch in sqs_batch_entries(messages):
             current_config.client.send_message_batch(
                 QueueUrl=current_config.inflation_queue(game_id).url,

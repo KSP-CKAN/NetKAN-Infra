@@ -195,9 +195,9 @@ class CkanMetaRepo(XkanRepo):
                 and any(child.match('*.ckan')
                         for child in path.iterdir()))
 
-    def all_latest_modules(self) -> Iterable[Ckan]:
+    def all_latest_modules(self, prerelease: bool = False) -> Iterable[Ckan]:
         return filter(None,
-                      (self.highest_version_module(identifier)
+                      (self.highest_version_module(identifier, prerelease)
                        for identifier in self.identifiers()))
 
     def mod_path(self, identifier: str) -> Path:
@@ -206,11 +206,16 @@ class CkanMetaRepo(XkanRepo):
     def ckans(self, identifier: str) -> Iterable[Ckan]:
         return (Ckan(f) for f in self.mod_path(identifier).glob(self.CKANMETA_GLOB))
 
-    def highest_version_module(self, identifier: str) -> Optional[Ckan]:
-        return max(self.ckans(identifier),
+    def highest_version_module(self, identifier: str, prerelease: bool) -> Optional[Ckan]:
+        return max((ck for ck in self.ckans(identifier)
+                    if ck.is_prerelease == prerelease),
                    default=None,
                    key=lambda ck: ck.version if ck else Ckan.Version('0'))
 
     def highest_version(self, identifier: str) -> Optional[Ckan.Version]:
-        highest = self.highest_version_module(identifier)
+        highest = self.highest_version_module(identifier, False)
+        return highest.version if highest else None
+
+    def highest_version_prerelease(self, identifier: str) -> Optional[Ckan.Version]:
+        highest = self.highest_version_module(identifier, True)
         return highest.version if highest else None
