@@ -89,20 +89,12 @@ class SpaceDockAdder:
     @staticmethod
     def _pr_body(info: Dict[str, Any]) -> str:
         try:
-            shared_authors = info.get('shared_authors', [])
-            # It's supposed to be a list of dicts, SpaceDock has a bug right now where it's a string
-            bad_author = (not isinstance(shared_authors, list)
-                          or any(not isinstance(auth, dict) for auth in shared_authors))
-            if bad_author:
-                logging.error('shared_authors should be list of dicts, is: %s', shared_authors)
             return SpaceDockAdder.PR_BODY_TEMPLATE.safe_substitute(defaultdict(
                 lambda: '',
                 {**info,
                  'all_authors_md': ', '.join(SpaceDockAdder.USER_TEMPLATE.safe_substitute(
                                                                 defaultdict(lambda: '', a))
-                                             for a in ([info]
-                                                       if bad_author else
-                                                       [info, *info.get('shared_authors', [])]))}))
+                                             for a in info.get('all_authors', []))}))
         except Exception as exc:
             # Log the input on failure
             logging.error('Failed to generate pull request body from %s', info)
