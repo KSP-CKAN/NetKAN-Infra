@@ -73,7 +73,6 @@ omit = ["tests/*"]
 exclude_lines = ["if TYPE_CHECKING:", "    pass"]
 
 [tool.pytest.ini_options]
-python_files = "tests/__init__.py"
 addopts = "-p no:cacheprovider --mypy --pylint"
 filterwarnings = ["ignore", "default:::netkan.*", "default:::tests.*"]
 
