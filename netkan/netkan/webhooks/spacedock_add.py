@@ -1,5 +1,6 @@
 from hashlib import md5
 import json
+from itertools import zip_longest
 from typing import Tuple, TYPE_CHECKING
 import logging
 from flask import Blueprint, current_app, request
@@ -60,12 +61,12 @@ def batch_message(raw: 'ImmutableMultiDict[str, str]', game_id: str) -> SendMess
                                         'email':               user_tuple[4],
                                         'user_url':            user_tuple[5]}
                                        for user_tuple
-                                       in zip(raw.getlist('username'),
-                                              raw.getlist('user_github'),
-                                              raw.getlist('user_forum_id'),
-                                              raw.getlist('user_forum_username'),
-                                              raw.getlist('email'),
-                                              raw.getlist('user_url'))]})
+                                       in zip_longest(raw.getlist('username'),
+                                                      raw.getlist('user_github'),
+                                                      raw.getlist('user_forum_id'),
+                                                      raw.getlist('user_forum_username'),
+                                                      raw.getlist('email'),
+                                                      raw.getlist('user_url'))]})
     logging.error('SpaceDockAdder queue message body: %s', body)
     return {
         'Id':                     '1',
