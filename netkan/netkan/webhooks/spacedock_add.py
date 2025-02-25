@@ -2,7 +2,6 @@ from hashlib import md5
 import json
 from itertools import zip_longest
 from typing import Tuple, TYPE_CHECKING
-import logging
 from flask import Blueprint, current_app, request
 from werkzeug.datastructures import ImmutableMultiDict
 
@@ -47,10 +46,6 @@ def add_hook(game_id: str) -> Tuple[str, int]:
 
 
 def batch_message(raw: 'ImmutableMultiDict[str, str]', game_id: str) -> SendMessageBatchRequestEntryTypeDef:
-    for key in ('username', 'user_github', 'user_forum_id',
-                'user_forum_username', 'email', 'user_url'):
-        logging.error('SpaceDockAdder form list %s: %s',
-                      key, json.dumps(raw.getlist(key)))
     body = json.dumps({**raw,
                        # Turn the separate user property lists into a list of user dicts so JSON can encode it
                        # (the original properties will only have the first user)
@@ -67,7 +62,6 @@ def batch_message(raw: 'ImmutableMultiDict[str, str]', game_id: str) -> SendMess
                                                       raw.getlist('user_forum_username'),
                                                       raw.getlist('email'),
                                                       raw.getlist('user_url'))]})
-    logging.error('SpaceDockAdder queue message body: %s', body)
     return {
         'Id':                     '1',
         'MessageBody':            body,
