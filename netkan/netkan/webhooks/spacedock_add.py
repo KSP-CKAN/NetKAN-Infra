@@ -52,13 +52,15 @@ def batch_message(raw: 'ImmutableMultiDict[str, str]', game_id: str) -> SendMess
                                         'user_github':         user_tuple[1],
                                         'user_forum_id':       user_tuple[2],
                                         'user_forum_username': user_tuple[3],
-                                        'email':               user_tuple[4]}
+                                        'email':               user_tuple[4],
+                                        'user_url':            user_tuple[5]}
                                        for user_tuple
                                        in zip(raw.getlist('username'),
                                               raw.getlist('user_github'),
                                               raw.getlist('user_forum_id'),
                                               raw.getlist('user_forum_username'),
-                                              raw.getlist('email'))]})
+                                              raw.getlist('email'),
+                                              raw.getlist('user_url'))]})
     return {
         'Id':                     '1',
         'MessageBody':            body,
