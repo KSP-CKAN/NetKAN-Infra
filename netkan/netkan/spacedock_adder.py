@@ -89,7 +89,6 @@ class SpaceDockAdder:
     @staticmethod
     def _pr_body(info: Dict[str, Any]) -> str:
         try:
-            logging.error("SpaceDockAdder all_authors: %s", json.dumps(info.get('all_authors', [])))
             return SpaceDockAdder.PR_BODY_TEMPLATE.safe_substitute(defaultdict(
                 lambda: '',
                 {**info,
