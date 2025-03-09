@@ -55,11 +55,16 @@ class SpaceDockAdder:
 
     def try_add(self) -> bool:
         netkan = self.make_netkan(self.info)
+        ident = netkan[0].get('identifier', '')
 
         # Create .netkan file or quit if already there
-        netkan_path = self.nk_repo.nk_path(netkan[0].get('identifier', ''))
+        netkan_path = self.nk_repo.nk_path(ident)
         if netkan_path.exists():
             # Already exists, we are done
+            return True
+
+        if self.nk_repo.frozen_path(ident).exists():
+            # Already frozen, quit
             return True
 
         # Create and checkout branch
