@@ -104,6 +104,12 @@ class TestSpaceDockAdder(SharedArgsHarness):
         self.adder.nk_repo.nk_path('NotAnotherFlag').unlink()
         self.assertEqual(len(self.adder.github_pr.method_calls), 0)
 
+    def test_frozen_already_exists(self):
+        self.adder.nk_repo.frozen_path('NotAnotherFlag').touch()
+        self.adder.try_add()
+        self.adder.nk_repo.frozen_path('NotAnotherFlag').unlink()
+        self.assertEqual(len(self.adder.github_pr.method_calls), 0)
+
     def test_netkan_creates_add_branch(self):
         self.adder.try_add()
         refs = [x.name for x in self.adder.nk_repo.git_repo.refs]
