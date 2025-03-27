@@ -293,7 +293,7 @@ class Mirrorer:
                         if self.ia_session.s3_is_overloaded(access_key=self.ia_access):
                             logging.info('The Internet Archive is overloaded, try again later')
                             break
-                    except:
+                    except: # pylint: disable=broad-except,bare-except  # noqa: E722
                         logging.info('Failed to check if Internet Archive is overloaded, try again later')
                         break
                     path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
