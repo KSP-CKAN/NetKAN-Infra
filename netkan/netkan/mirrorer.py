@@ -288,9 +288,13 @@ class Mirrorer:
                 # Start processing the messages
                 to_delete: List[DeleteMessageBatchRequestEntryTypeDef] = []
                 for msg in messages:
-                    # Check if archive.org is overloaded before each upload
-                    if self.ia_session.s3_is_overloaded(access_key=self.ia_access):
-                        logging.info('The Internet Archive is overloaded, try again later')
+                    try:
+                        # Check if archive.org is overloaded before each upload
+                        if self.ia_session.s3_is_overloaded(access_key=self.ia_access):
+                            logging.info('The Internet Archive is overloaded, try again later')
+                            break
+                    except:
+                        logging.info('Failed to check if Internet Archive is overloaded, try again later')
                         break
                     path = Path(self.ckm_repo.git_repo.working_dir, msg.body)
                     try:
