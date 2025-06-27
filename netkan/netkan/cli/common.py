@@ -32,7 +32,7 @@ _COMMON_OPTIONS = [
     click.option('--deep-clone', is_flag=True, default=False, expose_value=False,
                  help='Perform a deep clone of the git repos', callback=ctx_callback),
     click.option('--ckanmeta-remotes', envvar='CKANMETA_REMOTES', expose_value=False,
-                 help='game=Path/URL/SSH to Metadata Repos, ie ksp=http://gihub.com',
+                 help='game=Path/URL/SSH to Metadata Repos, ie ksp=http://github.com',
                  multiple=True, callback=ctx_callback),
     click.option('--netkan-remotes', envvar='NETKAN_REMOTES', expose_value=False,
                  help='game=Path/URL/SSH to the Stub Metadata Repos, ie ksp=git@github.com',
