@@ -16,15 +16,13 @@ RUN groupmod -n 'netkan' 'ubuntu' && \
     usermod -l 'netkan' -d /home/netkan -m ubuntu
 
 FROM ubuntu_with_python AS base
-COPY . /netkan
+COPY --chown=netkan:netkan . /netkan
 WORKDIR /netkan
-RUN chown -R netkan:netkan /netkan
 USER netkan
 RUN pip install --user . --no-warn-script-location
 
 FROM ubuntu_with_python AS production
-COPY --from=base /home/netkan/.local /home/netkan/.local
-RUN chown -R netkan:netkan /home/netkan
+COPY --from=base --chown=netkan:netkan /home/netkan/.local /home/netkan/.local
 WORKDIR /home/netkan
 USER netkan
 COPY .gitconfig .
@@ -36,8 +34,7 @@ CMD ["--help"]
 
 FROM production AS test
 USER root
-COPY . /netkan
-RUN chown -R netkan:netkan /netkan
+COPY --chown=netkan:netkan . /netkan
 USER netkan
 WORKDIR /netkan
 RUN pip install --user .[test]
@@ -45,8 +42,7 @@ RUN /home/netkan/.local/bin/pytest -v
 
 FROM production AS dev
 USER root
-ADD . /netkan
-RUN chown -R netkan:netkan /netkan
+ADD --chown=netkan:netkan . /netkan
 COPY run_dev.sh /usr/local/bin/
 USER netkan
 RUN pip install --user /netkan/.[development]
