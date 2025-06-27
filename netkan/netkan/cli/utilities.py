@@ -19,6 +19,7 @@ from ..ticket_closer import TicketCloser
 from ..auto_freezer import AutoFreezer
 from ..mirrorer import Mirrorer
 from ..mod_analyzer import ModAnalyzer
+from ..metadata import Netkan
 
 
 @click.command(short_help='Submit or update a PR freezing idle mods')
@@ -81,6 +82,18 @@ def analyze_mod(common: SharedArgs, ident: str, download_url: str) -> None:
               sio)
     click.echo(f'identifier: {ident}')
     click.echo(sio.getvalue())
+
+
+@click.command(short_help='Schedule the given netkan for inflation')
+@click.argument('ident', required=True)
+@common_options
+@pass_state
+def inflate_netkan(common: SharedArgs, ident: str) -> None:
+    game = common.game(common.game_id)
+    nk = Netkan(game.netkan_repo.nk_path(ident), game_id=common.game_id)
+    message = nk.sqs_message(game.ckanmeta_repo.highest_version(ident))
+    queue = boto3.resource('sqs').get_queue_by_name(QueueName=game.inflation_queue)
+    boto3.client('sqs').send_message_batch(QueueUrl=queue.url, Entries=[message])
 
 
 @click.command(short_help='Update the JSON status file on s3')
