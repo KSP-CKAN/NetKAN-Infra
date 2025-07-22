@@ -191,9 +191,7 @@ class SpaceDockAdder:
             '$kref': f"#/ckan/github/{gh_repo.full_name}",
             **({'x_netkan_github': {'use_source_archive': True}}
                if use_source_archive else {}),
-            **({'x_netkan_version_edit': {'find': f'^{version_find}',
-                                          'replace': '',
-                                          'strict': False}}
+            **({'x_netkan_version_edit': f'^{version_find}?(?<version>.+)$'}
                if version_find != '' else {}),
             **(vref_props),
         }
