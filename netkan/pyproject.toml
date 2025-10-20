@@ -20,8 +20,9 @@ dependencies = [
     "discord.py>=1.6.0,<=1.7.3",
     "PyGithub",
     "ruamel.yaml",
+    "more-itertools",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 authors = [{ name = "Leon Wright", email = "techman83@gmail.com" }]
 description = "NetKAN Infra"
 
