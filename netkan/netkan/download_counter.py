@@ -4,9 +4,12 @@ import re
 from pathlib import Path
 from string import Template
 import urllib.parse
-from typing import Dict, Tuple, Any, Optional
+from typing import Dict, Tuple, Any, Optional, Iterable
 import heapq
-from datetime import date
+from datetime import date, datetime, timezone, timedelta
+from time import sleep
+from itertools import groupby, batched
+from more_itertools import ilen
 
 import requests
 from requests.exceptions import ConnectTimeout
@@ -24,7 +27,7 @@ class GitHubBatchedQuery:
     GITHUB_API = 'https://api.github.com/graphql'
 
     # Get this many modules per request
-    MODULES_PER_GRAPHQL = 20
+    MODULES_PER_GRAPHQL = 10
 
     # The request we send to GitHub, with a parameter for the module specific section
     GRAPHQL_TEMPLATE = Template(legacy_read_text('netkan', 'downloads_query.graphql'))
@@ -59,16 +62,19 @@ class GitHubBatchedQuery:
             logging.debug('Skipping duplicate request for %s, %s, %s',
                           identifier, user, repo)
 
-    def clear(self) -> None:
-        self.repos.clear()
-        self.requests.clear()
+    def remove(self, identifier: str, user_repo: Tuple[str, str]) -> None:
+        self.repos.pop(identifier, None)
+        self.requests.pop(user_repo, None)
         # Keep self.cache for shared $krefs
 
-    def get_query(self) -> str:
-        return self.GRAPHQL_TEMPLATE.safe_substitute(module_queries="\n".join(
-            filter(None, [self.get_module_query(identifier, user, repo)
-                          for (user, repo), identifier
-                          in self.requests.items()])))
+    def get_queries(self) -> Iterable[str]:
+        return map(self.get_query, batched(self.requests.items(),
+                                           self.MODULES_PER_GRAPHQL))
+
+    def get_query(self, reqs: Tuple[Tuple[Tuple[str, str], str], ...]) -> str:
+        return self.GRAPHQL_TEMPLATE.safe_substitute(module_queries='\n'.join(
+            self.get_module_query(identifier, user, repo)
+            for (user, repo), identifier in reqs))
 
     def get_module_query(self, identifier: str, user: str, repo: str) -> str:
         return self.MODULE_TEMPLATE.safe_substitute(
@@ -98,34 +104,69 @@ class GitHubBatchedQuery:
         if counts is None:
             counts = {}
         logging.info('Running GraphQL query')
-        full_query = self.get_query()
-        result = self.graphql_to_github(full_query)
-        if 'errors' in result:
-            logging.error('DownloadCounter errors in GraphQL query: %s',
-                ', '.join(err['message'] for err in result['errors'])
-                if result['errors'] else 'Empty errors list')
-        if 'data' in result:
-            for fake_ident, apidata in result['data'].items():
-                if apidata:
-                    real_ident = self.from_graphql_safe_identifier(fake_ident)
-                    count = self.sum_graphql_result(apidata)
-                    user_repo = self.repos[real_ident]
-                    # Cache results per repo, for shared $krefs
-                    self.cache[user_repo] = count
+        for full_query in list(self.get_queries()):
+            result = self.graphql_to_github(full_query)
+            if not result:
+                continue
+            if 'errors' in result:
+                logging.error('DownloadCounter errors in GraphQL query: %s',
+                              ', '.join(f'{msg} (x{ilen(grp)})'
+                                        for msg, grp
+                                        in groupby(sorted(err['message']
+                                                          for err in result['errors'])))
+                              if result['errors'] else 'Empty errors list')
+            if 'data' in result:
+                for fake_ident, apidata in result['data'].items():
+                    if apidata:
+                        real_ident = self.from_graphql_safe_identifier(fake_ident)
+                        try:
+                            count = self.sum_graphql_result(apidata)
+                            user_repo = self.repos[real_ident]
+                            # Cache results per repo, for shared $krefs
+                            self.cache[user_repo] = count
+                        except Exception:  # pylint: disable=broad-except
+                            pass
         # Retrieve everything from the cache, new and old alike
-        for ident, user_repo in self.repos.items():
+        for ident, user_repo in list(self.repos.items()):
             if user_repo in self.cache:
                 count = self.cache[user_repo]
                 logging.info('Count for %s is %s', ident, count)
                 counts[ident] = counts.get(ident, 0) + count
+                # Purge completed requests
+                self.remove(ident, user_repo)
         return counts
 
-    def graphql_to_github(self, query: str) -> Dict[str, Any]:
+    def graphql_to_github(self, query: str) -> Optional[Dict[str, Any]]:
         logging.info('Contacting GitHub')
-        return requests.post(self.GITHUB_API,
-                             headers={'Authorization': f'bearer {self.github_token}'},
-                             json={'query': query},
-                             timeout=60).json()
+        for which_attempt in range(5):
+            response = requests.post(self.GITHUB_API,
+                                     headers={'Authorization': f'bearer {self.github_token}'},
+                                     json={'query': query},
+                                     timeout=60)
+            retry_after = self._retry_interval(response)
+            if retry_after:
+                logging.error('Download counter throttled, waiting %s to retry...',
+                              retry_after)
+                sleep(retry_after.total_seconds() * (2 ** which_attempt))
+            else:
+                return response.json()
+        logging.error('Download counter query ran out of retries')
+        return None
+
+    def _retry_interval(self, response: requests.Response) -> Optional[timedelta]:
+        retry_after = response.headers.get('Retry-After', None)
+        if retry_after:
+            return timedelta(seconds=float(retry_after))
+
+        remaining = response.headers.get('X-RateLimit-Remaining', None)
+        reset = response.headers.get('X-RateLimit-Reset', None)
+        if remaining and reset and float(remaining) == 0:
+            return datetime.fromtimestamp(float(reset), timezone.utc) - datetime.now(timezone.utc)
+
+        if response.status_code == 403:
+            return timedelta(minutes=1)
+
+        return None
 
     def sum_graphql_result(self, apidata: Dict[str, Any]) -> int:
         total = 0
@@ -269,8 +310,6 @@ class DownloadCounter:
                             if graph_query.full():
                                 # Run the query
                                 graph_query.get_result(self.counts)
-                                # Clear request list
-                                graph_query.clear()
                     elif url_parse.netloc == 'spacedock.info':
                         match = SpaceDockBatchedQuery.PATH_PATTERN.match(url_parse.path)
                         if match:
@@ -287,7 +326,7 @@ class DownloadCounter:
                                     ia_query.get_result(self.counts)
                                     ia_query = InternetArchiveBatchedQuery()
                                 except ConnectTimeout as exc:
-                                    # Cleanly turn off archive.org counting while the downtime continues
+                                    # Cleanly turn off archive.org counting during downtime
                                     logging.error('Failed to get counts from archive.org',
                                                   exc_info=exc)
                                     ia_query = None
