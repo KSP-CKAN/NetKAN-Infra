@@ -46,7 +46,7 @@ def pull_all(repos: Iterable[Union[NetkanRepo, CkanMetaRepo]]) -> None:
 
 
 def github_limit_remaining(token: str) -> int:
-    return github.Github(token, user_agent=USER_AGENT).get_rate_limit().core.remaining
+    return github.Github(token, user_agent=USER_AGENT).get_rate_limit().resources.core.remaining
 
 
 def deletion_msg(msg: Message) -> DeleteMessageBatchRequestEntryTypeDef:
