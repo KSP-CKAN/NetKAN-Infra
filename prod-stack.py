@@ -987,16 +987,29 @@ for service in services:
         if linux_parameters:
             definition.LinuxParameters = linux_parameters
         for volume in volumes:
+            # Our default is mapping to a local volume, but we don't
+            # really want to store our secrets outside the container
+            # volume. Refactoring is out of scope for this fix.
+            _, _, *vol_opt = volume
+            mode = vol_opt[0] if vol_opt else 'local'
+
             volume_name = '{}{}'.format(
                 name,
                 ''.join([i for i in volume[0].capitalize() if i.isalpha()])
             )
+
+            volume_kwargs = {}
+            if mode == 'local':
+                volume_kwargs.update(
+                    {
+                        'Host': Host(SourcePath=('/mnt/{}'.format(volume[0])))
+                    }
+                )
+
             task.Volumes.append(
                 Volume(
                     Name=volume_name,
-                    Host=Host(
-                        SourcePath=('/mnt/{}'.format(volume[0]))
-                    )
+                    **volume_kwargs
                 )
             )
             definition.MountPoints.append(
