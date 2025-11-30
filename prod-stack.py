@@ -233,23 +233,12 @@ netkan_role = t.add_resource(Role(
                     {
                         "Effect": "Allow",
                         "Action": [
-                            "route53:ListHostedZones",
-                            "route53:GetChange"
+                            "ssm:GetParameter",
                         ],
-                        "Resource": [
-                            "*"
-                        ]
-                    },
-                    {
-                        "Effect": "Allow",
-                        "Action": [
-                            "route53:ChangeResourceRecordSets"
-                        ],
-                        "Resource": [
-                            "arn:aws:route53:::hostedzone/{}".format(
-                                ZONE_ID
-                            ),
-                        ]
+                        "Resource": Sub(
+                            "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ns}CLOUDFLAREINI",
+                            ns=PARAM_NAMESPACE
+                        )
                     }
                 ],
             }
@@ -759,13 +748,38 @@ services = [
     },
     {
         'name': 'CertBot',
-        'image': 'certbot/dns-route53',
-        'command': [
-            'certonly', '-n', '--agree-tos', '--email',
-            EMAIL, '--dns-route53', '-d', BOT_FQDN
-        ],
-        'volumes': [
-            ('letsencrypt', '/etc/letsencrypt')
+        'containers': [
+            {
+                'name': 'cloudflareini',
+                'image': 'amazon/aws-cli',
+                'entrypoint': ['sh', '-c'],
+                "essential": False,
+                "command": [
+                    (
+                        f'aws ssm get-parameter --name {PARAM_NAMESPACE}CLOUDFLAREINI '
+                        '--with-decryption --query Parameter.Value --output text > '
+                        '/opt/config/cloudflare.ini && chmod 600 /opt/config/cloudflare.ini '
+                        '&& exit 0'
+                    )
+                ],
+                'volumes': [
+                    ('config', '/opt/config', 'container')
+                ],
+            },
+            {
+                'name': 'certbot',
+                'image': 'certbot/dns-cloudflare',
+                'command': [
+                    'certonly', '-n', '--agree-tos', '--email',
+                    EMAIL, '--dns-cloudflare', '-d', BOT_FQDN,
+                    '--dns-cloudflare-credentials', '/opt/config/cloudflare.ini'
+                ],
+                'volumes': [
+                    ('letsencrypt', '/etc/letsencrypt'),
+                    ('config', '/opt/config', 'container')
+                ],
+                'depends': [('cloudflareini', 'SUCCESS')]
+            }
         ],
         'schedule': 'cron(0 0 ? * MON *)',
     },
@@ -976,6 +990,9 @@ for service in services:
             PortMappings=[],
             DependsOn=[],
             Links=[],
+            **{'Essential': container.get('essential')}
+                if container.get('essential', None)
+                is not None else {}
         )
         if entrypoint:
             entrypoint = entrypoint if isinstance(
@@ -987,16 +1004,29 @@ for service in services:
         if linux_parameters:
             definition.LinuxParameters = linux_parameters
         for volume in volumes:
+            # Our default is mapping to a local volume, but we don't
+            # really want to store our secrets outside the container
+            # volume. Refactoring is out of scope for this fix.
+            _, _, *vol_opt = volume
+            mode = vol_opt[0] if vol_opt else 'local'
+
             volume_name = '{}{}'.format(
                 name,
                 ''.join([i for i in volume[0].capitalize() if i.isalpha()])
             )
+
+            volume_kwargs = {}
+            if mode == 'local':
+                volume_kwargs.update(
+                    {
+                        'Host': Host(SourcePath=('/mnt/{}'.format(volume[0])))
+                    }
+                )
+
             task.Volumes.append(
                 Volume(
                     Name=volume_name,
-                    Host=Host(
-                        SourcePath=('/mnt/{}'.format(volume[0]))
-                    )
+                    **volume_kwargs
                 )
             )
             definition.MountPoints.append(
@@ -1014,13 +1044,21 @@ for service in services:
                 )
             )
         for depend in depends:
+            condition = 'START'
+            dependency = depend
+            if isinstance(depend, tuple):
+                dependency = depend[0]
+                condition = depend[1]
             definition.DependsOn.append(
                 ContainerDependency(
-                    Condition='START',
-                    ContainerName=depend,
+                    Condition=condition,
+                    ContainerName=dependency,
                 )
             )
-            definition.Links.append(depend)
+            # This can probably go, but to keep change to just
+            # certbot, using an if for now.
+            if condition == 'START':
+                definition.Links.append(dependency)
         task.ContainerDefinitions.append(definition)
     t.add_resource(task)
 
