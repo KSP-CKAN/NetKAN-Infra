@@ -687,7 +687,7 @@ services = [
         'name': 'InflatorKsp',
         'image': 'kspckan/inflator',
         'memory': '256',
-        'secrets': ['GH_Token'],
+        'secrets': ['GH_Token', 'GL_Token'],
         'env': [
             (
                 'QUEUES', Sub(
