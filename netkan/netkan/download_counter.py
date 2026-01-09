@@ -40,7 +40,8 @@ class GitHubBatchedQuery:
     def __init__(self, github_token: str) -> None:
         self.repos: Dict[str, Tuple[str, str]] = {}
         self.requests: Dict[Tuple[str, str], str] = {}
-        self.cache: Dict[Tuple[str, str], int] = {}
+        self.cache: Dict[Tuple[str, str, bool], int] = {}
+        self.include_parents: Dict[str, bool] = {}
         self.github_token = github_token
         logging.info('Starting new GraphQL query')
 
@@ -52,11 +53,13 @@ class GitHubBatchedQuery:
         # We only need to do requests for uncached mods
         return len(self.requests) >= self.MODULES_PER_GRAPHQL
 
-    def add(self, identifier: str, user: str, repo: str) -> None:
+    def add(self, identifier: str, user: str, repo: str, include_parents: bool) -> None:
         user_repo = (user, repo)
+        cache_key = (user, repo, include_parents)
         self.repos[identifier] = user_repo
+        self.include_parents[identifier] = include_parents
         # Queue this request if we haven't already
-        if user_repo not in self.cache and user_repo not in self.requests:
+        if cache_key not in self.cache and user_repo not in self.requests:
             self.requests[user_repo] = identifier
         else:
             logging.debug('Skipping duplicate request for %s, %s, %s',
@@ -64,6 +67,7 @@ class GitHubBatchedQuery:
 
     def remove(self, identifier: str, user_repo: Tuple[str, str]) -> None:
         self.repos.pop(identifier, None)
+        self.include_parents.pop(identifier, None)
         self.requests.pop(user_repo, None)
         # Keep self.cache for shared $krefs
 
@@ -120,20 +124,24 @@ class GitHubBatchedQuery:
                     if apidata:
                         real_ident = self.from_graphql_safe_identifier(fake_ident)
                         try:
-                            count = self.sum_graphql_result(apidata)
-                            user_repo = self.repos[real_ident]
+                            include_parents = self.include_parents.get(real_ident, True)
+                            count = self.sum_graphql_result(apidata, include_parents)
+                            user, repo = self.repos[real_ident]
+                            cache_key = (user, repo, include_parents)
                             # Cache results per repo, for shared $krefs
-                            self.cache[user_repo] = count
+                            self.cache[cache_key] = count
                         except Exception:  # pylint: disable=broad-except
                             pass
         # Retrieve everything from the cache, new and old alike
-        for ident, user_repo in list(self.repos.items()):
-            if user_repo in self.cache:
-                count = self.cache[user_repo]
+        for ident, (user, repo) in list(self.repos.items()):
+            include_parents = self.include_parents.get(ident, True)
+            cache_key = (user, repo, include_parents)
+            if cache_key in self.cache:
+                count = self.cache[cache_key]
                 logging.info('Count for %s is %s', ident, count)
                 counts[ident] = counts.get(ident, 0) + count
                 # Purge completed requests
-                self.remove(ident, user_repo)
+                self.remove(ident, (user, repo))
         return counts
 
     def graphql_to_github(self, query: str) -> Optional[Dict[str, Any]]:
@@ -168,10 +176,10 @@ class GitHubBatchedQuery:
 
         return None
 
-    def sum_graphql_result(self, apidata: Dict[str, Any]) -> int:
+    def sum_graphql_result(self, apidata: Dict[str, Any], include_parents: bool) -> int:
         total = 0
-        if apidata.get('parent', None):
-            total += self.sum_graphql_result(apidata['parent'])
+        if include_parents and apidata.get('parent', None):
+            total += self.sum_graphql_result(apidata['parent'], include_parents)
         for release in apidata['releases']['nodes']:
             for asset in release['releaseAssets']['nodes']:
                 total += asset['downloadCount']
@@ -302,11 +310,12 @@ class DownloadCounter:
             for download in ckan.downloads:
                 try:
                     url_parse = urllib.parse.urlparse(download)
+                    include_parents = ckan.check_parent_downloads()
                     if url_parse.netloc == 'github.com':
                         match = GitHubBatchedQuery.PATH_PATTERN.match(url_parse.path)
                         if match:
                             # Process GitHub modules together in big batches
-                            graph_query.add(ckan.identifier, *match.groups())
+                            graph_query.add(ckan.identifier, *match.groups(), include_parents)
                             if graph_query.full():
                                 # Run the query
                                 graph_query.get_result(self.counts)
