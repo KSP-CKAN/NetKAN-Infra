@@ -315,7 +315,8 @@ class DownloadCounter:
                         match = GitHubBatchedQuery.PATH_PATTERN.match(url_parse.path)
                         if match:
                             # Process GitHub modules together in big batches
-                            graph_query.add(ckan.identifier, *match.groups(), include_parents)
+                            user, repo = match.groups()
+                            graph_query.add(ckan.identifier, user, repo, include_parents)
                             if graph_query.full():
                                 # Run the query
                                 graph_query.get_result(self.counts)
