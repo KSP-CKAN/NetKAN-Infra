@@ -15,8 +15,9 @@ import requests
 from requests.exceptions import ConnectTimeout
 
 from .utils import repo_file_add_or_changed, legacy_read_text
-from .repos import CkanMetaRepo
+from .repos import CkanMetaRepo, NetkanRepo
 from .metadata import Ckan
+from .metadata import Netkan
 
 
 class GitHubBatchedQuery:
@@ -290,9 +291,10 @@ class SourceForgeQuerier:
 
 class DownloadCounter:
 
-    def __init__(self, game_id: str, ckm_repo: CkanMetaRepo, github_token: str) -> None:
+    def __init__(self, game_id: str, ckm_repo: CkanMetaRepo, nk_repo: NetkanRepo, github_token: str) -> None:
         self.game_id = game_id
         self.ckm_repo = ckm_repo
+        self.nk_repo = nk_repo
         self.counts: Dict[str, Any] = {}
         self.github_token = github_token
         if self.ckm_repo.git_repo.working_dir:
@@ -307,10 +309,11 @@ class DownloadCounter:
         for ckan in self.ckm_repo.all_latest_modules():  # pylint: disable=too-many-nested-blocks
             if ckan.kind == 'dlc':
                 continue
+            nk = Netkan(self.nk_repo.nk_path(ckan.identifier), game_id=self.game_id)
             for download in ckan.downloads:
                 try:
                     url_parse = urllib.parse.urlparse(download)
-                    include_parents = ckan.check_parent_downloads()
+                    include_parents = nk.check_parent_downloads()
                     if url_parse.netloc == 'github.com':
                         match = GitHubBatchedQuery.PATH_PATTERN.match(url_parse.path)
                         if match:

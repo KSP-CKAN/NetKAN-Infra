@@ -117,6 +117,9 @@ class Netkan:
             'MessageAttributes': self.sqs_message_attribs(high_ver, high_ver_pre),
         }
 
+    def check_parent_downloads(self) -> bool:
+        return getattr(self, 'x_netkan_check_parent_downloads', True)
+
 
 class Ckan:
 
@@ -483,6 +486,3 @@ class Ckan:
                 return self.version.string.replace(' ', '_').replace(':', '-')
             return self.EPOCH_VERSION_REGEXP.sub('', self.version.string.replace(' ', '_'))
         return None
-
-    def check_parent_downloads(self) -> bool:
-        return getattr(self, 'x_netkan_check_parent_downloads', True)
