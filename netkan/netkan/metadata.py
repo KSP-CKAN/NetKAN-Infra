@@ -117,6 +117,9 @@ class Netkan:
             'MessageAttributes': self.sqs_message_attribs(high_ver, high_ver_pre),
         }
 
+    def check_parent_downloads(self) -> bool:
+        return getattr(self, 'x_netkan_check_parent_downloads', True)
+
 
 class Ckan:
 
