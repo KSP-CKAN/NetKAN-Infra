@@ -16,9 +16,7 @@ from requests.exceptions import ConnectTimeout
 
 from .utils import repo_file_add_or_changed, legacy_read_text
 from .repos import CkanMetaRepo, NetkanRepo
-from .metadata import Ckan
-from .metadata import Netkan
-
+from .metadata import Ckan, Netkan
 
 class GitHubBatchedQuery:
 
