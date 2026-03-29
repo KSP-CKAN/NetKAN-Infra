@@ -8,6 +8,7 @@ from .errors import errors
 from .inflate import inflate
 from .spacedock_inflate import spacedock_inflate
 from .spacedock_add import spacedock_add
+from .spacedock_metapackage import spacedock_metapackage
 from .github_inflate import github_inflate
 from .github_mirror import github_mirror
 
@@ -26,6 +27,7 @@ class NetkanWebhooks(Flask):
         self.register_blueprint(inflate)
         self.register_blueprint(spacedock_inflate, url_prefix='/sd')
         self.register_blueprint(spacedock_add, url_prefix='/sd')
+        self.register_blueprint(spacedock_metapackage, url_prefix='/sd')
         self.register_blueprint(github_inflate, url_prefix='/gh')
         self.register_blueprint(github_mirror, url_prefix='/gh')
 
