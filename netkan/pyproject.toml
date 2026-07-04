@@ -40,7 +40,9 @@ development = [
     "boto3-stubs[essential,cloudwatch]",
     "coverage",
     "troposphere",
-    "pytest",
+    # 2026-07-04 capping below 9 - pytest-pylint crashes on pytest 9,
+    # https://github.com/carsongee/pytest-pylint/issues/197
+    "pytest<9",
     "mypy",
     "pytest-mypy",
     "pylint",
@@ -54,7 +56,9 @@ development = [
 test = [
     "boto3-stubs[essential,cloudwatch]",
     "coverage",
-    "pytest",
+    # 2026-07-04 capping below 9 - pytest-pylint crashes on pytest 9,
+    # https://github.com/carsongee/pytest-pylint/issues/197
+    "pytest<9",
     "mypy",
     "pytest-mypy",
     "pylint",
